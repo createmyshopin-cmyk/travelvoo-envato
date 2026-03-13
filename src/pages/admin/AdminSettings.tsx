@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { compressImage } from "@/lib/compressImage";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,11 +97,12 @@ const AdminSettings = () => {
     }
   };
 
-  const uploadFile = async (file: File, type: "logo" | "favicon") => {
+  const uploadFile = async (rawFile: File, type: "logo" | "favicon") => {
     const setUploading = type === "logo" ? setUploadingLogo : setUploadingFavicon;
     setUploading(true);
 
     try {
+      const file = await compressImage(rawFile, "branding");
       const ext = file.name.split(".").pop();
       const path = `${tenant?.id || "default"}/${type}-${Date.now()}.${ext}`;
 

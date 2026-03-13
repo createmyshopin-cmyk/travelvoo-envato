@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { compressImage } from "@/lib/compressImage";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, GripVertical, Play, MapPin, Image, Star, Film, Navigation, Wifi, Waves, UtensilsCrossed, Car, TreePine, Flame, Coffee, Dumbbell, Wind, Tv, ShowerHead, Mountain, Tent, Dog, Baby, Sparkles, Music, Gamepad2, BookOpen, Shirt, Phone, ShieldCheck, Clock, Zap, Check, Search, Upload, Loader2, BedDouble, Users, Pencil, ImagePlus, ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { SortablePhotoGrid } from "./SortablePhotoGrid";
@@ -229,6 +230,8 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
       return;
     }
 
+    const { data: tenantId } = await supabase.rpc("get_my_tenant_id");
+
     const amenitiesArray = selectedAmenities;
     const stayId = stay ? stay.stay_id : `Stay-${Math.floor(1000 + Math.random() * 9000)}`;
     const payload = {
@@ -254,7 +257,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
       ({ error } = await supabase.from("stays").update(payload).eq("id", stay.id));
     } else {
       const { data, error: insertError } = await supabase.from("stays").insert([{
-        stay_id: stayId, ...payload,
+        stay_id: stayId, ...payload, tenant_id: tenantId,
       }]).select("id").single();
       error = insertError;
       if (data) savedStayId = data.id;
@@ -604,7 +607,8 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
                       if (!files || files.length === 0) return;
                       setUploading(true);
                       const newUrls: string[] = [];
-                      for (const file of Array.from(files)) {
+                      for (const rawFile of Array.from(files)) {
+                        const file = await compressImage(rawFile, "stay");
                         const ext = file.name.split('.').pop();
                         const path = `stays/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
                         const { error } = await supabase.storage.from('stay-images').upload(path, file);
@@ -817,7 +821,8 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
                             if (!files || files.length === 0) return;
                             setRoomPhotoUploading(true);
                             const newUrls: string[] = [];
-                            for (const file of Array.from(files)) {
+                            for (const rawFile of Array.from(files)) {
+                              const file = await compressImage(rawFile, "room");
                               const ext = file.name.split(".").pop();
                               const path = `rooms/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
                               const { error } = await supabase.storage.from("stay-images").upload(path, file);
@@ -1074,10 +1079,11 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
                       accept="image/*"
                       className="hidden"
                       onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
+                        const rawFile = e.target.files?.[0];
+                        if (!rawFile) return;
                         setUploadingOg(true);
                         try {
+                          const file = await compressImage(rawFile, "og");
                           const ext = file.name.split(".").pop() || "jpg";
                           const path = `stays/og-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
                           const { error } = await supabase.storage.from("stay-images").upload(path, file, { upsert: true });

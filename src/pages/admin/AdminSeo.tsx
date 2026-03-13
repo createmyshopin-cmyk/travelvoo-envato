@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { compressImage } from "@/lib/compressImage";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,9 +69,10 @@ const AdminSeo = () => {
     }
   };
 
-  const uploadOgImage = async (file: File) => {
+  const uploadOgImage = async (rawFile: File) => {
     setUploadingOg(true);
     try {
+      const file = await compressImage(rawFile, "og");
       const tenantId = await fetchTenantId();
       const ext = file.name.split(".").pop() || "jpg";
       const path = `${tenantId}/og-image-${Date.now()}.${ext}`;

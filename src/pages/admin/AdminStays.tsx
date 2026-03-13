@@ -344,6 +344,7 @@ export default function AdminStays() {
 
   const duplicateStay = async (stay: any) => {
     const newStayId = `Stay-${Math.floor(1000 + Math.random() * 9000)}`;
+    const { data: tenantId } = await supabase.rpc("get_my_tenant_id");
     const { error } = await (supabase.from("stays") as any).insert({
       stay_id: newStayId,
       name: `${stay.name} (Copy)`,
@@ -357,6 +358,7 @@ export default function AdminStays() {
       amenities: stay.amenities,
       images: stay.images,
       status: "hidden",
+      tenant_id: tenantId,
     });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "Stay duplicated", description: `${stay.name} (Copy) created as hidden.` }); fetchStays(); }

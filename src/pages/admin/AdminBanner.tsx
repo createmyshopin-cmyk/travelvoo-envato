@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { compressImage } from "@/lib/compressImage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -260,12 +261,13 @@ function ImageUploader({
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = useCallback(async (file: File) => {
-    if (!file.type.startsWith("image/")) {
+  const handleFile = useCallback(async (rawFile: File) => {
+    if (!rawFile.type.startsWith("image/")) {
       toast({ title: "Only image files are supported", variant: "destructive" });
       return;
     }
     setUploading(true);
+    const file = await compressImage(rawFile, "banner");
     const ext = file.name.split(".").pop() || "jpg";
     const path = `banner-${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("banners").upload(path, file, { upsert: true });
