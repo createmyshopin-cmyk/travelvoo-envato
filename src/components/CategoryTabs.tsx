@@ -40,14 +40,14 @@ const CategoryTabs = ({ selected, onSelect }: CategoryTabsProps) => {
             <button
               key={label}
               onClick={() => onSelect(label)}
-              className={`flex flex-col items-center gap-2 shrink-0 min-w-[72px] py-3 px-2 rounded-2xl transition-all ${
+              className={`flex flex-col items-center gap-2 shrink-0 min-w-[80px] md:min-w-[88px] py-4 px-3 rounded-2xl transition-all ${
                 active
                   ? "bg-primary text-primary-foreground shadow-soft"
                   : "bg-muted text-muted-foreground hover:bg-accent"
               }`}
             >
-              <Icon className="w-6 h-6" />
-              <span className="text-[11px] font-semibold text-center leading-tight">{label}</span>
+              <Icon className="w-8 h-8 md:w-7 md:h-7" />
+              <span className="text-[11px] md:text-xs font-semibold text-center leading-tight">{label}</span>
             </button>
           );
         })}
