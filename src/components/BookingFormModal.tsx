@@ -172,18 +172,21 @@ const BookingFormModal = ({ open, onOpenChange, stayName, stayId, roomCategories
   const allRoomCategoryIds = useMemo(() => roomCategories.map((r) => r.id), [roomCategories]);
   const { customPricing, unavailableDates: dbUnavailableDates, getPriceForDate: getDbPrice, getMinNightsForDate, isBookedDate, isCooldownDate, cooldownMinutes, lastFetchedAt } = useCalendarPricing(stayId, allRoomCategoryIds);
 
-  // Resolve display price per room: use calendar price when dates selected, else fallback to room_categories
+  // Resolve display price per room: calendar (room-specific → global) → room_categories base
   const getDisplayPriceForRoom = useCallback(
-    (room: RoomSelection, roomCategoryId?: string): { price: number; originalPrice: number } => {
+    (room: RoomSelection, roomCategoryId?: string): number => {
       const firstDate = dateRanges[0]?.checkIn;
-      if (firstDate && roomCategoryId) {
-        const calPrice = getDbPrice(firstDate, roomCategoryId);
-        if (calPrice != null) {
-          const originalPrice = room.originalPrice;
-          return { price: calPrice, originalPrice: originalPrice > calPrice ? originalPrice : calPrice };
-        }
+      if (!firstDate) return room.price;
+      // 1) Room-specific calendar price
+      if (roomCategoryId) {
+        const roomPrice = getDbPrice(firstDate, roomCategoryId);
+        if (roomPrice != null) return roomPrice;
       }
-      return { price: room.price, originalPrice: room.originalPrice };
+      // 2) Global calendar price (admin set "all" rooms)
+      const globalPrice = getDbPrice(firstDate);
+      if (globalPrice != null) return globalPrice;
+      // 3) Fallback to base from room_categories
+      return room.price;
     },
     [dateRanges, getDbPrice]
   );
@@ -262,13 +265,22 @@ const BookingFormModal = ({ open, onOpenChange, stayName, stayId, roomCategories
   const hasDates = dateRanges.length > 0;
 
   // Dynamic pricing across all date ranges — room-category-specific overrides
+  // Per-room display prices from calendar — re-computes when calendar data updates (realtime)
+  const roomDisplayPrices = useMemo(() => {
+    return roomCategories.map((rc, i) => {
+      if (dateRanges.length === 0) return roomCategories[i]?.price ?? 0;
+      const firstDate = dateRanges[0].checkIn;
+      const roomId = rc.id;
+      return getDbPrice(firstDate, roomId) ?? getDbPrice(firstDate) ?? rc.price ?? 0;
+    });
+  }, [dateRanges, roomCategories, getDbPrice]);
+
   const roomTotal = useMemo(() => {
     if (dateRanges.length === 0) return 0;
     const selected = roomSelections.filter((r) => r.selected && r.count > 0);
     let total = 0;
     for (const room of selected) {
-      // Find matching room category ID by name
-      const roomCat = roomCategories.find((rc) => rc.name === room.name);
+      const roomCat = roomCategories.find((rc) => rc.name === room.name) ?? roomCategories[roomCategories.findIndex((rc) => rc.name === room.name)];
       const roomCategoryId = roomCat?.id;
       for (const range of dateRanges) {
         let d = range.checkIn;
@@ -808,12 +820,9 @@ ${addOnLines ? `*Add-ons:*\n${addOnLines}\n` : ""}${appliedCoupon ? `🏷 *Coupo
                       <span className="text-sm font-semibold text-foreground">{room.name}</span>
                     </div>
                     <span className="text-sm font-bold text-primary" aria-live="polite">
-                      ₹{(
-                        dateRanges.length > 0
-                          ? (getDbPrice(dateRanges[0].checkIn, roomCategories.find((rc) => rc.name === room.name)?.id) ??
-                            getDbPrice(dateRanges[0].checkIn) ??
-                            room.price)
-                          : room.price
+                      ₹{getDisplayPriceForRoom(
+                        room,
+                        (roomCategories.find((rc) => rc.name === room.name) ?? roomCategories[index])?.id
                       ).toLocaleString()}
                       <span className="text-xs font-normal text-muted-foreground"> /night</span>
                     </span>
