@@ -1,6 +1,20 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+
+export type NewBooking = {
+  id: string;
+  booking_id: string;
+  guest_name: string;
+  phone?: string;
+  email?: string;
+  checkin?: string;
+  checkout?: string;
+  total_price?: number;
+  stay_id?: string;
+};
 
 // Generates a pleasant 3-note ascending chime using Web Audio API — no audio file needed
 function playNotificationSound() {
@@ -48,11 +62,13 @@ function vibrateDevice() {
 /**
  * useBookingNotification
  * Listens for new booking INSERT events via Supabase Realtime.
- * On every new booking it: plays a chime, vibrates the device, and shows a toast.
+ * On every new booking it: plays a chime, vibrates the device, shows a toast, and popup.
  * Mount this once in AdminLayout so it's always active across admin pages.
  */
 export function useBookingNotification() {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [newBooking, setNewBooking] = useState<NewBooking | null>(null);
   // Skip notifications fired during the initial subscription handshake
   const ready = useRef(false);
 
@@ -72,6 +88,18 @@ export function useBookingNotification() {
           playNotificationSound();
           vibrateDevice();
 
+          setNewBooking({
+            id: booking.id,
+            booking_id: booking.booking_id,
+            guest_name: booking.guest_name,
+            phone: booking.phone,
+            email: booking.email,
+            checkin: booking.checkin,
+            checkout: booking.checkout,
+            total_price: booking.total_price,
+            stay_id: booking.stay_id,
+          });
+
           toast({
             title: "New Booking Received!",
             description: `${booking.guest_name ?? "A guest"} — ${booking.booking_id ?? ""}`,
@@ -85,4 +113,9 @@ export function useBookingNotification() {
       supabase.removeChannel(channel);
     };
   }, [toast]);
+
+  return {
+    newBooking,
+    clearNewBooking: () => setNewBooking(null),
+  };
 }

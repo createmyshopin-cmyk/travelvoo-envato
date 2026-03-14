@@ -2,12 +2,17 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "./AdminSidebar";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { SubscriptionBanner } from "./SubscriptionBanner";
+import { NewBookingPopup } from "./NewBookingPopup";
 import { useBookingNotification } from "@/hooks/useBookingNotification";
 import { Outlet } from "react-router-dom";
 
 function BookingNotificationListener() {
-  useBookingNotification();
-  return null;
+  const { newBooking, clearNewBooking } = useBookingNotification();
+  return (
+    <>
+      <NewBookingPopup booking={newBooking} onClose={clearNewBooking} />
+    </>
+  );
 }
 
 export function AdminLayout() {
