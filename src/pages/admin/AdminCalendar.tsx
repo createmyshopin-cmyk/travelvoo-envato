@@ -64,6 +64,14 @@ const SPECIAL_DAYS: Record<string, { emoji: string; label: string; type: "indian
 
 const getSpecialDay = (date: Date) => SPECIAL_DAYS[format(date, "MM-dd")] || null;
 
+/** Same multipliers as BookingCalendar.tsx — Mon-Thu ×1.0, Fri ×1.15, Sat-Sun ×1.3 */
+const getDefaultPrice = (date: Date, basePrice: number): number => {
+  const dow = getDay(date); // 0=Sun,1=Mon,...,6=Sat
+  if (dow === 6 || dow === 0) return Math.round(basePrice * 1.3);
+  if (dow === 5) return Math.round(basePrice * 1.15);
+  return basePrice;
+};
+
 const validatePrice = (raw: string): number | null => {
   const val = parseInt(raw, 10);
   return isNaN(val) || val < 100 || val > 100000 ? null : val;
@@ -179,6 +187,17 @@ export default function AdminCalendar() {
 
   useEffect(() => { fetchPricing(); }, [fetchPricing]);
 
+  // Realtime: re-fetch when calendar_pricing or bookings change for this stay
+  useEffect(() => {
+    if (!selectedStay) return;
+    const channel = supabase
+      .channel(`admin-calendar-${selectedStay}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "calendar_pricing", filter: `stay_id=eq.${selectedStay}` }, () => fetchPricing())
+      .on("postgres_changes", { event: "*", schema: "public", table: "bookings", filter: `stay_id=eq.${selectedStay}` }, () => fetchPricing())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [selectedStay, fetchPricing]);
+
   const getPricingForDate = (dateStr: string) => pricing.find(p => p.date === dateStr);
   const getBookingForDate = (dateStr: string) => bookings.find(b => b.checkin <= dateStr && b.checkout > dateStr);
 
@@ -217,11 +236,14 @@ export default function AdminCalendar() {
     const monthDays = eachDayOfInterval({ start: startOfMonth(currentDate), end: endOfMonth(currentDate) });
     let pricedDays = 0, blockedDays = 0, bookedDays = 0, totalPrice = 0;
 
+    const basePrice = rooms.length > 0 ? (selectedRoom !== "all" ? rooms.find(r => r.id === selectedRoom)?.price : rooms[0]?.price) ?? 0 : 0;
     for (const day of monthDays) {
       const ds = format(day, "yyyy-MM-dd");
       const entry = getPricingForDate(ds);
       const booking = getBookingForDate(ds);
-      if (entry) { pricedDays++; totalPrice += entry.price; if (entry.is_blocked) blockedDays++; }
+      const effectivePrice = entry ? entry.price : (basePrice ? getDefaultPrice(day, basePrice) : 0);
+      if (effectivePrice && !entry?.is_blocked) { pricedDays++; totalPrice += effectivePrice; }
+      if (entry?.is_blocked) blockedDays++;
       if (booking) bookedDays++;
     }
 
@@ -560,7 +582,7 @@ export default function AdminCalendar() {
               const inMonth = isSameMonth(day, currentDate);
               const priceLevel = entry ? getPriceLevel(entry.price) : null;
               const specialDay = getSpecialDay(day);
-              const isWE = [0, 5, 6].includes(getDay(day));
+              const isWE = [0, 6].includes(getDay(day)); // Sat+Sun — matches BookingCalendar
               const isCooldown = isCooldownDate(dateStr);
 
               return (
@@ -605,10 +627,20 @@ export default function AdminCalendar() {
 
                   {/* Price */}
                   {entry && !entry.is_blocked && (
-                    <p className="text-[9px] sm:text-xs font-semibold text-foreground mt-0.5 sm:mt-1 leading-tight truncate">
+                    <p className="text-[9px] sm:text-xs font-semibold text-foreground mt-0.5 sm:mt-1 leading-tight truncate" title="Custom price">
                       ₹{entry.price >= 10000 ? `${(entry.price / 1000).toFixed(entry.price % 1000 === 0 ? 0 : 1)}k` : entry.price.toLocaleString("en-IN")}
                     </p>
                   )}
+                  {!entry && !entry?.is_blocked && inMonth && (() => {
+                    const basePrice = rooms.length > 0 ? (selectedRoom !== "all" ? rooms.find(r => r.id === selectedRoom)?.price : rooms[0]?.price) ?? 0 : 0;
+                    if (!basePrice) return null;
+                    const calcPrice = getDefaultPrice(day, basePrice);
+                    return (
+                      <p className="text-[9px] sm:text-xs font-medium text-muted-foreground/70 mt-0.5 sm:mt-1 leading-tight truncate italic" title="Calculated price (no custom entry)">
+                        ₹{calcPrice >= 10000 ? `${(calcPrice / 1000).toFixed(calcPrice % 1000 === 0 ? 0 : 1)}k` : calcPrice.toLocaleString("en-IN")}
+                      </p>
+                    );
+                  })()}
 
                   {/* Per-date cooldown badge */}
                   {entry?.cooldown_minutes != null && !entry.is_blocked && (
@@ -619,10 +651,6 @@ export default function AdminCalendar() {
 
                   {entry?.is_blocked && (
                     <p className="text-[8px] sm:text-[10px] text-destructive font-medium mt-0.5 leading-tight">Blocked</p>
-                  )}
-
-                  {!entry && !booking && inMonth && (
-                    <p className="text-[8px] sm:text-[10px] text-muted-foreground/50 mt-0.5 hidden sm:block leading-tight">—</p>
                   )}
 
                   {/* Booking */}
