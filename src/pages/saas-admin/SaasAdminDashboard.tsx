@@ -40,6 +40,7 @@ const SaasAdminDashboard = () => {
     const plans = plansRes.data || [];
 
     const activeSubs = subs.filter(s => s.status === "active").length;
+    const trialSubs = subs.filter(s => s.status === "trial").length;
     const successTx = txs.filter(t => t.status === "success");
     const mrr = successTx.reduce((s, t) => s + (t.amount || 0), 0);
 
@@ -49,7 +50,7 @@ const SaasAdminDashboard = () => {
       mrr,
       totalBookings: bookingsRes.data?.length || 0,
       totalAiSearches: aiRes.data?.length || 0,
-      trialTenants: tenants.filter(t => t.status === "trial").length,
+      trialTenants: trialSubs,
     });
 
     // Plan distribution
