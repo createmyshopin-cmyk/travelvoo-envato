@@ -52,7 +52,6 @@ const sslVariant = (s: string) => {
   }
 };
 
-const SSL_STATUSES = ["pending", "active", "failed", "verifying"];
 
 const SaasAdminDomains = () => {
   const [domains, setDomains] = useState<Domain[]>([]);
@@ -166,12 +165,6 @@ const SaasAdminDomains = () => {
       title: current ? "Domain unverified" : "Domain verified",
       description: nowVerified && platformConfig.autoSSL ? "SSL automatically activated" : undefined,
     });
-    fetchAll();
-  };
-
-  const updateSSL = async (id: string, status: string) => {
-    await supabase.from("tenant_domains").update({ ssl_status: status }).eq("id", id);
-    toast({ title: `SSL → ${status}` });
     fetchAll();
   };
 
@@ -358,16 +351,7 @@ const SaasAdminDomains = () => {
                         </Button>
                       </TableCell>
                       <TableCell>
-                        <Select value={d.ssl_status} onValueChange={v => updateSSL(d.id, v)}>
-                          <SelectTrigger className="w-[115px] h-8">
-                            <Badge variant={sslVariant(d.ssl_status)}>{d.ssl_status}</Badge>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {SSL_STATUSES.map(s => (
-                              <SelectItem key={s} value={s}>{s}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Badge variant={sslVariant(d.ssl_status)}>{d.ssl_status}</Badge>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{format(new Date(d.created_at), "dd MMM yyyy")}</TableCell>
                       <TableCell>
