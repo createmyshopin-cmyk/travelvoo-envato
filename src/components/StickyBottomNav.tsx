@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Home, Compass, Sparkles, Heart, Search, X, Loader2, Mic, Clapperboard } from "lucide-react";
 import { useWishlist } from "@/context/WishlistContext";
 import { supabase } from "@/integrations/supabase/client";
+import { reelsQueryKey, fetchReels } from "@/hooks/useReels";
 import { Badge } from "@/components/ui/badge";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 
@@ -35,6 +37,7 @@ interface SearchResult {
 const StickyBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { count } = useWishlist();
   const [activeTab, setActiveTab] = useState("home");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -79,6 +82,16 @@ const StickyBottomNav = () => {
         }
       });
   }, []);
+
+  // Prefetch reels data + ReelsPage chunk when Reels tab is visible (after 1.5s idle)
+  useEffect(() => {
+    if (!menuConfig.showReels) return;
+    const timer = setTimeout(() => {
+      queryClient.prefetchQuery({ queryKey: reelsQueryKey, queryFn: fetchReels });
+      import("../pages/ReelsPage");
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [menuConfig.showReels, queryClient]);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 

@@ -1,18 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Volume2, VolumeX, ExternalLink, MapPin } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Volume2, VolumeX, ExternalLink, MapPin, Share2 } from "lucide-react";
 import StickyBottomNav from "@/components/StickyBottomNav";
-
-interface ReelWithStay {
-  id: string;
-  stay_id: string;
-  title: string;
-  thumbnail: string;
-  url: string;
-  platform: string;
-  stay_name: string;
-}
+import { useReels, type ReelWithStay } from "@/hooks/useReels";
 
 const platformColors: Record<string, string> = {
   instagram: "bg-gradient-to-br from-purple-500 to-pink-500",
@@ -40,15 +30,16 @@ function VerticalReelCard({ reel }: VerticalReelCardProps) {
   const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
   const [muted, setMuted] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const ytId = getYouTubeId(reel.url);
   const isVideo = isVideoFile(reel.url);
 
-  const ytSrc = (muteParam: boolean) =>
+  const ytSrc = (muteParam: boolean, playing: boolean) =>
     ytId
-      ? `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=${muteParam ? 1 : 0}&loop=1&playlist=${ytId}&controls=0&modestbranding=1&playsinline=1&rel=0&showinfo=0&iv_load_policy=3&disablekb=1&fs=0`
+      ? `https://www.youtube.com/embed/${ytId}?autoplay=${playing ? 1 : 0}&mute=${muteParam ? 1 : 0}&loop=1&playlist=${ytId}&controls=0&modestbranding=1&playsinline=1&rel=0&showinfo=0&iv_load_policy=3&disablekb=1&fs=0`
       : "";
 
   // IntersectionObserver: play/pause + unmute when visible, mute when not
@@ -60,11 +51,13 @@ function VerticalReelCard({ reel }: VerticalReelCardProps) {
         setIsVisible(visible);
         if (visible) {
           setMuted(false);
+          setIsPlaying(true);
           if (isVideo && videoRef.current) {
             videoRef.current.play().catch(() => {});
           }
         } else {
           setMuted(true);
+          setIsPlaying(false);
           if (isVideo && videoRef.current) {
             videoRef.current.pause();
           }
@@ -85,15 +78,52 @@ function VerticalReelCard({ reel }: VerticalReelCardProps) {
     setMuted((m) => !m);
   }, []);
 
+  const togglePlayPause = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (isVideo && videoRef.current) {
+        if (videoRef.current.paused) {
+          videoRef.current.play().catch(() => {});
+          setIsPlaying(true);
+        } else {
+          videoRef.current.pause();
+          setIsPlaying(false);
+        }
+      } else if (ytId) {
+        setIsPlaying((p) => !p);
+      } else if (!ytId && !isVideo) {
+        window.open(reel.url, "_blank");
+      }
+    },
+    [isVideo, ytId, reel.url]
+  );
+
   const handleViewStay = useCallback(() => {
     navigate(`/stay/${reel.stay_id}`);
   }, [navigate, reel.stay_id]);
 
-  const handleClick = useCallback(() => {
-    if (!ytId && !isVideo) {
-      window.open(reel.url, "_blank");
-    }
-  }, [ytId, isVideo, reel.url]);
+  const handleShare = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const origin = window.location.origin;
+      const reelsLink = `${origin}/reels`;
+      const websiteLink = origin;
+      const text = `Check out this reel: ${reel.title}\n\nReels: ${reelsLink}\nWebsite: ${websiteLink}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+    },
+    [reel.title]
+  );
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (isVideo || ytId) {
+        togglePlayPause(e);
+      } else if (!ytId && !isVideo) {
+        window.open(reel.url, "_blank");
+      }
+    },
+    [isVideo, ytId, reel.url, togglePlayPause]
+  );
 
   const platformLabel =
     reel.platform === "youtube"
@@ -124,32 +154,50 @@ function VerticalReelCard({ reel }: VerticalReelCardProps) {
                 playsInline
                 className="w-full h-full object-contain"
               />
-              <button
-                onClick={toggleMute}
-                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white z-10"
-              >
-                {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-              </button>
+              <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+                <button
+                  onClick={toggleMute}
+                  className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white"
+                >
+                  {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white"
+                  title="Share to WhatsApp"
+                >
+                  <Share2 className="w-5 h-5" />
+                </button>
+              </div>
             </>
           )}
 
           {ytId && (
             <>
               <iframe
-                key={`${ytId}-${muted}`}
-                src={ytSrc(muted)}
+                key={`${ytId}-${muted}-${isPlaying}`}
+                src={ytSrc(muted, isPlaying)}
                 title={reel.title}
                 allow="autoplay; encrypted-media; picture-in-picture"
                 className="absolute inset-0 border-0 pointer-events-none w-full h-[115%] -top-[7.5%]"
               />
               <div className="absolute bottom-0 left-0 right-0 h-12 bg-black z-[5]" />
-              <div className="absolute inset-0 z-[6]" onClick={toggleMute} />
-              <button
-                onClick={toggleMute}
-                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/60 flex items-center justify-center text-white z-[7]"
-              >
-                {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-              </button>
+              <div className="absolute inset-0 z-[6]" aria-hidden />
+              <div className="absolute top-4 right-4 flex flex-col gap-2 z-[7]">
+                <button
+                  onClick={toggleMute}
+                  className="w-10 h-10 rounded-full bg-black/60 flex items-center justify-center text-white"
+                >
+                  {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="w-10 h-10 rounded-full bg-black/60 flex items-center justify-center text-white"
+                  title="Share to WhatsApp"
+                >
+                  <Share2 className="w-5 h-5" />
+                </button>
+              </div>
             </>
           )}
 
@@ -166,10 +214,15 @@ function VerticalReelCard({ reel }: VerticalReelCardProps) {
                   <ExternalLink className="w-6 h-6 text-primary" />
                 </div>
               </div>
-              <button
-                onClick={toggleMute}
-                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white z-10 opacity-0 pointer-events-none"
-              />
+              <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+                <button
+                  onClick={handleShare}
+                  className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white"
+                  title="Share to WhatsApp"
+                >
+                  <Share2 className="w-5 h-5" />
+                </button>
+              </div>
             </>
           )}
 
@@ -198,10 +251,10 @@ function VerticalReelCard({ reel }: VerticalReelCardProps) {
             e.stopPropagation();
             handleViewStay();
           }}
-          className="flex items-center gap-2 w-full justify-center py-2.5 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm touch-manipulation"
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm touch-manipulation"
         >
-          <MapPin className="w-4 h-4" />
-          View Stay: {reel.stay_name}
+          <MapPin className="w-4 h-4 shrink-0" />
+          View Stay
         </button>
       </div>
     </div>
@@ -209,37 +262,7 @@ function VerticalReelCard({ reel }: VerticalReelCardProps) {
 }
 
 const ReelsPage = () => {
-  const [reels, setReels] = useState<ReelWithStay[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchReels = async () => {
-      const { data, error } = await supabase
-        .from("stay_reels")
-        .select("id, stay_id, title, thumbnail, url, platform, sort_order, stays!inner(name)")
-        .order("sort_order");
-
-      if (error) {
-        console.error("Failed to fetch reels:", error);
-        setReels([]);
-      } else if (data) {
-        setReels(
-          (data as any[]).map((r) => ({
-            id: r.id,
-            stay_id: r.stay_id,
-            title: r.title || "",
-            thumbnail: r.thumbnail || "",
-            url: r.url || "",
-            platform: r.platform || "youtube",
-            stay_name: r.stays?.name || "Resort",
-          }))
-        );
-      }
-      setLoading(false);
-    };
-
-    fetchReels();
-  }, []);
+  const { data: reels = [], isLoading: loading } = useReels();
 
   if (loading) {
     return (
