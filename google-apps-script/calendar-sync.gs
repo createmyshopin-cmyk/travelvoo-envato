@@ -147,12 +147,14 @@ function onCalendarChange() {
   }
 
   var cal = CalendarApp.getCalendarById(calendarId);
-  if (!cal) return;
+  if (!cal) { Logger.log("ERROR: Calendar not found for ID: " + calendarId); return; }
 
-  // Scan events from today up to 2 years ahead
+  // Scan from 7 days ago up to 2 years ahead (catches recently edited past/today events)
   var now = new Date();
+  var past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   var future = new Date(now.getFullYear() + 2, now.getMonth(), now.getDate());
-  var events = cal.getEvents(now, future);
+  var events = cal.getEvents(past, future);
+  Logger.log("onCalendarChange: scanning " + events.length + " events");
 
   for (var i = 0; i < events.length; i++) {
     var event = events[i];
@@ -164,10 +166,14 @@ function onCalendarChange() {
       dateStr = event.getTag("date");
     } catch (e) { continue; }
 
-    if (!stayId || !dateStr) continue;
+    if (!stayId || !dateStr) {
+      Logger.log("SKIP (no tags): " + event.getTitle());
+      continue;
+    }
 
     var title = event.getTitle();
     var isBlocked = title.indexOf("BLOCKED") !== -1;
+    Logger.log("Processing: " + title + " | date=" + dateStr + " | stay=" + stayId);
 
     // Parse price from title: "🏡 Stay Name — ₹2,500"
     var price = 0;
