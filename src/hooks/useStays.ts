@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Stay, RoomCategory, Review, Reel, NearbyDestination } from "@/types/stay";
 
@@ -65,13 +65,19 @@ function mapDbReview(row: any): Review {
   };
 }
 
-const todayStr = () => new Date().toISOString().slice(0, 10);
+// Local date (YYYY-MM-DD) — calendar_pricing uses local dates; UTC caused mismatches for Indian timezone
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 export function useStays(category?: string) {
   const cacheKey = category ?? "__all__";
   const [stays, setStays] = useState<Stay[]>(staysCache.get(cacheKey) ?? []);
   const [loading, setLoading] = useState(!staysCache.has(cacheKey));
   const [calendarPriceMap, setCalendarPriceMap] = useState<Record<string, number>>({});
+  const staysRef = useRef<Stay[]>([]);
+  staysRef.current = stays;
 
   const fetchStays = useCallback(async () => {
     setLoading(true);
@@ -96,12 +102,20 @@ export function useStays(category?: string) {
 
   const fetchCalendarMinPrices = useCallback(async (stayIds: string[]) => {
     if (stayIds.length === 0) return;
-    const dateStr = todayStr();
+    const today = todayStr();
+    // Query next 14 days — "From" price uses nearest available calendar rate
+    const dates: string[] = [];
+    const d = new Date();
+    for (let i = 0; i < 14; i++) {
+      const dt = new Date(d);
+      dt.setDate(dt.getDate() + i);
+      dates.push(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`);
+    }
     const { data } = await supabase
       .from("calendar_pricing")
-      .select("stay_id, price")
-      .eq("date", dateStr)
+      .select("stay_id, price, date")
       .in("stay_id", stayIds)
+      .in("date", dates)
       .eq("is_blocked", false)
       .gte("price", 100)
       .lte("price", 100000);
@@ -126,15 +140,25 @@ export function useStays(category?: string) {
     fetchCalendarMinPrices(stays.map((s) => s.id));
   }, [stays, fetchCalendarMinPrices]);
 
+  // Periodic refetch so prices update even if realtime misses (e.g. tab inactive)
+  useEffect(() => {
+    if (stays.length === 0) return;
+    const interval = setInterval(() => {
+      fetchCalendarMinPrices(staysRef.current.map((s) => s.id));
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [stays.length, fetchCalendarMinPrices]);
+
   useEffect(() => {
     const channel = supabase
-      .channel("stays-calendar-pricing")
+      .channel(`stays-cal-${cacheKey}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "calendar_pricing" }, () => {
-        if (stays.length > 0) fetchCalendarMinPrices(stays.map((s) => s.id));
+        const current = staysRef.current;
+        if (current.length > 0) fetchCalendarMinPrices(current.map((s) => s.id));
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [stays, fetchCalendarMinPrices]);
+  }, [fetchCalendarMinPrices, cacheKey]);
 
   const staysWithCalendarPrices = stays.map((s) => {
     const calPrice = calendarPriceMap[s.id];
