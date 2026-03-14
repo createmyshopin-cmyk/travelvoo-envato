@@ -600,7 +600,8 @@ export default function AdminCalendar() {
                     isCooldown && !booking && !entry?.is_blocked && "bg-amber-50 dark:bg-amber-950/20",
                     booking && !entry?.is_blocked && "bg-accent/30",
                     isToday(day) && "ring-1 ring-primary/40",
-                    isWE && !isSelected && !booking && !entry?.is_blocked && !isCooldown && "bg-muted/30",
+                    isWE && !isSelected && !booking && !entry?.is_blocked && !isCooldown && "bg-orange-50 dark:bg-orange-950/20",
+                    !isWE && !isSelected && !booking && !entry?.is_blocked && !isCooldown && inMonth && "bg-green-50 dark:bg-green-950/20",
                   )}
                   onMouseDown={() => handleDateMouseDown(dateStr)}
                   onMouseEnter={() => handleDateMouseEnter(dateStr)}
