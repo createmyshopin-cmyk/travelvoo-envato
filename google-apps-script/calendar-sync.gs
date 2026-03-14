@@ -138,8 +138,13 @@ function onCalendarChange() {
   var props = PropertiesService.getScriptProperties();
   var supabaseUrl = props.getProperty("SUPABASE_URL");
   var supabaseKey = props.getProperty("SUPABASE_ANON_KEY");
+  // Service role key bypasses RLS — required for writes (GAS has no user session)
+  var serviceKey = props.getProperty("SUPABASE_SERVICE_KEY");
   var calendarId = props.getProperty("CALENDAR_ID");
-  if (!supabaseUrl || !supabaseKey || !calendarId) return;
+  if (!supabaseUrl || !supabaseKey || !serviceKey || !calendarId) {
+    Logger.log("Missing script property. Required: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, CALENDAR_ID");
+    return;
+  }
 
   var cal = CalendarApp.getCalendarById(calendarId);
   if (!cal) return;
@@ -171,7 +176,7 @@ function onCalendarChange() {
       price = parseInt(priceMatch[1].replace(/,/g, ""), 10);
     }
 
-    // Check if entry exists in Supabase
+    // Read with anon key (public SELECT policy allows it)
     var checkResp = UrlFetchApp.fetch(
       supabaseUrl + "/rest/v1/calendar_pricing?stay_id=eq." + stayId + "&date=eq." + dateStr + "&select=id,price,is_blocked",
       { headers: { "apikey": supabaseKey, "Authorization": "Bearer " + supabaseKey } }
@@ -183,35 +188,37 @@ function onCalendarChange() {
     if (existing && existing.length > 0) {
       // Skip if nothing changed
       if (existing[0].price === price && existing[0].is_blocked === isBlocked) continue;
-      // PATCH existing row
+      // PATCH with service key — bypasses RLS
       UrlFetchApp.fetch(
         supabaseUrl + "/rest/v1/calendar_pricing?stay_id=eq." + stayId + "&date=eq." + dateStr,
         {
           method: "PATCH",
           headers: {
-            "apikey": supabaseKey,
-            "Authorization": "Bearer " + supabaseKey,
+            "apikey": serviceKey,
+            "Authorization": "Bearer " + serviceKey,
             "Content-Type": "application/json",
             "Prefer": "return=minimal",
           },
           payload: body,
         }
       );
+      Logger.log("Updated " + dateStr + " price=" + price + " blocked=" + isBlocked);
     } else if (!isBlocked && price > 0) {
-      // POST new row only if it has a valid price
+      // POST with service key — bypasses RLS
       UrlFetchApp.fetch(
         supabaseUrl + "/rest/v1/calendar_pricing",
         {
           method: "POST",
           headers: {
-            "apikey": supabaseKey,
-            "Authorization": "Bearer " + supabaseKey,
+            "apikey": serviceKey,
+            "Authorization": "Bearer " + serviceKey,
             "Content-Type": "application/json",
             "Prefer": "return=minimal",
           },
           payload: JSON.stringify({ stay_id: stayId, date: dateStr, price: price, original_price: price, is_blocked: false, available: 1, min_nights: 1 }),
         }
       );
+      Logger.log("Inserted " + dateStr + " price=" + price);
     }
   }
 }
