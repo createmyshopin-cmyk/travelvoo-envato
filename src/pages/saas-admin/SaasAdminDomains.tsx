@@ -337,7 +337,13 @@ const SaasAdminDomains = () => {
                         </Button>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={sslVariant(d.ssl_status)}>{d.ssl_status}</Badge>
+                        {d.ssl_status === "active" ? (
+                          <Badge className="bg-emerald-500 text-white text-[10px]">
+                            <Shield className="w-3 h-3 mr-1" /> active
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">{d.ssl_status}</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{format(new Date(d.created_at), "dd MMM yyyy")}</TableCell>
                       <TableCell>
