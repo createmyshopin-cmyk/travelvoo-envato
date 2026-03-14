@@ -17,16 +17,11 @@ import BookingCalendar, { getDefaultPrice } from "@/components/BookingCalendar";
 import type { RoomCategory } from "@/types/stay";
 
 interface AddOn {
+  id: string;
   label: string;
   price: number;
+  optional: boolean;
 }
-
-const ADD_ONS: AddOn[] = [
-  { label: "Dinner", price: 500 },
-  { label: "Local Guide", price: 800 },
-  { label: "Campfire", price: 700 },
-  { label: "Airport Pickup", price: 1500 },
-];
 
 interface Coupon {
   code: string;
@@ -99,6 +94,23 @@ const BookingFormModal = ({ open, onOpenChange, stayName, stayId, roomCategories
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [bookingId, setBookingId] = useState("");
   const [copiedBookingId, setCopiedBookingId] = useState(false);
+
+  const [dbAddOns, setDbAddOns] = useState<AddOn[]>([]);
+
+  useEffect(() => {
+    if (!open || !stayId) return;
+    (supabase.from("stay_addons") as any)
+      .select("id, name, price, optional")
+      .eq("stay_id", stayId)
+      .order("sort_order")
+      .then(({ data }: { data: any[] | null }) => {
+        if (data && data.length > 0) {
+          setDbAddOns(data.map((a) => ({ id: a.id, label: a.name, price: a.price, optional: a.optional })));
+        } else {
+          setDbAddOns([]);
+        }
+      });
+  }, [open, stayId]);
 
   const [roomSelections, setRoomSelections] = useState<RoomSelection[]>(() =>
     preselectedRooms || roomCategories.map((r) => ({
@@ -234,8 +246,8 @@ const BookingFormModal = ({ open, onOpenChange, stayName, stayId, roomCategories
   }, [roomSelections, dateRanges, roomCategories]);
 
   const addOnTotal = useMemo(() => {
-    return ADD_ONS.filter((a) => selectedAddOns.includes(a.label)).reduce((sum, a) => sum + a.price, 0);
-  }, [selectedAddOns]);
+    return dbAddOns.filter((a) => selectedAddOns.includes(a.label)).reduce((sum, a) => sum + a.price, 0);
+  }, [selectedAddOns, dbAddOns]);
 
   const subtotal = roomTotal + addOnTotal;
 
@@ -377,7 +389,7 @@ const BookingFormModal = ({ open, onOpenChange, stayName, stayId, roomCategories
     setBookingId(newBookingId);
 
     const roomsJson = selectedRooms.map((r) => ({ name: r.name, count: r.count, price: r.price }));
-    const addonsJson = ADD_ONS.filter((a) => selectedAddOns.includes(a.label)).map((a) => ({ label: a.label, price: a.price }));
+    const addonsJson = dbAddOns.filter((a) => selectedAddOns.includes(a.label)).map((a) => ({ label: a.label, price: a.price }));
     const firstRange = dateRanges[0];
 
     const fullPhone = phoneCountryCode + phone;
@@ -440,7 +452,7 @@ const BookingFormModal = ({ open, onOpenChange, stayName, stayId, roomCategories
     }
 
     const roomLines = selectedRooms.map((r) => `${r.name} — ${r.count} room(s)`).join("\n");
-    const addOnLines = ADD_ONS.filter((a) => selectedAddOns.includes(a.label))
+    const addOnLines = dbAddOns.filter((a) => selectedAddOns.includes(a.label))
       .map((a) => `${a.label} — ₹${a.price}`)
       .join("\n");
 
@@ -949,9 +961,9 @@ ${addOnLines ? `*Add-ons:*\n${addOnLines}\n` : ""}${appliedCoupon ? `🏷 *Coupo
             )}
           </div>
 
-          {/* Add-ons — only visible after dates selected */}
+          {/* Add-ons — only visible after dates selected and if add-ons exist */}
           <AnimatePresence>
-            {hasDates && (
+            {hasDates && dbAddOns.length > 0 && (
               <motion.div
                 key="addons-section"
                 initial={{ opacity: 0, height: 0 }}
@@ -962,7 +974,7 @@ ${addOnLines ? `*Add-ons:*\n${addOnLines}\n` : ""}${appliedCoupon ? `🏷 *Coupo
               >
                 <Label className="text-xs font-semibold text-foreground">Add-ons</Label>
                 <div className="space-y-2">
-                  {ADD_ONS.map((addon) => (
+                  {dbAddOns.map((addon) => (
                     <label
                       key={addon.label}
                       className={cn(
@@ -1100,7 +1112,7 @@ ${addOnLines ? `*Add-ons:*\n${addOnLines}\n` : ""}${appliedCoupon ? `🏷 *Coupo
                 {addOnTotal > 0 && (
                   <div className="space-y-1.5 text-sm border-t border-border pt-3">
                     <span className="text-muted-foreground font-medium">Add-ons</span>
-                    {ADD_ONS.filter((a) => selectedAddOns.includes(a.label)).map((a) => (
+                    {dbAddOns.filter((a) => selectedAddOns.includes(a.label)).map((a) => (
                       <div key={a.label} className="flex justify-between">
                         <span className="text-muted-foreground">{a.label}</span>
                         <span className="text-foreground">₹{a.price.toLocaleString()}</span>

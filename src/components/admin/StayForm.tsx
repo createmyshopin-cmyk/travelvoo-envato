@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { compressImage } from "@/lib/compressImage";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, GripVertical, Play, MapPin, Image, Star, Film, Navigation, Wifi, Waves, UtensilsCrossed, Car, TreePine, Flame, Coffee, Dumbbell, Wind, Tv, ShowerHead, Mountain, Tent, Dog, Baby, Sparkles, Music, Gamepad2, BookOpen, Shirt, Phone, ShieldCheck, Clock, Zap, Check, Search, Upload, Loader2, BedDouble, Users, Pencil, ImagePlus, ChevronLeft, ChevronRight, Save } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Trash2, GripVertical, Play, MapPin, Image, Star, Film, Navigation, Wifi, Waves, UtensilsCrossed, Car, TreePine, Flame, Coffee, Dumbbell, Wind, Tv, ShowerHead, Mountain, Tent, Dog, Baby, Sparkles, Music, Gamepad2, BookOpen, Shirt, Phone, ShieldCheck, Clock, Zap, Check, Search, Upload, Loader2, BedDouble, Users, Pencil, ImagePlus, ChevronLeft, ChevronRight, Save, Package } from "lucide-react";
 import { SortablePhotoGrid } from "./SortablePhotoGrid";
 
 const ALL_AMENITIES = [
@@ -64,6 +65,8 @@ interface ReelItem { id?: string; title: string; thumbnail: string; url: string;
 interface NearbyItem { id?: string; name: string; image: string; distance: string; }
 interface ReviewItem { id?: string; guest_name: string; rating: number; comment: string; photos: string[]; }
 
+interface AddonItem { id?: string; name: string; price: number; optional: boolean; }
+
 interface RoomCategoryItem {
   id?: string;
   name: string;
@@ -99,7 +102,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
   const [savingDraft, setSavingDraft] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
 
-  const TAB_ORDER = ["basic", "photos", "rooms", "reels", "nearby", "reviews", "seo"] as const;
+  const TAB_ORDER = ["basic", "photos", "rooms", "addons", "reels", "nearby", "reviews", "seo"] as const;
   const tabIdx = TAB_ORDER.indexOf(activeTab as typeof TAB_ORDER[number]);
   const isFirstTab = tabIdx === 0;
   const isLastTab = tabIdx === TAB_ORDER.length - 1;
@@ -137,6 +140,10 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
   const [roomPhotoUploading, setRoomPhotoUploading] = useState(false);
   const roomPhotoRef = useRef<HTMLInputElement>(null);
 
+  // Add-ons
+  const [addons, setAddons] = useState<AddonItem[]>([]);
+  const [deletedAddonIds, setDeletedAddonIds] = useState<string[]>([]);
+
   // SEO
   const [seo, setSeo] = useState({
     seo_title: "",
@@ -173,6 +180,8 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
       setEditingRoomIdx(null);
       setRoomFormOpen(false);
       setDeletedRoomIds([]);
+      setAddons([]);
+      setDeletedAddonIds([]);
       fetchRelatedData(stay.id);
     } else {
       setForm({ name: "", location: "", description: "", category: "", price: 0, original_price: 0, status: "active" });
@@ -189,16 +198,19 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
       setEditingRoomIdx(null);
       setRoomFormOpen(false);
       setDeletedRoomIds([]);
+      setAddons([]);
+      setDeletedAddonIds([]);
     }
     setActiveTab("basic");
   }, [stay, open]);
 
   const fetchRelatedData = async (stayId: string) => {
-    const [reelsRes, nearbyRes, reviewsRes, roomsRes] = await Promise.all([
+    const [reelsRes, nearbyRes, reviewsRes, roomsRes, addonsRes] = await Promise.all([
       supabase.from("stay_reels").select("*").eq("stay_id", stayId).order("sort_order"),
       supabase.from("nearby_destinations").select("*").eq("stay_id", stayId).order("sort_order"),
       supabase.from("reviews").select("*").eq("stay_id", stayId).order("created_at", { ascending: false }),
       supabase.from("room_categories").select("*").eq("stay_id", stayId).order("name"),
+      (supabase.from("stay_addons") as any).select("*").eq("stay_id", stayId).order("sort_order"),
     ]);
     if (reelsRes.data) setReels(reelsRes.data.map(r => ({ id: r.id, title: r.title, thumbnail: r.thumbnail, url: r.url, platform: r.platform })));
     if (nearbyRes.data) setNearby(nearbyRes.data.map(n => ({ id: n.id, name: n.name, image: n.image, distance: n.distance })));
@@ -207,6 +219,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
       id: r.id, name: r.name, max_guests: r.max_guests, available: r.available,
       amenities: r.amenities || [], price: r.price, original_price: r.original_price, images: r.images || [],
     })));
+    if (addonsRes.data) setAddons(addonsRes.data.map((a: any) => ({ id: a.id, name: a.name, price: a.price, optional: a.optional })));
   };
 
   const validateBasic = () => {
@@ -275,6 +288,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
       await saveNearby(savedStayId);
       await saveNewReviews(savedStayId);
       await saveRoomCategories(savedStayId);
+      await saveAddons(savedStayId);
     }
 
     toast({
@@ -339,6 +353,21 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
         await supabase.from("room_categories").update(payload).eq("id", room.id);
       } else {
         await supabase.from("room_categories").insert([payload]);
+      }
+    }
+  };
+
+  const saveAddons = async (stayId: string) => {
+    for (const id of deletedAddonIds) {
+      await (supabase.from("stay_addons") as any).delete().eq("id", id);
+    }
+    for (let i = 0; i < addons.length; i++) {
+      const addon = addons[i];
+      const payload = { stay_id: stayId, name: addon.name.trim(), price: addon.price, optional: addon.optional, sort_order: i };
+      if (addon.id) {
+        await (supabase.from("stay_addons") as any).update(payload).eq("id", addon.id);
+      } else {
+        await (supabase.from("stay_addons") as any).insert([payload]);
       }
     }
   };
@@ -426,10 +455,11 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
         <form onSubmit={handleSubmit}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="px-6 pt-2">
-              <TabsList className="w-full grid grid-cols-7 h-9">
+              <TabsList className="w-full grid grid-cols-8 h-9">
                 <TabsTrigger value="basic" className="text-xs gap-1"><GripVertical className="h-3 w-3 hidden sm:block" />Basic</TabsTrigger>
                 <TabsTrigger value="photos" className="text-xs gap-1"><Image className="h-3 w-3 hidden sm:block" />Photos</TabsTrigger>
                 <TabsTrigger value="rooms" className="text-xs gap-1"><BedDouble className="h-3 w-3 hidden sm:block" />Rooms</TabsTrigger>
+                <TabsTrigger value="addons" className="text-xs gap-1"><Package className="h-3 w-3 hidden sm:block" />Add-ons</TabsTrigger>
                 <TabsTrigger value="reels" className="text-xs gap-1"><Film className="h-3 w-3 hidden sm:block" />Reels</TabsTrigger>
                 <TabsTrigger value="nearby" className="text-xs gap-1"><Navigation className="h-3 w-3 hidden sm:block" />Nearby</TabsTrigger>
                 <TabsTrigger value="reviews" className="text-xs gap-1"><Star className="h-3 w-3 hidden sm:block" />Reviews</TabsTrigger>
@@ -867,6 +897,72 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
                       Cancel
                     </Button>
                   </div>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* ADD-ONS TAB */}
+            <TabsContent value="addons" className="px-6 pb-2 space-y-4 mt-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">Add bookable extras shown in the booking form</p>
+                <button
+                  type="button"
+                  onClick={() => setAddons(prev => [...prev, { name: "", price: 0, optional: true }])}
+                  className="inline-flex items-center gap-1 text-xs font-semibold bg-primary text-primary-foreground px-3 py-1.5 rounded-lg"
+                >
+                  <Plus className="h-3.5 w-3.5" />Add
+                </button>
+              </div>
+              {addons.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+                  <Package className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">No add-ons yet</p>
+                  <p className="text-xs mt-1">e.g. Dinner, Airport Pickup, Local Guide</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {addons.map((addon, i) => (
+                    <div key={i} className="border rounded-xl p-3 space-y-2 bg-muted/20">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={addon.name}
+                          onChange={(e) => setAddons(prev => prev.map((a, idx) => idx === i ? { ...a, name: e.target.value } : a))}
+                          placeholder="Add-on name (e.g. Dinner)"
+                          className="flex-1 text-sm bg-background border border-input rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
+                        <input
+                          type="number"
+                          value={addon.price}
+                          min={0}
+                          onChange={(e) => setAddons(prev => prev.map((a, idx) => idx === i ? { ...a, price: Number(e.target.value) } : a))}
+                          placeholder="₹ Price"
+                          className="w-24 text-sm bg-background border border-input rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const id = addons[i].id;
+                            if (id) setDeletedAddonIds(prev => [...prev, id]);
+                            setAddons(prev => prev.filter((_, idx) => idx !== i));
+                          }}
+                          className="text-destructive hover:text-destructive/80"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={addon.optional}
+                          onCheckedChange={(v) => setAddons(prev => prev.map((a, idx) => idx === i ? { ...a, optional: v } : a))}
+                          id={`addon-optional-${i}`}
+                        />
+                        <label htmlFor={`addon-optional-${i}`} className="text-xs text-muted-foreground cursor-pointer">
+                          {addon.optional ? "Optional (guest can choose)" : "Mandatory (always included)"}
+                        </label>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </TabsContent>

@@ -94,7 +94,5 @@ export function NewBookingPopup({ booking, onClose }: NewBookingPopupProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      )}
-    </AnimatePresence>
   );
 }
