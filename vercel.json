@@ -1,6 +1,17 @@
 {
   "rewrites": [
-    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+    {
+      "source": "/stay/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(whatsapp|facebookexternalhit|facebot|twitterbot|telegrambot|linkedinbot|slackbot|discordbot|pinterestbot|googlebot|bingbot|yandex).*"
+        }
+      ],
+      "destination": "/api/stay/:id"
+    },
+    { "source": "/((?!assets/|api/).*)", "destination": "/index.html" }
   ],
   "headers": [
     {

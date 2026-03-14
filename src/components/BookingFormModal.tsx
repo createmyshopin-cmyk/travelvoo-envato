@@ -347,12 +347,7 @@ const BookingFormModal = ({ open, onOpenChange, stayName, stayId, roomCategories
 
   const handleSubmit = async () => {
     setSubmitError(null);
-    if (!validate()) {
-      setTimeout(() => {
-        formContainerRef.current?.querySelector("[data-validation-error]")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 0);
-      return;
-    }
+    if (!validate()) return;
     setSubmitting(true);
 
     // Server-side overlap + cooldown check for each date range
@@ -1132,21 +1127,6 @@ ${addOnLines ? `*Add-ons:*\n${addOnLines}\n` : ""}${appliedCoupon ? `🏷 *Coupo
           {errors.dates && (
             <div className="px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
               <p className="text-xs font-medium text-red-700 dark:text-red-400">{errors.dates}</p>
-            </div>
-          )}
-
-          {/* Validation summary & Submit error - always visible near button */}
-          {(Object.keys(errors).length > 0 || submitError) && (
-            <div
-              data-validation-error
-              className="px-3 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 space-y-1"
-            >
-              {submitError && <p className="text-xs font-medium text-red-700 dark:text-red-400">{submitError}</p>}
-              {Object.keys(errors).length > 0 && !submitError && (
-                <p className="text-xs font-medium text-red-700 dark:text-red-400">
-                  Please fix the errors above: {Object.values(errors).join(" ")}
-                </p>
-              )}
             </div>
           )}
 

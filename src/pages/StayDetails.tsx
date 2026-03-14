@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { useStayDetail, useStays } from "@/hooks/useStays";
 import { supabase } from "@/integrations/supabase/client";
 import { useDocumentHead } from "@/hooks/useDocumentHead";
+import { getOgImageUrl } from "@/lib/ogImage";
 import { useBranding } from "@/context/BrandingContext";
 import { JsonLd } from "@/components/seo/JsonLd";
 
@@ -80,7 +81,8 @@ const StayDetails = () => {
 
   const seoTitle = stay?.seoTitle || (stay ? `${stay.name} | ${siteName}` : "");
   const seoDescription = stay?.seoDescription || (stay?.description?.slice(0, 155) ?? "");
-  const ogImage = stay?.ogImageUrl || stay?.images?.[0];
+  const rawOgImage = stay?.ogImageUrl || stay?.images?.[0];
+  const ogImage = getOgImageUrl(rawOgImage, typeof window !== "undefined" ? window.location.origin : undefined);
 
   useDocumentHead(
     stay
