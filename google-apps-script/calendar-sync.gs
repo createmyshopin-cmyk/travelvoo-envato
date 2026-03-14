@@ -128,10 +128,97 @@ function setEventProps(event, stayId, dateStr) {
   event.setTag("date", dateStr);
 }
 
-// ── Optional: Time-Driven Auto-Sync ──────────────────────────────────────────
-// If you want automatic sync every hour without needing to press the button:
-//   1. Go to Triggers → Add Trigger → Choose function: autoSync → Time-driven → Hour timer → Every hour
-//   2. Add SUPABASE_URL and SUPABASE_ANON_KEY to Script Properties
+// ── Reverse Sync: Google Calendar → Supabase ─────────────────────────────────
+// Fires automatically when any event in the calendar is created/edited/deleted.
+// Setup:
+//   Triggers → Add Trigger → Function: onCalendarChange
+//   Event source: From calendar → Calendar updated → select your calendar
+
+function onCalendarChange() {
+  var props = PropertiesService.getScriptProperties();
+  var supabaseUrl = props.getProperty("SUPABASE_URL");
+  var supabaseKey = props.getProperty("SUPABASE_ANON_KEY");
+  var calendarId = props.getProperty("CALENDAR_ID");
+  if (!supabaseUrl || !supabaseKey || !calendarId) return;
+
+  var cal = CalendarApp.getCalendarById(calendarId);
+  if (!cal) return;
+
+  // Scan events from today up to 2 years ahead
+  var now = new Date();
+  var future = new Date(now.getFullYear() + 2, now.getMonth(), now.getDate());
+  var events = cal.getEvents(now, future);
+
+  for (var i = 0; i < events.length; i++) {
+    var event = events[i];
+    var stayId = null;
+    var dateStr = null;
+
+    try {
+      stayId = event.getTag("stay_id");
+      dateStr = event.getTag("date");
+    } catch (e) { continue; }
+
+    if (!stayId || !dateStr) continue;
+
+    var title = event.getTitle();
+    var isBlocked = title.indexOf("BLOCKED") !== -1;
+
+    // Parse price from title: "🏡 Stay Name — ₹2,500"
+    var price = 0;
+    var priceMatch = title.match(/₹([\d,]+)/);
+    if (priceMatch) {
+      price = parseInt(priceMatch[1].replace(/,/g, ""), 10);
+    }
+
+    // Check if entry exists in Supabase
+    var checkResp = UrlFetchApp.fetch(
+      supabaseUrl + "/rest/v1/calendar_pricing?stay_id=eq." + stayId + "&date=eq." + dateStr + "&select=id,price,is_blocked",
+      { headers: { "apikey": supabaseKey, "Authorization": "Bearer " + supabaseKey } }
+    );
+    var existing = JSON.parse(checkResp.getContentText());
+
+    var body = JSON.stringify({ price: price, is_blocked: isBlocked });
+
+    if (existing && existing.length > 0) {
+      // Skip if nothing changed
+      if (existing[0].price === price && existing[0].is_blocked === isBlocked) continue;
+      // PATCH existing row
+      UrlFetchApp.fetch(
+        supabaseUrl + "/rest/v1/calendar_pricing?stay_id=eq." + stayId + "&date=eq." + dateStr,
+        {
+          method: "PATCH",
+          headers: {
+            "apikey": supabaseKey,
+            "Authorization": "Bearer " + supabaseKey,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+          },
+          payload: body,
+        }
+      );
+    } else if (!isBlocked && price > 0) {
+      // POST new row only if it has a valid price
+      UrlFetchApp.fetch(
+        supabaseUrl + "/rest/v1/calendar_pricing",
+        {
+          method: "POST",
+          headers: {
+            "apikey": supabaseKey,
+            "Authorization": "Bearer " + supabaseKey,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+          },
+          payload: JSON.stringify({ stay_id: stayId, date: dateStr, price: price, original_price: price, is_blocked: false, available: 1, min_nights: 1 }),
+        }
+      );
+    }
+  }
+}
+
+// ── Optional: Time-Driven Auto-Sync (Admin → Google Calendar) ────────────────
+// If you want automatic push every hour without pressing the button:
+//   Triggers → Add Trigger → Function: autoSync → Time-driven → Hour timer → Every hour
 
 function autoSync() {
   var props = PropertiesService.getScriptProperties();
