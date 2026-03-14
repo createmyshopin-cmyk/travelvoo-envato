@@ -169,6 +169,7 @@ const SaasAdminTenants = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-10">#</TableHead>
+                    <TableHead className="w-28">Tenant ID</TableHead>
                     <TableHead>Tenant</TableHead>
                     <TableHead>Owner</TableHead>
                     <TableHead>Email</TableHead>
@@ -189,6 +190,7 @@ const SaasAdminTenants = () => {
                     return (
                       <TableRow key={t.id}>
                         <TableCell className="text-muted-foreground text-xs">{(page - 1) * PAGE_SIZE + idx + 1}</TableCell>
+                        <TableCell className="text-xs font-mono text-muted-foreground select-all" title={t.id}>{t.id.slice(0, 8)}…</TableCell>
                         <TableCell className="font-medium">{t.tenant_name}</TableCell>
                         <TableCell className="text-sm">{t.owner_name || "—"}</TableCell>
                         <TableCell className="text-xs">{t.email || "—"}</TableCell>
