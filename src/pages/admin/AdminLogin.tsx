@@ -80,9 +80,6 @@ export default function AdminLogin() {
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-          <p className="text-center text-xs text-muted-foreground mt-4">
-            No account yet? <a href="/admin/create" className="text-primary hover:underline">Create admin</a>
-          </p>
         </CardContent>
       </Card>
     </div>
