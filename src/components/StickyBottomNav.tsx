@@ -136,7 +136,11 @@ const StickyBottomNav = () => {
   const handleNavClick = (tab: string) => {
     setActiveTab(tab);
     if (tab === "home") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (location.pathname !== "/") {
+        navigate("/", { replace: true });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     } else if (tab === "explore") {
       navigate("/stays");
     } else if (tab === "wishlist") {
