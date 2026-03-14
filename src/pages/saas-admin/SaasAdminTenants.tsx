@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { RefreshCw, Plus, Eye, Building2, CreditCard, RotateCcw, ShieldOff, CalendarPlus, Globe, Zap, Check, X, Lock } from "lucide-react";
+import { RefreshCw, Plus, Eye, Building2, CreditCard, RotateCcw, ShieldOff, CalendarPlus, Globe, Zap, Check, X, Lock, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { initiateRazorpayCheckout } from "@/lib/razorpay";
 import { format } from "date-fns";
 
@@ -38,6 +39,7 @@ const SaasAdminTenants = () => {
   const [page, setPage] = useState(1);
   const [viewTenant, setViewTenant] = useState<Tenant | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [deleteTenantId, setDeleteTenantId] = useState<string | null>(null);
   const [form, setForm] = useState({ tenant_name: "", owner_name: "", email: "", phone: "", domain: "", plan_id: "", password: "", confirmPassword: "" });
   const [subdomainSuffix, setSubdomainSuffix] = useState(".travelvoo.in");
   const [subdomainStatus, setSubdomainStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
@@ -243,6 +245,18 @@ const SaasAdminTenants = () => {
     toast({ title: "Domain force-verified" });
   };
 
+  const deleteTenant = async (id: string) => {
+    const { error } = await supabase.from("tenants").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Failed to delete tenant", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Tenant deleted" });
+    setDeleteTenantId(null);
+    setViewTenant(null);
+    fetchAll();
+  };
+
   const filtered = tenants.filter(t =>
     t.tenant_name.toLowerCase().includes(search.toLowerCase()) ||
     t.email.toLowerCase().includes(search.toLowerCase()) ||
@@ -320,7 +334,10 @@ const SaasAdminTenants = () => {
                         </TableCell>
                         <TableCell className="text-xs">{t.domain || "—"}</TableCell>
                         <TableCell>
-                          <Button size="sm" variant="ghost" onClick={() => setViewTenant(t)}><Eye className="w-4 h-4" /></Button>
+                          <div className="flex items-center gap-1">
+                            <Button size="sm" variant="ghost" onClick={() => setViewTenant(t)} title="View"><Eye className="w-4 h-4" /></Button>
+                            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDeleteTenantId(t.id)} title="Delete"><Trash2 className="w-4 h-4" /></Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -511,12 +528,32 @@ const SaasAdminTenants = () => {
                       <Zap className="w-3 h-3 mr-1" /> Reactivate
                     </Button>
                   )}
+                  <Button variant="outline" size="sm" className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={() => { setDeleteTenantId(viewTenant.id); setViewTenant(null); }}>
+                    <Trash2 className="w-3 h-3 mr-1" /> Delete Tenant
+                  </Button>
                 </div>
               </div>
             </div>
           </DialogContent>
         </Dialog>
       )}
+
+      <AlertDialog open={!!deleteTenantId} onOpenChange={(open) => !open && setDeleteTenantId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tenant?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the tenant and all related data (subscriptions, domains, usage). This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteTenantId && deleteTenant(deleteTenantId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
