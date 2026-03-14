@@ -16,6 +16,7 @@ import { format } from "date-fns";
 interface Plan { id: string; plan_name: string; price: number; max_stays: number; max_rooms: number; max_bookings_per_month: number; max_ai_search: number; }
 interface Tenant { id: string; tenant_name: string; owner_name: string; email: string; phone: string; domain: string; plan_id: string | null; status: string; created_at: string; }
 interface TenantUsage { tenant_id: string; stays_created: number; rooms_created: number; bookings_this_month: number; ai_search_count: number; storage_used: number; }
+interface Subscription { id: string; tenant_id: string; status: string; renewal_date: string | null; plan_id: string | null; }
 
 const statusVariant = (s: string) => {
   switch (s) { case "active": return "default" as const; case "trial": return "secondary" as const; case "expired": case "cancelled": case "suspended": return "destructive" as const; default: return "outline" as const; }
@@ -23,12 +24,16 @@ const statusVariant = (s: string) => {
 
 const limitLabel = (v: number) => v === -1 ? "Unlimited" : v.toString();
 
+const PAGE_SIZE = 25;
+
 const SaasAdminTenants = () => {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [usages, setUsages] = useState<TenantUsage[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [viewTenant, setViewTenant] = useState<Tenant | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ tenant_name: "", owner_name: "", email: "", phone: "", domain: "", plan_id: "" });
@@ -37,24 +42,43 @@ const SaasAdminTenants = () => {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [t, p, u] = await Promise.all([
+    const [t, p, u, s] = await Promise.all([
       supabase.from("tenants").select("*").order("created_at", { ascending: false }),
       supabase.from("plans").select("*").order("price"),
       supabase.from("tenant_usage").select("*"),
+      supabase.from("subscriptions").select("id, tenant_id, status, renewal_date, plan_id").order("created_at", { ascending: false }),
     ]);
     if (t.data) setTenants(t.data as Tenant[]);
     if (p.data) setPlans(p.data as Plan[]);
     if (u.data) setUsages(u.data as TenantUsage[]);
+    if (s.data) setSubscriptions(s.data as Subscription[]);
     setLoading(false);
   };
 
   const getPlan = (id: string | null) => plans.find(p => p.id === id);
   const getUsage = (id: string) => usages.find(u => u.tenant_id === id);
+  // Latest subscription per tenant
+  const getSub = (tenantId: string) => subscriptions.find(s => s.tenant_id === tenantId);
 
   const addTenant = async () => {
     if (!form.tenant_name) return;
-    const { error } = await supabase.from("tenants").insert({ ...form, plan_id: form.plan_id || null, status: "trial" });
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    const { data: newTenant, error } = await supabase
+      .from("tenants")
+      .insert({ ...form, plan_id: form.plan_id || null, status: "trial" })
+      .select()
+      .single();
+    if (error || !newTenant) { toast({ title: "Error", description: error?.message, variant: "destructive" }); return; }
+
+    // Create initial subscription record (trial, 14 days)
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 14);
+    await supabase.from("subscriptions").insert({
+      tenant_id: newTenant.id,
+      plan_id: form.plan_id || null,
+      status: "trial",
+      renewal_date: trialEnd.toISOString().split("T")[0],
+    });
+
     toast({ title: "Tenant created" });
     setShowAdd(false);
     setForm({ tenant_name: "", owner_name: "", email: "", phone: "", domain: "", plan_id: "" });
@@ -118,6 +142,9 @@ const SaasAdminTenants = () => {
     t.owner_name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   if (loading) return <div className="flex items-center justify-center py-20"><RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
 
   return (
@@ -125,12 +152,12 @@ const SaasAdminTenants = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2"><Building2 className="w-6 h-6 text-primary" /> Tenants</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage all platform tenants</p>
+          <p className="text-sm text-muted-foreground mt-1">Manage all platform tenants · {filtered.length} total</p>
         </div>
         <Button onClick={() => setShowAdd(true)}><Plus className="w-4 h-4 mr-1" /> Add Tenant</Button>
       </div>
 
-      <Input placeholder="Search tenants..." value={search} onChange={e => setSearch(e.target.value)} className="max-w-sm" />
+      <Input placeholder="Search tenants..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="max-w-sm" />
 
       {filtered.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">No tenants found</CardContent></Card>
@@ -141,41 +168,72 @@ const SaasAdminTenants = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">#</TableHead>
                     <TableHead>Tenant</TableHead>
                     <TableHead>Owner</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Plan</TableHead>
+                    <TableHead>Subscribed</TableHead>
+                    <TableHead>Expiry</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Domain</TableHead>
-                    <TableHead>Created</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map(t => (
-                    <TableRow key={t.id}>
-                      <TableCell className="font-medium">{t.tenant_name}</TableCell>
-                      <TableCell>{t.owner_name || "—"}</TableCell>
-                      <TableCell className="text-xs">{t.email || "—"}</TableCell>
-                      <TableCell>{getPlan(t.plan_id)?.plan_name || "—"}</TableCell>
-                      <TableCell>
-                        <Select value={t.status} onValueChange={v => updateStatus(t.id, v)}>
-                          <SelectTrigger className="w-[120px] h-8"><Badge variant={statusVariant(t.status)}>{t.status}</Badge></SelectTrigger>
-                          <SelectContent>
-                            {["trial", "active", "expired", "suspended", "cancelled"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-xs">{t.domain || "—"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{format(new Date(t.created_at), "dd MMM yyyy")}</TableCell>
-                      <TableCell>
-                        <Button size="sm" variant="ghost" onClick={() => setViewTenant(t)}><Eye className="w-4 h-4" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {paginated.map((t, idx) => {
+                    const sub = getSub(t.id);
+                    const subPlan = getPlan(sub?.plan_id ?? t.plan_id);
+                    const expiryDate = sub?.renewal_date ? new Date(sub.renewal_date) : null;
+                    const isExpiredDate = expiryDate && expiryDate < new Date();
+                    return (
+                      <TableRow key={t.id}>
+                        <TableCell className="text-muted-foreground text-xs">{(page - 1) * PAGE_SIZE + idx + 1}</TableCell>
+                        <TableCell className="font-medium">{t.tenant_name}</TableCell>
+                        <TableCell className="text-sm">{t.owner_name || "—"}</TableCell>
+                        <TableCell className="text-xs">{t.email || "—"}</TableCell>
+                        <TableCell className="text-sm">{subPlan?.plan_name || getPlan(t.plan_id)?.plan_name || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{format(new Date(t.created_at), "dd MMM yyyy")}</TableCell>
+                        <TableCell className="text-xs">
+                          {expiryDate ? (
+                            <span className={isExpiredDate ? "text-destructive font-medium" : "text-muted-foreground"}>
+                              {format(expiryDate, "dd MMM yyyy")}
+                            </span>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Select value={t.status} onValueChange={v => updateStatus(t.id, v)}>
+                            <SelectTrigger className="w-[120px] h-8"><Badge variant={statusVariant(t.status)}>{t.status}</Badge></SelectTrigger>
+                            <SelectContent>
+                              {["trial", "active", "expired", "suspended", "cancelled"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-xs">{t.domain || "—"}</TableCell>
+                        <TableCell>
+                          <Button size="sm" variant="ghost" onClick={() => setViewTenant(t)}><Eye className="w-4 h-4" /></Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                    <Button key={p} size="sm" variant={p === page ? "default" : "outline"} onClick={() => setPage(p)} className="w-8 px-0">{p}</Button>
+                  ))}
+                  <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
