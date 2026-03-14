@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Stay Admin",
-    "slug": "stay-admin",
+    "slug": "stay-booking",
     "version": "1.0.0",
     "scheme": "stayadmin",
     "orientation": "portrait",
