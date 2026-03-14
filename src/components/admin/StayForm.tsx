@@ -113,6 +113,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
   const [form, setForm] = useState({
     name: "", location: "", description: "", category: "",
     price: 0, original_price: 0, status: "active",
+    max_adults: 20, max_children: 5, max_pets: 5,
   });
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [customAmenity, setCustomAmenity] = useState("");
@@ -164,6 +165,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
         name: stay.name || "", location: stay.location || "", description: stay.description || "",
         category: stay.category || "", price: stay.price || 0, original_price: stay.original_price || 0,
         status: stay.status || "active",
+        max_adults: stay.max_adults ?? 20, max_children: stay.max_children ?? 5, max_pets: stay.max_pets ?? 5,
       });
       setSelectedAmenities(stay.amenities || []);
       setPhotos(stay.images || []);
@@ -257,6 +259,9 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
       amenities: amenitiesArray,
       status,
       images: photos,
+      max_adults: form.max_adults,
+      max_children: form.max_children,
+      max_pets: form.max_pets,
       seo_title: seo.seo_title || null,
       seo_description: seo.seo_description || null,
       seo_keywords: seo.seo_keywords || null,
@@ -511,6 +516,23 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Original Price (₹)</label>
                   <Input type="number" value={form.original_price} onChange={(e) => setForm({ ...form, original_price: Number(e.target.value) })} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Guest Limits</label>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Max Adults</label>
+                    <Input type="number" min={1} max={100} value={form.max_adults} onChange={(e) => setForm({ ...form, max_adults: Number(e.target.value) })} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Max Children</label>
+                    <Input type="number" min={0} max={50} value={form.max_children} onChange={(e) => setForm({ ...form, max_children: Number(e.target.value) })} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Max Pets</label>
+                    <Input type="number" min={0} max={20} value={form.max_pets} onChange={(e) => setForm({ ...form, max_pets: Number(e.target.value) })} />
+                  </div>
                 </div>
               </div>
               <div className="space-y-3">

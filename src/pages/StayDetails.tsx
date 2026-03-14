@@ -564,6 +564,9 @@ const couponDiscount = bestCoupon ? bestCoupon.discount : 0;
           roomCategories={roomCategories}
           preselectedRooms={roomSelections}
           autoAppliedCoupon={bestCoupon ? { code: bestCoupon.code, discount: bestCoupon.discount } : null}
+          maxAdults={stay.maxAdults}
+          maxChildren={stay.maxChildren}
+          maxPets={stay.maxPets}
         />
       )}
     </div>

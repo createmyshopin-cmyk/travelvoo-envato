@@ -49,6 +49,9 @@ export interface Stay {
   status: string;
   tenantId: string | null;
   cooldownMinutes: number;
+  maxAdults: number;
+  maxChildren: number;
+  maxPets: number;
   seoTitle?: string | null;
   seoDescription?: string | null;
   seoKeywords?: string | null;

@@ -40,6 +40,9 @@ interface BookingFormModalProps {
   roomCategories: RoomCategory[];
   preselectedRooms?: RoomSelection[];
   autoAppliedCoupon?: { code: string; discount: number } | null;
+  maxAdults?: number;
+  maxChildren?: number;
+  maxPets?: number;
 }
 
 const generateBookingId = () => `#${Math.floor(1000 + Math.random() * 9000)}`;
@@ -65,8 +68,9 @@ const Stepper = ({ value, onChange, min = 0, max = 10, label }: { value: number;
   </div>
 );
 
-const BookingFormModal = ({ open, onOpenChange, stayName, stayId, roomCategories, preselectedRooms, autoAppliedCoupon }: BookingFormModalProps) => {
+const BookingFormModal = ({ open, onOpenChange, stayName, stayId, roomCategories: initialRoomCategories, preselectedRooms, autoAppliedCoupon, maxAdults = 20, maxChildren = 5, maxPets = 5 }: BookingFormModalProps) => {
   const { settings: siteSettings } = useSiteSettings();
+  const [roomCategories, setRoomCategories] = useState(initialRoomCategories);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_COUNTRY_CODE);
@@ -99,6 +103,26 @@ const BookingFormModal = ({ open, onOpenChange, stayName, stayId, roomCategories
 
   useEffect(() => {
     if (!open || !stayId) return;
+    // Fetch fresh room categories (for latest available count set by admin)
+    supabase
+      .from("room_categories")
+      .select("id, name, images, max_guests, available, amenities, price, original_price")
+      .eq("stay_id", stayId)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setRoomCategories(data.map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            images: r.images || [],
+            maxGuests: r.max_guests,
+            available: r.available,
+            amenities: r.amenities || [],
+            price: r.price,
+            originalPrice: r.original_price,
+          })));
+        }
+      });
+    // Fetch add-ons
     (supabase.from("stay_addons") as any)
       .select("id, name, price, optional")
       .eq("stay_id", stayId)
@@ -204,7 +228,7 @@ const BookingFormModal = ({ open, onOpenChange, stayName, stayId, roomCategories
   const updateRoomCount = (index: number, count: number) => {
     setRoomSelections((prev) =>
       prev.map((r, i) =>
-        i === index ? { ...r, count: Math.max(0, Math.min(10, count)), selected: count > 0 } : r
+        i === index ? { ...r, count: Math.max(0, Math.min(roomCategories[index]?.available ?? 10, count)), selected: count > 0 } : r
       )
     );
   };
@@ -714,8 +738,8 @@ ${addOnLines ? `*Add-ons:*\n${addOnLines}\n` : ""}${appliedCoupon ? `🏷 *Coupo
               >
                 <Label className="text-xs font-semibold text-foreground">Guests</Label>
                 <div className="space-y-3 bg-muted rounded-xl p-3">
-                  <Stepper value={guests} onChange={setGuests} min={1} max={20} label="Adults" />
-                  <Stepper value={children} onChange={setChildren} min={0} max={5} label="Children" />
+                  <Stepper value={guests} onChange={setGuests} min={1} max={maxAdults} label="Adults" />
+                  <Stepper value={children} onChange={setChildren} min={0} max={maxChildren} label="Children" />
                 </div>
               </motion.div>
             )}
@@ -725,7 +749,7 @@ ${addOnLines ? `*Add-ons:*\n${addOnLines}\n` : ""}${appliedCoupon ? `🏷 *Coupo
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-foreground">Pets</Label>
             <div className="bg-muted rounded-xl p-3">
-              <Stepper value={pets} onChange={setPets} min={0} max={5} label="Pets" />
+              <Stepper value={pets} onChange={setPets} min={0} max={maxPets} label="Pets" />
               <AnimatePresence>
                 {pets > 0 && (
                   <motion.p
@@ -784,7 +808,7 @@ ${addOnLines ? `*Add-ons:*\n${addOnLines}\n` : ""}${appliedCoupon ? `🏷 *Coupo
                           value={room.count}
                           onChange={(c) => updateRoomCount(index, c)}
                           min={1}
-                          max={10}
+                          max={roomCategories[index]?.available ?? 10}
                           label="Rooms"
                         />
                       </motion.div>
