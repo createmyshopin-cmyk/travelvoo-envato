@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
-import { RefreshCw, Globe, Plus, Trash2, CheckCircle2, XCircle, Shield, AlertCircle, Zap, Lock, Filter, Upload, Loader2 } from "lucide-react";
+import { RefreshCw, Globe, Plus, Trash2, CheckCircle2, XCircle, Shield, AlertCircle, Zap, Lock, Filter } from "lucide-react";
 import { format } from "date-fns";
 
 interface Domain {
@@ -65,7 +65,6 @@ const SaasAdminDomains = () => {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [platformConfig, setPlatformConfig] = useState<PlatformConfig>({ autoSSL: false, autoApprove: false });
   const [configLoading, setConfigLoading] = useState(false);
-  const [registeringVercel, setRegisteringVercel] = useState<string | null>(null);
 
   useEffect(() => { fetchAll(); fetchPlatformConfig(); }, []);
 
@@ -166,19 +165,6 @@ const SaasAdminDomains = () => {
       description: nowVerified && platformConfig.autoSSL ? "SSL automatically activated" : undefined,
     });
     fetchAll();
-  };
-
-  const registerInVercel = async (d: Domain) => {
-    const domain = d.custom_domain;
-    if (!domain) return;
-    setRegisteringVercel(d.id);
-    const { data, error } = await supabase.functions.invoke("add-domain-to-vercel", { body: { domain } });
-    if (error || !data?.success) {
-      toast({ title: "Vercel registration failed", description: error?.message ?? "Check VERCEL_TOKEN secret", variant: "destructive" });
-    } else {
-      toast({ title: data.vercel_configured ? "Registered in Vercel" : "Skipped (no Vercel token)", description: domain });
-    }
-    setRegisteringVercel(null);
   };
 
   const deleteDomain = async (id: string) => {
@@ -356,19 +342,9 @@ const SaasAdminDomains = () => {
                       <TableCell className="text-xs text-muted-foreground">{format(new Date(d.created_at), "dd MMM yyyy")}</TableCell>
                       <TableCell>
                         {d.custom_domain ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs gap-1"
-                            onClick={() => registerInVercel(d)}
-                            disabled={registeringVercel === d.id}
-                            title={`Register ${d.custom_domain} in Vercel project`}
-                          >
-                            {registeringVercel === d.id
-                              ? <Loader2 className="w-3 h-3 animate-spin" />
-                              : <Upload className="w-3 h-3" />}
-                            Vercel
-                          </Button>
+                          <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-300 bg-emerald-50">
+                            <CheckCircle2 className="w-3 h-3 mr-1" /> Vercel
+                          </Badge>
                         ) : (
                           <span className="text-xs text-muted-foreground">wildcard</span>
                         )}
