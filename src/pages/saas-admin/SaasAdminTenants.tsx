@@ -15,7 +15,7 @@ import { initiateRazorpayCheckout } from "@/lib/razorpay";
 import { format } from "date-fns";
 
 interface Plan { id: string; plan_name: string; price: number; max_stays: number; max_rooms: number; max_bookings_per_month: number; max_ai_search: number; }
-interface Tenant { id: string; tenant_name: string; owner_name: string; email: string; phone: string; domain: string; plan_id: string | null; status: string; created_at: string; }
+interface Tenant { id: string; tenant_name: string; owner_name: string; email: string; phone: string; domain: string; plan_id: string | null; status: string; created_at: string; user_id?: string | null; }
 interface TenantUsage { tenant_id: string; stays_created: number; rooms_created: number; bookings_this_month: number; ai_search_count: number; storage_used: number; }
 interface Subscription { id: string; tenant_id: string; status: string; renewal_date: string | null; plan_id: string | null; }
 
@@ -243,6 +243,39 @@ const SaasAdminTenants = () => {
   const forceDomainVerify = async (tenantId: string) => {
     await supabase.from("tenant_domains").update({ verified: true, ssl_status: "active" }).eq("tenant_id", tenantId);
     toast({ title: "Domain force-verified" });
+  };
+
+  const grantAdminAccess = async (tenant: Tenant) => {
+    if (tenant.user_id) {
+      const { error } = await supabase.from("user_roles").upsert(
+        { user_id: tenant.user_id, role: "admin" },
+        { onConflict: "user_id,role" }
+      );
+      if (error) {
+        toast({ title: "Failed to grant admin", description: error.message, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Admin access granted", description: "They can now sign in at /admin/login" });
+      return;
+    }
+    if (!tenant.email?.trim()) {
+      toast({ title: "No email", description: "Add an email to this tenant first, or create the account via Add Tenant with email+password.", variant: "destructive" });
+      return;
+    }
+    const { data, error } = await supabase.functions.invoke("grant-tenant-admin", {
+      body: { email: tenant.email.trim(), tenant_id: tenant.id },
+    });
+    if (error) {
+      toast({ title: "Failed to grant admin", description: error.message, variant: "destructive" });
+      return;
+    }
+    if (data?.error) {
+      toast({ title: "Failed to grant admin", description: data.error, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Admin access granted", description: "They can now sign in at /admin/login" });
+    setViewTenant(null);
+    fetchAll();
   };
 
   const deleteTenant = async (id: string) => {
@@ -483,6 +516,9 @@ const SaasAdminTenants = () => {
               <div className="border-t pt-4">
                 <Label className="text-xs text-muted-foreground uppercase tracking-wider">Admin Controls</Label>
                 <div className="grid grid-cols-2 gap-2 mt-2">
+                  <Button size="sm" variant="outline" onClick={() => grantAdminAccess(viewTenant)} title="Allow this tenant to sign in at /admin/login">
+                    <Lock className="w-3 h-3 mr-1" /> Grant Admin Access
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => extendTrial(viewTenant.id)}>
                     <CalendarPlus className="w-3 h-3 mr-1" /> Extend Trial
                   </Button>
