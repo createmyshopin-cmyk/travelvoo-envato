@@ -5,6 +5,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Returns next renewal date based on billing cycle
+function nextRenewalDate(from: Date, billingCycle: string): Date {
+  const d = new Date(from);
+  switch (billingCycle) {
+    case "yearly":    d.setFullYear(d.getFullYear() + 1); break;
+    case "6months":   d.setMonth(d.getMonth() + 6); break;
+    case "3months":   d.setMonth(d.getMonth() + 3); break;
+    case "monthly":
+    case "30days":    d.setDate(d.getDate() + 30); break;
+    case "14days":    d.setDate(d.getDate() + 14); break;
+    case "7days":     d.setDate(d.getDate() + 7); break;
+    case "3days":     d.setDate(d.getDate() + 3); break;
+    default:          d.setMonth(d.getMonth() + 1); break;
+  }
+  return d;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -24,7 +41,19 @@ Deno.serve(async (req) => {
 
     const today = new Date().toISOString().split("T")[0];
 
-    // Find subscriptions due for renewal today or overdue
+    // Auto-expire trial subscriptions past their renewal_date
+    const { data: expiredTrials } = await supabaseAdmin
+      .from("subscriptions")
+      .select("id, tenant_id")
+      .eq("status", "trial")
+      .lte("renewal_date", today);
+
+    for (const t of expiredTrials || []) {
+      await supabaseAdmin.from("subscriptions").update({ status: "expired" }).eq("id", t.id);
+      await supabaseAdmin.from("tenants").update({ status: "expired" }).eq("id", t.tenant_id);
+    }
+
+    // Find active subscriptions due for renewal today or overdue
     const { data: dueSubs, error: fetchErr } = await supabaseAdmin
       .from("subscriptions")
       .select("*, tenants:tenant_id(id, tenant_name, email, phone, plan_id, status)")
@@ -48,8 +77,7 @@ Deno.serve(async (req) => {
 
       if (!plan || plan.price <= 0) {
         // Free plan — just extend
-        const newRenewal = new Date();
-        newRenewal.setMonth(newRenewal.getMonth() + (sub.billing_cycle === "yearly" ? 12 : 1));
+        const newRenewal = nextRenewalDate(new Date(), plan?.billing_cycle || sub.billing_cycle || "monthly");
 
         // Handle scheduled downgrade
         const newPlanId = sub.scheduled_plan_id || sub.plan_id;
