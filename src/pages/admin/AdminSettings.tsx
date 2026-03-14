@@ -27,6 +27,9 @@ interface SiteSettings {
   sticky_menu_show_ai: boolean;
   sticky_menu_show_wishlist: boolean;
   sticky_menu_show_explore: boolean;
+  ga_id: string;
+  fb_pixel_id: string;
+  clarity_id: string;
 }
 
 interface TenantBranding {
@@ -78,7 +81,7 @@ const AdminSettings = () => {
 
     const { id, ...rest } = settings;
     const [{ error: settingsErr }, { error: brandingErr }] = await Promise.all([
-      supabase.from("site_settings").update({ ...rest, updated_at: new Date().toISOString() }).eq("id", id),
+      (supabase.from("site_settings") as any).update({ ...rest, updated_at: new Date().toISOString() }).eq("id", id),
       tenant ? supabase.from("tenants").update({
         logo_url: branding.logo_url,
         favicon_url: branding.favicon_url,
@@ -481,6 +484,52 @@ const AdminSettings = () => {
               <div>
                 <Label>YouTube</Label>
                 <Input value={settings.social_youtube} onChange={(e) => update("social_youtube", e.target.value)} className="mt-1" placeholder="https://youtube.com/..." />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Analytics & Tracking */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Globe className="w-4 h-4" /> Analytics &amp; Tracking
+            </CardTitle>
+            <CardDescription>
+              Scripts are injected only on public pages (landing, stay detail, category, booking). Admin pages are never tracked.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <Label>Google Analytics 4 — Measurement ID</Label>
+                <Input
+                  value={settings.ga_id || ""}
+                  onChange={(e) => update("ga_id", e.target.value)}
+                  className="mt-1 font-mono text-sm"
+                  placeholder="G-XXXXXXXXXX"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">Found in GA4 → Admin → Data Streams</p>
+              </div>
+              <div>
+                <Label>Facebook Pixel ID</Label>
+                <Input
+                  value={settings.fb_pixel_id || ""}
+                  onChange={(e) => update("fb_pixel_id", e.target.value)}
+                  className="mt-1 font-mono text-sm"
+                  placeholder="1234567890123456"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">Found in Meta Events Manager → Pixels</p>
+              </div>
+              <div>
+                <Label>Microsoft Clarity Project ID</Label>
+                <Input
+                  value={settings.clarity_id || ""}
+                  onChange={(e) => update("clarity_id", e.target.value)}
+                  className="mt-1 font-mono text-sm"
+                  placeholder="abcde12345"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">Found in Clarity → Settings → Overview</p>
               </div>
             </div>
           </CardContent>

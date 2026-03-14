@@ -9,6 +9,7 @@ import { TenantProvider } from "./context/TenantContext";
 import { BrandingProvider } from "./context/BrandingContext";
 import MaintenancePage from "./components/MaintenancePage";
 import { useSiteSettings } from "./hooks/useSiteSettings";
+import AnalyticsScripts from "./components/AnalyticsScripts";
 
 // ─── Public pages ────────────────────────────────────────────────────────────
 // Index is the landing page — kept eager so first paint has no waterfall
@@ -102,6 +103,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <AnalyticsScripts />
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<MaintenanceGate><Index /></MaintenanceGate>} />

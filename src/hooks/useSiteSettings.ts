@@ -19,6 +19,9 @@ interface SiteSettings {
   sticky_menu_show_wishlist: boolean;
   sticky_menu_show_explore: boolean;
   auto_generate_invoice: boolean;
+  ga_id: string;
+  fb_pixel_id: string;
+  clarity_id: string;
 }
 
 interface UseSiteSettingsReturn {
