@@ -63,7 +63,7 @@ serve(async (req) => {
 
     if (!authUser) {
       return new Response(
-        JSON.stringify({ error: "No account found with this email. Ask them to sign up first at /create-tenant" }),
+        JSON.stringify({ error: "No account found with this email. Ask them to sign up first at /create-account" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

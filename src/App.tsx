@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { WishlistProvider } from "./context/WishlistContext";
 import { TenantProvider } from "./context/TenantContext";
@@ -113,7 +113,8 @@ const App = () => (
               <Route path="/category/:slug" element={<MaintenanceGate><CategoryPage /></MaintenanceGate>} />
               <Route path="/wishlist" element={<MaintenanceGate><Wishlist /></MaintenanceGate>} />
               <Route path="/reels" element={<MaintenanceGate><ReelsPage /></MaintenanceGate>} />
-              <Route path="/create-tenant" element={<MaintenanceGate><CreateTenantSignup /></MaintenanceGate>} />
+              <Route path="/create-account" element={<MaintenanceGate><CreateTenantSignup /></MaintenanceGate>} />
+              <Route path="/create-tenant" element={<Navigate to="/create-account" replace />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/create" element={<AdminCreate />} />
               <Route path="/admin" element={<AdminLayout />}>

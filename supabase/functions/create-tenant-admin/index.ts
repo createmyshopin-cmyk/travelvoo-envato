@@ -165,7 +165,7 @@ serve(async (req) => {
     }
 
     const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 14);
+    trialEnd.setDate(trialEnd.getDate() + 3);
     await adminClient.from("subscriptions").insert({
       tenant_id: newTenant.id,
       plan_id: planId,

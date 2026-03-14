@@ -11,6 +11,12 @@ import { Building2, Mail, Lock, Check, X, MessageCircle } from "lucide-react";
 const slugifySubdomain = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/^-+|-+$/g, "");
 
+/** Extract subdomain suggestion from email: admin@greenleaf.com → greenleaf */
+const subdomainFromEmail = (email: string) => {
+  const local = email.split("@")[0]?.trim() || "";
+  return slugifySubdomain(local);
+};
+
 const CreateTenantSignup = () => {
   const [loading, setLoading] = useState(false);
   const [subdomainSuffix, setSubdomainSuffix] = useState(".travelvoo.in");
@@ -102,61 +108,26 @@ const CreateTenantSignup = () => {
 
     setLoading(true);
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data, error } = await supabase.functions.invoke("create-tenant-signup", {
+        body: {
+          companyName: form.companyName.trim(),
+          subdomain: slug,
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          whatsappNumber: phone || undefined,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
         email: form.email.trim().toLowerCase(),
         password: form.password,
-        options: { emailRedirectTo: window.location.origin },
       });
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("Signup failed");
-      const userId = authData.user.id;
+      if (signInErr) throw signInErr;
 
-      const { data: starterPlan } = await supabase
-        .from("plans")
-        .select("id")
-        .eq("status", "active")
-        .order("price", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      const { data: tenant, error: tenantError } = await supabase
-        .from("tenants")
-        .insert({
-          tenant_name: form.companyName.trim(),
-          owner_name: form.companyName.trim(),
-          email: form.email.trim().toLowerCase(),
-          phone: phone || form.email.trim(),
-          domain: slug,
-          status: "trial",
-          plan_id: starterPlan?.id || null,
-          user_id: userId,
-        })
-        .select()
-        .single();
-      if (tenantError) throw tenantError;
-
-      const { error: domainErr } = await supabase.from("tenant_domains").insert({
-        tenant_id: tenant.id,
-        subdomain: slug,
-      });
-      if (domainErr) throw domainErr;
-
-      if (starterPlan?.id) {
-        const renewal = new Date();
-        renewal.setDate(renewal.getDate() + 14);
-        await supabase.from("subscriptions").insert({
-          tenant_id: tenant.id,
-          plan_id: starterPlan.id,
-          status: "trial",
-          billing_cycle: "monthly",
-          renewal_date: renewal.toISOString().split("T")[0],
-        });
-      }
-
-      await supabase.from("tenant_usage").insert({ tenant_id: tenant.id });
-      await supabase.from("user_roles").insert({ user_id: userId, role: "admin" as any });
-
-      toast({ title: "Welcome aboard!", description: "Your 14-day trial has started. Check your email to verify." });
+      toast({ title: "Welcome aboard!", description: "Your account & 3-day trial are ready." });
       navigate("/admin/dashboard");
     } catch (err: any) {
       toast({ title: "Signup failed", description: err.message, variant: "destructive" });
@@ -225,7 +196,15 @@ const CreateTenantSignup = () => {
                 <Input
                   type="email"
                   value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  onChange={(e) => {
+                    const email = e.target.value;
+                    const suggested = subdomainFromEmail(email);
+                    setForm((prev) => ({
+                      ...prev,
+                      email,
+                      subdomain: prev.subdomain || suggested,
+                    }));
+                  }}
                   className="pl-9"
                   placeholder="admin@company.com"
                   required

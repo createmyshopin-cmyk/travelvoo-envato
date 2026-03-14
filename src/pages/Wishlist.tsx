@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Heart, Star, MapPin } from "lucide-react";
 import { useWishlist } from "@/context/WishlistContext";
+import { useTenant } from "@/context/TenantContext";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Stay } from "@/types/stay";
@@ -10,6 +11,7 @@ const fallbackImages = ["/assets/stay-1.jpg", "/assets/stay-2.jpg", "/assets/sta
 
 const Wishlist = () => {
   const navigate = useNavigate();
+  const { tenantId } = useTenant();
   const { wishlist, toggleWishlist } = useWishlist();
   const [wishedStays, setWishedStays] = useState<Stay[]>([]);
 
@@ -18,10 +20,10 @@ const Wishlist = () => {
       setWishedStays([]);
       return;
     }
-    supabase
-      .from("stays")
-      .select("*")
-      .in("id", wishlist)
+    let query = supabase.from("stays").select("*").in("id", wishlist);
+    if (tenantId) query = query.eq("tenant_id", tenantId);
+    else query = query.is("tenant_id", null);
+    query
       .then(({ data }) => {
         if (data) {
           setWishedStays(
@@ -45,7 +47,7 @@ const Wishlist = () => {
           );
         }
       });
-  }, [wishlist]);
+  }, [wishlist, tenantId]);
 
   return (
     <div className="min-h-screen bg-background max-w-lg mx-auto pb-10">

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/context/TenantContext";
 import type { Stay, RoomCategory, Review, Reel, NearbyDestination } from "@/types/stay";
 
-// Module-level cache so switching category tabs doesn't re-fetch already-loaded data
+// Module-level cache: key = "tenantId|category" so tenant subdomains get fresh empty data
 const staysCache = new Map<string, Stay[]>();
 
 // Fallback images when DB images are empty
@@ -72,7 +73,8 @@ const todayStr = () => {
 };
 
 export function useStays(category?: string) {
-  const cacheKey = category ?? "__all__";
+  const { tenantId } = useTenant();
+  const cacheKey = `${tenantId ?? "platform"}|${category ?? "__all__"}`;
   const [stays, setStays] = useState<Stay[]>(staysCache.get(cacheKey) ?? []);
   const [loading, setLoading] = useState(!staysCache.has(cacheKey));
   const [calendarPriceMap, setCalendarPriceMap] = useState<Record<string, number>>({});
@@ -87,6 +89,12 @@ export function useStays(category?: string) {
       .eq("status", "active")
       .order("created_at", { ascending: false });
 
+    // Filter by tenant: on tenant subdomain only show their stays (fresh accounts = empty)
+    if (tenantId) {
+      query = query.eq("tenant_id", tenantId);
+    } else {
+      query = query.is("tenant_id", null);
+    }
     if (category) {
       query = query.eq("category", category);
     }
@@ -98,7 +106,7 @@ export function useStays(category?: string) {
       setStays(mapped);
     }
     setLoading(false);
-  }, [cacheKey, category]);
+  }, [cacheKey, category, tenantId]);
 
   const fetchCalendarMinPrices = useCallback(async (stayIds: string[]) => {
     if (stayIds.length === 0) return;
@@ -169,6 +177,7 @@ export function useStays(category?: string) {
 }
 
 export function useStayDetail(stayId: string | undefined) {
+  const { tenantId } = useTenant();
   const [stay, setStay] = useState<Stay | null>(null);
   const [roomCategories, setRoomCategories] = useState<RoomCategory[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -189,26 +198,31 @@ export function useStayDetail(stayId: string | undefined) {
         .single();
 
       if (stayData) {
-        setStay(mapDbStay(stayData));
-
-        const [roomsRes, reviewsRes, reelsRes, nearbyRes] = await Promise.all([
-          supabase.from("room_categories").select("*").eq("stay_id", stayData.id),
-          supabase.from("reviews").select("*").eq("stay_id", stayData.id).eq("status", "approved").order("created_at", { ascending: false }),
-          supabase.from("stay_reels").select("*").eq("stay_id", stayData.id).order("sort_order"),
-          supabase.from("nearby_destinations").select("*").eq("stay_id", stayData.id).order("sort_order"),
-        ]);
-
-        if (roomsRes.data) setRoomCategories(roomsRes.data.map(mapDbRoom));
-        if (reviewsRes.data) setReviews(reviewsRes.data.map(mapDbReview));
-        if (reelsRes.data) setReels(reelsRes.data.map(r => ({ title: r.title, thumbnail: r.thumbnail, url: r.url, platform: r.platform as Reel["platform"] })));
-        if (nearbyRes.data) setNearbyDestinations(nearbyRes.data.map(n => ({ name: n.name, image: n.image, distance: n.distance })));
+        // On tenant subdomain, only show stays belonging to that tenant
+        if (tenantId && stayData.tenant_id !== tenantId) {
+          setStay(null);
+        } else if (!tenantId && stayData.tenant_id != null) {
+          setStay(null); // Platform site: hide tenant-specific stays
+        } else {
+          setStay(mapDbStay(stayData));
+          const [roomsRes, reviewsRes, reelsRes, nearbyRes] = await Promise.all([
+            supabase.from("room_categories").select("*").eq("stay_id", stayData.id),
+            supabase.from("reviews").select("*").eq("stay_id", stayData.id).eq("status", "approved").order("created_at", { ascending: false }),
+            supabase.from("stay_reels").select("*").eq("stay_id", stayData.id).order("sort_order"),
+            supabase.from("nearby_destinations").select("*").eq("stay_id", stayData.id).order("sort_order"),
+          ]);
+          if (roomsRes.data) setRoomCategories(roomsRes.data.map(mapDbRoom));
+          if (reviewsRes.data) setReviews(reviewsRes.data.map(mapDbReview));
+          if (reelsRes.data) setReels(reelsRes.data.map(r => ({ title: r.title, thumbnail: r.thumbnail, url: r.url, platform: r.platform as Reel["platform"] })));
+          if (nearbyRes.data) setNearbyDestinations(nearbyRes.data.map(n => ({ name: n.name, image: n.image, distance: n.distance })));
+        }
       }
 
       setLoading(false);
     };
 
     fetchAll();
-  }, [stayId]);
+  }, [stayId, tenantId]);
 
   return { stay, roomCategories, reviews, reels, nearbyDestinations, loading };
 }

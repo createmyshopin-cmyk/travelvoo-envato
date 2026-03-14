@@ -175,7 +175,7 @@ const SaasAdminTenants = () => {
     if (error || !newTenant) { toast({ title: "Error", description: error?.message, variant: "destructive" }); return; }
 
     const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 14);
+    trialEnd.setDate(trialEnd.getDate() + 3);
     await supabase.from("subscriptions").insert({
       tenant_id: newTenant.id,
       plan_id: planId,
@@ -227,7 +227,7 @@ const SaasAdminTenants = () => {
 
   const extendTrial = async (tenantId: string) => {
     const newRenewal = new Date();
-    newRenewal.setDate(newRenewal.getDate() + 14);
+    newRenewal.setDate(newRenewal.getDate() + 3);
     const { data: sub } = await supabase.from("subscriptions").select("id").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(1).single();
     if (sub) {
       await supabase.from("subscriptions").update({
@@ -236,7 +236,7 @@ const SaasAdminTenants = () => {
       }).eq("id", sub.id);
     }
     await supabase.from("tenants").update({ status: "trial" }).eq("id", tenantId);
-    toast({ title: "Trial extended by 14 days" });
+    toast({ title: "Trial extended by 3 days" });
     fetchAll();
   };
 

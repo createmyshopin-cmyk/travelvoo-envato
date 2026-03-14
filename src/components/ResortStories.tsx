@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Play, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/context/TenantContext";
 
 // --- Types -----------------------------------------------------------
 
@@ -26,6 +27,7 @@ interface StoryGroup {
 const FALLBACK_DURATION = 4;
 
 const ResortStories = () => {
+  const { tenantId } = useTenant();
   const [groups, setGroups] = useState<StoryGroup[]>([]);
   const [sectionTitle, setSectionTitle] = useState("Resort Stories");
   const [duration, setDuration] = useState(FALLBACK_DURATION);
@@ -36,11 +38,15 @@ const ResortStories = () => {
 
   useEffect(() => {
     const fetchAll = async () => {
+      let reelsQuery = supabase
+        .from("stay_reels")
+        .select("id, stay_id, url, platform, title, thumbnail, sort_order, stays(name, images)")
+        .order("sort_order");
+      if (tenantId) reelsQuery = reelsQuery.eq("tenant_id", tenantId);
+      else reelsQuery = reelsQuery.is("tenant_id", null);
+
       const [{ data: reelsData }, { data: settingsData }] = await Promise.all([
-        supabase
-          .from("stay_reels")
-          .select("id, stay_id, url, platform, title, thumbnail, sort_order, stays(name, images)")
-          .order("sort_order"),
+        reelsQuery,
         supabase
           .from("site_settings")
           .select("*")
@@ -87,7 +93,7 @@ const ResortStories = () => {
     };
 
     fetchAll();
-  }, []);
+  }, [tenantId]);
 
   const openGroup = (idx: number) => { setActiveGroup(idx); setActiveItem(0); };
   const closeGroup = () => setActiveGroup(null);

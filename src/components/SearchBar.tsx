@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/context/TenantContext";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 
 const placeholders = [
@@ -34,9 +35,9 @@ interface SearchResult {
   images: string[];
 }
 
-async function searchStaysDB(q: string): Promise<SearchResult[]> {
+async function searchStaysDB(q: string, tenantId: string | null): Promise<SearchResult[]> {
   const term = q.trim();
-  const { data } = await supabase
+  let query = supabase
     .from("stays")
     .select("id, stay_id, name, location, price, original_price, rating, category, images")
     .eq("status", "active")
@@ -45,10 +46,14 @@ async function searchStaysDB(q: string): Promise<SearchResult[]> {
     )
     .order("rating", { ascending: false })
     .limit(10);
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  else query = query.is("tenant_id", null);
+  const { data } = await query;
   return (data || []) as SearchResult[];
 }
 
 const SearchBar = () => {
+  const { tenantId } = useTenant();
   const [focused, setFocused] = useState(false);
   const [query, setQuery] = useState("");
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -69,14 +74,14 @@ const SearchBar = () => {
     setLoading(true);
     setHasSearched(true);
     try {
-      const rows = await searchStaysDB(q);
+      const rows = await searchStaysDB(q, tenantId);
       setResults(rows);
     } catch {
       setResults([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tenantId]);
 
   const triggerSearch = useCallback((value: string) => {
     setQuery(value);
