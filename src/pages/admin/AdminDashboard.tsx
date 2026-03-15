@@ -22,11 +22,13 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const fetchAll = async () => {
+      const { data: tenantId } = await supabase.rpc("get_my_tenant_id");
+      const eqTenant = (q: { eq: (c: string, v: any) => any }) => (tenantId != null ? q.eq("tenant_id", tenantId) : q);
       const [staysRes, roomsRes, bookingsRes, roomCatsRes] = await Promise.all([
-        supabase.from("stays").select("id", { count: "exact", head: true }),
-        supabase.from("room_categories").select("id", { count: "exact", head: true }),
-        supabase.from("bookings").select("total_price, created_at, rooms, status"),
-        supabase.from("room_categories").select("name, stay_id"),
+        eqTenant(supabase.from("stays").select("id", { count: "exact", head: true })),
+        eqTenant(supabase.from("room_categories").select("id", { count: "exact", head: true })),
+        eqTenant(supabase.from("bookings").select("total_price, created_at, rooms, status")),
+        eqTenant(supabase.from("room_categories").select("name, stay_id")),
       ]);
 
       const bookings = bookingsRes.data || [];

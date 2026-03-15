@@ -121,7 +121,12 @@ export default function AdminStays() {
   const [categoryCount, setCategoryCount] = useState(0);
 
   const fetchStays = useCallback(async () => {
-    const { data, error } = await supabase.from("stays").select("*").order("created_at", { ascending: false });
+    const { data: tenantId } = await supabase.rpc("get_my_tenant_id");
+    let query = supabase.from("stays").select("*").order("created_at", { ascending: false });
+    if (tenantId != null) {
+      query = query.eq("tenant_id", tenantId);
+    }
+    const { data, error } = await query;
     if (!error) {
       setStays(data || []);
       const cats = [...new Set((data || []).map((s: any) => s.category).filter(Boolean))];
@@ -131,7 +136,12 @@ export default function AdminStays() {
   }, []);
 
   const fetchBookingCounts = useCallback(async () => {
-    const { data } = await supabase.from("bookings").select("stay_id");
+    const { data: tenantId } = await supabase.rpc("get_my_tenant_id");
+    let query = supabase.from("bookings").select("stay_id");
+    if (tenantId != null) {
+      query = query.eq("tenant_id", tenantId);
+    }
+    const { data } = await query;
     if (data) {
       const counts: BookingCount = {};
       data.forEach((b: any) => { if (b.stay_id) counts[b.stay_id] = (counts[b.stay_id] || 0) + 1; });
