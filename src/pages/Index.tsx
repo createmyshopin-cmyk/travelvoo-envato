@@ -12,6 +12,10 @@ import EnquiryForm from "@/components/EnquiryForm";
 import Footer from "@/components/Footer";
 import StickyBottomNav from "@/components/StickyBottomNav";
 import LazySection from "@/components/LazySection";
+import CouponBanner from "@/components/CouponBanner";
+import BestFeatures from "@/components/BestFeatures";
+import PromoPopup from "@/components/PromoPopup";
+import MenuPopup from "@/components/MenuPopup";
 
 const sections = [
   { title: "Couple Friendly Stays", category: "Couple Friendly" },
@@ -39,6 +43,7 @@ const Index = () => {
       {/* Single centered container — everything stays in the same column */}
       <div className="max-w-lg mx-auto md:max-w-5xl lg:max-w-7xl xl:max-w-[1400px] pb-[80px] md:pb-16">
         <AnnouncementBanner />
+        <CouponBanner />
         <HeroBanner />
         <SearchBar />
         <LazySection rootMargin="300px">
@@ -56,6 +61,9 @@ const Index = () => {
         <LazySection rootMargin="300px">
           <PromoBanners />
         </LazySection>
+        <LazySection rootMargin="250px">
+          <BestFeatures />
+        </LazySection>
         <LazySection rootMargin="200px">
           <EnquiryForm />
         </LazySection>
@@ -65,6 +73,8 @@ const Index = () => {
       </div>
 
       <StickyBottomNav />
+      <MenuPopup />
+      <PromoPopup />
     </div>
   );
 };

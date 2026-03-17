@@ -9,6 +9,9 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { Settings, Globe, Phone, Mail, MapPin, RefreshCw, Smartphone, Home, Compass, Sparkles, Heart, Palette, Upload, Image, Type, Loader2, Trash2, Clapperboard, CalendarDays } from "lucide-react";
 import { clearSiteSettingsCache } from "@/hooks/useSiteSettings";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 interface SiteSettings {
   id: string;
@@ -28,6 +31,11 @@ interface SiteSettings {
   sticky_menu_show_wishlist: boolean;
   sticky_menu_show_explore: boolean;
   sticky_menu_show_reels: boolean;
+  menu_popup_enabled: boolean;
+  menu_popup_title: string;
+  best_features_enabled: boolean;
+  best_features_title: string;
+  coupon_banner_enabled: boolean;
   ga_id: string;
   fb_pixel_id: string;
   clarity_id: string;
@@ -44,6 +52,37 @@ interface TenantBranding {
   footer_text: string;
 }
 
+interface MenuItem {
+  id: string;
+  category: string;
+  name: string;
+  description: string;
+  price: number;
+  is_available: boolean;
+  sort_order: number;
+}
+
+interface PopupSettings {
+  enabled: boolean;
+  title: string;
+  message: string;
+  cta_text: string;
+  cta_link: string;
+  image_url: string;
+  delay_seconds: number;
+  show_once: boolean;
+  coupon_code: string;
+}
+
+interface FeatureItem {
+  id: string;
+  icon_name: string;
+  title: string;
+  description: string;
+  sort_order: number;
+  active: boolean;
+}
+
 const AdminSettings = () => {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [branding, setBranding] = useState<TenantBranding>({
@@ -56,6 +95,10 @@ const AdminSettings = () => {
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [popupSettings, setPopupSettings] = useState<PopupSettings | null>(null);
+  const [features, setFeatures] = useState<FeatureItem[]>([]);
+  const [loadingMarketing, setLoadingMarketing] = useState(false);
 
   useEffect(() => { fetchSettings(); }, []);
 
@@ -77,7 +120,46 @@ const AdminSettings = () => {
         footer_text: tenantData.footer_text || "",
       });
     }
+    await fetchMarketing();
     setLoading(false);
+  };
+
+  const fetchMarketing = async () => {
+    setLoadingMarketing(true);
+    try {
+      const { data: tenantId } = await supabase.rpc("get_my_tenant_id");
+      if (!tenantId) {
+        setLoadingMarketing(false);
+        return;
+      }
+
+      const [{ data: menu }, { data: popup }, { data: feats }] = await Promise.all([
+        supabase.from("menu_items").select("*").eq("tenant_id", tenantId).order("sort_order", { ascending: true }),
+        supabase.from("popup_settings").select("*").eq("tenant_id", tenantId).maybeSingle(),
+        supabase.from("property_features").select("*").eq("tenant_id", tenantId).order("sort_order", { ascending: true }),
+      ]);
+
+      setMenuItems((menu || []) as MenuItem[]);
+      if (popup) {
+        const { enabled, title, message, cta_text, cta_link, image_url, delay_seconds, show_once, coupon_code } = popup;
+        setPopupSettings({ enabled, title, message, cta_text, cta_link, image_url, delay_seconds, show_once, coupon_code });
+      } else {
+        setPopupSettings({
+          enabled: false,
+          title: "",
+          message: "",
+          cta_text: "Book Now",
+          cta_link: "",
+          image_url: "",
+          delay_seconds: 3,
+          show_once: true,
+          coupon_code: "",
+        });
+      }
+      setFeatures((feats || []) as FeatureItem[]);
+    } finally {
+      setLoadingMarketing(false);
+    }
   };
 
   const save = async () => {
@@ -619,6 +701,556 @@ const AdminSettings = () => {
                 <li>Deploy → New Deployment → Web App → Execute as <em>Me</em> → Who has access: <em>Anyone</em> → Copy the URL above</li>
               </ol>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Marketing & Popups */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              Marketing &amp; Popups
+              <Badge variant="outline" className="text-[10px]">New</Badge>
+            </CardTitle>
+            <CardDescription>Configure menu popup, promo popup, coupon banner, and best features shown on your landing page.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {loadingMarketing && (
+              <div className="flex items-center text-xs text-muted-foreground gap-2">
+                <Loader2 className="w-3 h-3 animate-spin" /> Loading marketing data...
+              </div>
+            )}
+            <Tabs defaultValue="promo-popup" className="w-full">
+              <TabsList className="flex flex-wrap">
+                <TabsTrigger value="menu">Menu Popup</TabsTrigger>
+                <TabsTrigger value="promo-popup">Promo Popup</TabsTrigger>
+                <TabsTrigger value="coupons">Coupon Display</TabsTrigger>
+                <TabsTrigger value="best-features">Best Features</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="menu" className="mt-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Enable Menu Popup</Label>
+                    <p className="text-xs text-muted-foreground">Show a quick menu overlay on the landing page.</p>
+                  </div>
+                  <Switch
+                    checked={settings.menu_popup_enabled}
+                    onCheckedChange={(v) => update("menu_popup_enabled", v)}
+                  />
+                </div>
+                <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
+                  <div className="space-y-3">
+                    <div>
+                      <Label>Popup Title</Label>
+                      <Input
+                        value={settings.menu_popup_title}
+                        onChange={(e) => update("menu_popup_title", e.target.value)}
+                        className="mt-1"
+                        placeholder="Our Menu"
+                      />
+                    </div>
+                    <div className="border rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold">Menu Items</Label>
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          onClick={() =>
+                            setMenuItems((items) => [
+                              ...items,
+                              {
+                                id: `temp-${Date.now()}`,
+                                category: "General",
+                                name: "New Item",
+                                description: "",
+                                price: 0,
+                                is_available: true,
+                                sort_order: items.length + 1,
+                              },
+                            ])
+                          }
+                        >
+                          Add Item
+                        </Button>
+                      </div>
+                      {menuItems.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No items yet. Click &quot;Add Item&quot; to create your first one.</p>
+                      ) : (
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {menuItems.map((item, idx) => (
+                            <div key={item.id} className="border rounded-md p-2 flex flex-col gap-1 text-xs">
+                              <div className="flex gap-2">
+                                <Input
+                                  value={item.name}
+                                  onChange={(e) => {
+                                    const v = e.target.value;
+                                    setMenuItems((items) =>
+                                      items.map((it, i) => (i === idx ? { ...it, name: v } : it)),
+                                    );
+                                  }}
+                                  placeholder="Item name"
+                                />
+                                <Input
+                                  value={item.category}
+                                  onChange={(e) => {
+                                    const v = e.target.value;
+                                    setMenuItems((items) =>
+                                      items.map((it, i) => (i === idx ? { ...it, category: v } : it)),
+                                    );
+                                  }}
+                                  placeholder="Category"
+                                />
+                                <Input
+                                  type="number"
+                                  value={item.price}
+                                  onChange={(e) => {
+                                    const v = Number(e.target.value || 0);
+                                    setMenuItems((items) =>
+                                      items.map((it, i) => (i === idx ? { ...it, price: v } : it)),
+                                    );
+                                  }}
+                                  className="w-24"
+                                  placeholder="Price"
+                                />
+                              </div>
+                              <Textarea
+                                value={item.description}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setMenuItems((items) =>
+                                    items.map((it, i) => (i === idx ? { ...it, description: v } : it)),
+                                  );
+                                }}
+                                placeholder="Short description"
+                                rows={2}
+                              />
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    checked={item.is_available}
+                                    onCheckedChange={(v) =>
+                                      setMenuItems((items) =>
+                                        items.map((it, i) => (i === idx ? { ...it, is_available: v } : it)),
+                                      )
+                                    }
+                                  />
+                                  <span className="text-xs text-muted-foreground">
+                                    {item.is_available ? "Available" : "Hidden"}
+                                  </span>
+                                </div>
+                                <Button
+                                  size="xs"
+                                  variant="ghost"
+                                  className="text-destructive"
+                                  onClick={() =>
+                                    setMenuItems((items) => items.filter((_, i) => i !== idx))
+                                  }
+                                >
+                                  <Trash2 className="w-3 h-3 mr-1" /> Remove
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="hidden md:block">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Phone Preview
+                    </Label>
+                    <div className="mt-2 bg-muted rounded-xl p-3">
+                      <div className="bg-background rounded-lg shadow-sm border overflow-hidden">
+                        <div className="px-3 py-2 border-b flex items-center justify-between">
+                          <span className="text-xs font-semibold">
+                            {settings.menu_popup_title || "Our Menu"}
+                          </span>
+                          <span className="text-xs text-muted-foreground">X</span>
+                        </div>
+                        <div className="p-3 space-y-2 max-h-56 overflow-hidden">
+                          {menuItems.slice(0, 3).map((item) => (
+                            <div key={item.id} className="flex items-center justify-between text-xs">
+                              <div>
+                                <div className="font-medium">{item.name || "Menu item"}</div>
+                                <div className="text-[11px] text-muted-foreground">
+                                  {item.description || "Short description goes here"}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-[11px] font-semibold">
+                                  ₹{item.price || 0}
+                                </div>
+                                {!item.is_available && (
+                                  <div className="text-[10px] text-red-500">Sold out</div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                          {menuItems.length === 0 && (
+                            <p className="text-[11px] text-muted-foreground">
+                              Add items to see a live preview of your menu popup.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="promo-popup" className="mt-4 space-y-4">
+                {popupSettings && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Enable Promo Popup</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Show a time-delayed promo popup on the landing page.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={popupSettings.enabled}
+                        onCheckedChange={(v) =>
+                          setPopupSettings({ ...popupSettings, enabled: v })
+                        }
+                      />
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
+                      <div className="space-y-3">
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div>
+                            <Label>Title</Label>
+                            <Input
+                              value={popupSettings.title}
+                              onChange={(e) =>
+                                setPopupSettings({ ...popupSettings, title: e.target.value })
+                              }
+                              className="mt-1"
+                              placeholder="Limited-time offer"
+                            />
+                          </div>
+                          <div>
+                            <Label>CTA Button Text</Label>
+                            <Input
+                              value={popupSettings.cta_text}
+                              onChange={(e) =>
+                                setPopupSettings({ ...popupSettings, cta_text: e.target.value })
+                              }
+                              className="mt-1"
+                              placeholder="Book Now"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label>Message</Label>
+                          <Textarea
+                            value={popupSettings.message}
+                            onChange={(e) =>
+                              setPopupSettings({ ...popupSettings, message: e.target.value })
+                            }
+                            className="mt-1"
+                            rows={3}
+                            placeholder="Describe your offer, free nights, early bird discount, etc."
+                          />
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <div>
+                            <Label>CTA Link</Label>
+                            <Input
+                              value={popupSettings.cta_link}
+                              onChange={(e) =>
+                                setPopupSettings({ ...popupSettings, cta_link: e.target.value })
+                              }
+                              className="mt-1 text-xs"
+                              placeholder="/stay/demo-stay or external URL"
+                            />
+                          </div>
+                          <div>
+                            <Label>Delay (seconds)</Label>
+                            <Input
+                              type="number"
+                              value={popupSettings.delay_seconds}
+                              onChange={(e) =>
+                                setPopupSettings({
+                                  ...popupSettings,
+                                  delay_seconds: Number(e.target.value || 0),
+                                })
+                              }
+                              className="mt-1"
+                              min={0}
+                              max={30}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between mt-6 md:mt-0">
+                            <div className="flex flex-col gap-1">
+                              <Label>Show only once per session</Label>
+                              <p className="text-[11px] text-muted-foreground">
+                                Uses browser session storage.
+                              </p>
+                            </div>
+                            <Switch
+                              checked={popupSettings.show_once}
+                              onCheckedChange={(v) =>
+                                setPopupSettings({ ...popupSettings, show_once: v })
+                              }
+                            />
+                          </div>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div>
+                            <Label>Background Image URL</Label>
+                            <Input
+                              value={popupSettings.image_url}
+                              onChange={(e) =>
+                                setPopupSettings({
+                                  ...popupSettings,
+                                  image_url: e.target.value,
+                                })
+                              }
+                              className="mt-1 text-xs"
+                              placeholder="https://images.unsplash.com/..."
+                            />
+                          </div>
+                          <div>
+                            <Label>Attach Coupon (optional)</Label>
+                            <Input
+                              value={popupSettings.coupon_code}
+                              onChange={(e) =>
+                                setPopupSettings({
+                                  ...popupSettings,
+                                  coupon_code: e.target.value.toUpperCase(),
+                                })
+                              }
+                              className="mt-1 font-mono text-xs"
+                              placeholder="WELCOME10"
+                            />
+                            <p className="text-[11px] text-muted-foreground mt-1">
+                              Type an existing coupon code to highlight it in the popup.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="hidden md:block">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          Phone Preview
+                        </Label>
+                        <div className="mt-2 bg-muted rounded-xl p-3">
+                          <div className="bg-background rounded-lg shadow-lg border overflow-hidden">
+                            {popupSettings.image_url && (
+                              <div className="h-24 bg-cover bg-center" style={{ backgroundImage: `url(${popupSettings.image_url})` }} />
+                            )}
+                            <div className="p-3 space-y-2">
+                              <div className="text-sm font-semibold">
+                                {popupSettings.title || "Limited-time offer"}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground line-clamp-3">
+                                {popupSettings.message || "Describe your best deal here to nudge guests to book."}
+                              </div>
+                              {popupSettings.coupon_code && (
+                                <div className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-mono text-primary">
+                                  COUPON: {popupSettings.coupon_code}
+                                </div>
+                              )}
+                              <Button size="sm" className="mt-1 w-full">
+                                {popupSettings.cta_text || "Book Now"}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+
+              <TabsContent value="coupons" className="mt-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Show Coupon Banner</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Display selected coupons as a strip below the announcement bar on the landing page.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.coupon_banner_enabled}
+                    onCheckedChange={(v) => update("coupon_banner_enabled", v)}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Configure which coupons are public from the <span className="font-semibold">Coupons</span> page using the
+                  <span className="font-mono bg-muted px-1 rounded ml-1">show_publicly</span> toggle. The banner will automatically pick them up.
+                </p>
+              </TabsContent>
+
+              <TabsContent value="best-features" className="mt-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Show Best Features Section</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Highlight why guests love your property with up to 6 feature cards.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.best_features_enabled}
+                    onCheckedChange={(v) => update("best_features_enabled", v)}
+                  />
+                </div>
+                <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
+                  <div className="space-y-3">
+                    <div>
+                      <Label>Section Title</Label>
+                      <Input
+                        value={settings.best_features_title}
+                        onChange={(e) => update("best_features_title", e.target.value)}
+                        className="mt-1"
+                        placeholder="Why guests love us"
+                      />
+                    </div>
+                    <div className="border rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold">Features</Label>
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          onClick={() =>
+                            setFeatures((items) =>
+                              items.length >= 6
+                                ? items
+                                : [
+                                    ...items,
+                                    {
+                                      id: `temp-${Date.now()}`,
+                                      icon_name: "Star",
+                                      title: "New Feature",
+                                      description: "",
+                                      sort_order: items.length + 1,
+                                      active: true,
+                                    },
+                                  ],
+                            )
+                          }
+                        >
+                          Add Feature
+                        </Button>
+                      </div>
+                      {features.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          No features yet. Add up to 6 key selling points (e.g. Infinity Pool, Pet Friendly, Jungle View).
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {features.map((feat, idx) => (
+                            <div key={feat.id} className="border rounded-md p-2 flex flex-col gap-1 text-xs">
+                              <div className="grid gap-2 md:grid-cols-3">
+                                <Input
+                                  value={feat.icon_name}
+                                  onChange={(e) =>
+                                    setFeatures((items) =>
+                                      items.map((it, i) => (i === idx ? { ...it, icon_name: e.target.value } : it)),
+                                    )
+                                  }
+                                  placeholder="Icon (e.g. Star, Mountain, Waves)"
+                                />
+                                <Input
+                                  value={feat.title}
+                                  onChange={(e) =>
+                                    setFeatures((items) =>
+                                      items.map((it, i) => (i === idx ? { ...it, title: e.target.value } : it)),
+                                    )
+                                  }
+                                  placeholder="Title"
+                                />
+                                <Input
+                                  type="number"
+                                  value={feat.sort_order}
+                                  onChange={(e) =>
+                                    setFeatures((items) =>
+                                      items.map((it, i) =>
+                                        i === idx ? { ...it, sort_order: Number(e.target.value || 0) } : it,
+                                      ),
+                                    )
+                                  }
+                                  className="w-20"
+                                  placeholder="Order"
+                                />
+                              </div>
+                              <Textarea
+                                value={feat.description}
+                                onChange={(e) =>
+                                  setFeatures((items) =>
+                                    items.map((it, i) =>
+                                      i === idx ? { ...it, description: e.target.value } : it,
+                                    ),
+                                  )
+                                }
+                                placeholder="Short description (e.g. 180-degree valley view from every room)."
+                                rows={2}
+                              />
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    checked={feat.active}
+                                    onCheckedChange={(v) =>
+                                      setFeatures((items) =>
+                                        items.map((it, i) => (i === idx ? { ...it, active: v } : it)),
+                                      )
+                                    }
+                                  />
+                                  <span className="text-xs text-muted-foreground">
+                                    {feat.active ? "Visible" : "Hidden"}
+                                  </span>
+                                </div>
+                                <Button
+                                  size="xs"
+                                  variant="ghost"
+                                  className="text-destructive"
+                                  onClick={() =>
+                                    setFeatures((items) => items.filter((_, i) => i !== idx))
+                                  }
+                                >
+                                  <Trash2 className="w-3 h-3 mr-1" /> Remove
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="hidden md:block">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Section Preview
+                    </Label>
+                    <div className="mt-2 bg-muted rounded-xl p-3">
+                      <div className="bg-background rounded-lg shadow-sm border p-3 space-y-2">
+                        <div className="text-sm font-semibold">
+                          {settings.best_features_title || "Why guests love us"}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mt-1">
+                          {features.slice(0, 4).map((feat) => (
+                            <div key={feat.id} className="border rounded-md p-2 space-y-1">
+                              <div className="text-[11px] font-semibold flex items-center gap-1">
+                                <span className="inline-block w-4 h-4 rounded-full bg-primary/10" />
+                                {feat.title || "Feature title"}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground line-clamp-2">
+                                {feat.description || "Short description of the feature."}
+                              </div>
+                            </div>
+                          ))}
+                          {features.length === 0 && (
+                            <p className="text-[11px] text-muted-foreground col-span-2">
+                              Add features to preview how they will appear on your landing page.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>

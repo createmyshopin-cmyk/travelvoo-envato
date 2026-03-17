@@ -4,7 +4,39 @@ There are **no default credentials**. You must create your first admin account.
 
 ---
 
-## Demo Admin (quickest)
+## Accounts Summary
+
+| Role | Email | Password | URL | Script |
+|------|-------|----------|-----|--------|
+| **SaaS Super Admin** | `superadmin@stay.com` | `superadmin123` | `/saas-admin/login` | `supabase/seed_super_admin.sql` |
+| **Demo Admin** (basic) | `admin@admin.com` | `admin.com` | `/admin/login` | `supabase/seed_demo_admin.sql` |
+| **Demo Tenant** (full 60-record data) | `demo@stay.com` | `demo123` | `/admin/login` → subdomain `demo` | `supabase/seed_demo_tenant.sql` |
+
+---
+
+## Demo Tenant — Full Demo Data (recommended)
+
+**Credentials:** `demo@stay.com` / `demo123`  
+**Subdomain:** `demo`  
+**Includes 60 demo data records:**
+
+| Table | Count | Details |
+|-------|-------|---------|
+| Stays | 5 | Pool Villa (Goa), Mountain Lodge (Manali), Couples Retreat (Coorg), Family Camp (Wayanad), Treehouse (Athirapally) |
+| Room Categories | 10 | 2 per stay |
+| Bookings | 20 | Mix of confirmed, pending, completed, cancelled |
+| Invoices | 10 | Paid & pending |
+| Coupons | 8 | Percentage & flat discounts |
+| Quotations | 7 | Draft, sent, accepted, expired |
+| **Total** | **60** | |
+
+1. Open [Supabase SQL Editor](https://supabase.com/dashboard/project/rqnxtcigfauzzjaqxzut/sql/new)
+2. Paste and run the contents of **`supabase/seed_demo_tenant.sql`**
+3. Log in at **`/admin/login`** → enter subdomain `demo`
+
+---
+
+## Demo Admin (quickest, basic)
 
 **Credentials:** `admin@admin.com` / `admin.com`
 
@@ -13,6 +45,16 @@ There are **no default credentials**. You must create your first admin account.
 3. Log in at **`/admin/login`** with the demo credentials
 
 **If you get "Email not confirmed":** Run **`supabase/confirm_demo_email.sql`** in the SQL Editor. Or turn off email confirmation: [Supabase Dashboard → Authentication → Providers → Email](https://supabase.com/dashboard/project/rqnxtcigfauzzjaqxzut/auth/providers) → uncheck **"Confirm email"**.
+
+---
+
+## SaaS Super Admin
+
+**Credentials:** `superadmin@stay.com` / `superadmin123`
+
+1. Open [Supabase SQL Editor](https://supabase.com/dashboard/project/rqnxtcigfauzzjaqxzut/sql/new)
+2. Paste and run the contents of **`supabase/seed_super_admin.sql`**
+3. Log in at **`/saas-admin/login`**
 
 ---
 
