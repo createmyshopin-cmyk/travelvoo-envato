@@ -1,52 +1,62 @@
-import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Alert, Switch } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useSubscriptionGuard } from "@/hooks/useSubscriptionGuard";
 import { useTenant } from "@/context/TenantContext";
+import { useTheme } from "@/context/ThemeContext";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 interface MenuItem {
   label: string;
-  icon: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
   route: string;
   featureKey?: string;
-  description?: string;
+  description: string;
 }
 
 const MENU_SECTIONS = [
   {
     title: "Management",
     items: [
-      { label: "Guest Contacts", icon: "👥", route: "/(admin)/guests", description: "View & message guests" },
-      { label: "Analytics", icon: "📊", route: "/(admin)/analytics", featureKey: "analytics", description: "Booking & revenue insights" },
-      { label: "Coupons", icon: "🏷️", route: "/(admin)/coupons", featureKey: "coupons", description: "Discount codes" },
-      { label: "Quotations", icon: "📄", route: "/(admin)/quotations", featureKey: "quotation_generator", description: "Guest quotes" },
-      { label: "Invoices", icon: "🧾", route: "/(admin)/invoices", featureKey: "invoice_generator", description: "Payment invoices" },
+      { label: "Guest Contacts", icon: "account-group" as const, route: "/(admin)/guests", description: "Database and communication history" },
+      { label: "Analytics", icon: "chart-bar" as const, route: "/(admin)/analytics", featureKey: "analytics", description: "Performance and revenue insights" },
+      { label: "Coupons", icon: "tag-outline" as const, route: "/(admin)/coupons", featureKey: "coupons", description: "Manage discounts and promotions" },
+      { label: "Quotations", icon: "file-document-outline" as const, route: "/(admin)/quotations", featureKey: "quotation_generator", description: "Create and track price quotes" },
+      { label: "Invoices", icon: "receipt" as const, route: "/(admin)/invoices", featureKey: "invoice_generator", description: "Billing and payment history" },
     ],
   },
   {
     title: "Account",
     items: [
-      { label: "Profile", icon: "👤", route: "/(admin)/account/profile", description: "Property & owner info" },
-      { label: "Subscription", icon: "💳", route: "/(admin)/account/billing", description: "Plan & billing" },
-      { label: "Usage", icon: "📈", route: "/(admin)/account/usage", description: "Limits & quotas" },
+      { label: "Profile", icon: "account-outline" as const, route: "/(admin)/account/profile", description: "Personal details and preferences" },
+      { label: "Subscription", icon: "credit-card-outline" as const, route: "/(admin)/account/billing", description: "Manage plan and billing info" },
+      { label: "Usage", icon: "chart-donut" as const, route: "/(admin)/account/usage", description: "Track API and storage metrics" },
     ],
   },
 ];
 
-function MenuRow({ item, isLocked }: { item: MenuItem; isLocked: boolean }) {
+function MenuRow({ item, isLocked, isDark }: { item: MenuItem; isLocked: boolean; isDark: boolean }) {
+  const borderColor = isDark ? "#1f2937" : "#f1f5f9";
   return (
     <TouchableOpacity
-      className="flex-row items-center px-5 py-3.5 border-b border-gray-50 active:bg-gray-50"
+      style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 8, marginHorizontal: -8, borderBottomWidth: 1, borderBottomColor: borderColor }}
+      activeOpacity={0.6}
       onPress={() => router.push(item.route as any)}
     >
-      <Text className="text-xl w-9">{item.icon}</Text>
-      <View className="flex-1">
-        <Text className={`text-base font-medium ${isLocked ? "text-gray-400" : "text-gray-900"}`}>{item.label}</Text>
-        {item.description && <Text className="text-xs text-gray-400">{item.description}</Text>}
+      <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: isDark ? "rgba(22,162,73,0.15)" : "rgba(22,162,73,0.1)", alignItems: "center", justifyContent: "center", marginRight: 14 }}>
+        <MaterialCommunityIcons name={item.icon} size={22} color="#16a34a" />
       </View>
-      {isLocked && <Text className="text-sm mr-1">🔒</Text>}
-      <Text className="text-gray-300">›</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 15, fontWeight: "600", color: isLocked ? (isDark ? "#6b7280" : "#9ca3af") : (isDark ? "#f9fafb" : "#0f172a") }}>
+          {item.label}
+        </Text>
+        <Text style={{ fontSize: 12, color: isDark ? "#6b7280" : "#94a3b8", marginTop: 1 }}>
+          {item.description}
+        </Text>
+      </View>
+      {isLocked && <Text style={{ fontSize: 14, marginRight: 4 }}>🔒</Text>}
+      <Text style={{ fontSize: 20, color: isDark ? "#374151" : "#cbd5e1", fontWeight: "300" }}>›</Text>
     </TouchableOpacity>
   );
 }
@@ -54,6 +64,7 @@ function MenuRow({ item, isLocked }: { item: MenuItem; isLocked: boolean }) {
 export default function MoreScreen() {
   const { plan } = useSubscriptionGuard();
   const { tenantName } = useTenant();
+  const { mode, setMode, isDark } = useTheme();
 
   const isLocked = (featureKey?: string) => {
     if (!featureKey) return false;
@@ -74,38 +85,95 @@ export default function MoreScreen() {
     ]);
   };
 
-  return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <View className="bg-white px-4 pt-4 pb-3 border-b border-gray-100">
-        <Text className="text-xl font-bold text-gray-900">More</Text>
-        {tenantName && <Text className="text-xs text-gray-400 mt-0.5">{tenantName}</Text>}
-      </View>
+  const toggleNightMode = () => {
+    setMode(isDark ? "light" : "dark");
+  };
 
-      <ScrollView className="flex-1">
+  const bg = isDark ? "#030712" : "#ffffff";
+  const sectionTitleColor = "#16a34a";
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* Profile header */}
+        <View style={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 16 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: isDark ? "rgba(22,162,73,0.15)" : "rgba(22,162,73,0.1)", borderWidth: 2, borderColor: isDark ? "rgba(22,162,73,0.3)" : "rgba(22,162,73,0.2)", alignItems: "center", justifyContent: "center" }}>
+              <MaterialCommunityIcons name="account" size={30} color="#16a34a" />
+            </View>
+            <View style={{ backgroundColor: isDark ? "rgba(22,162,73,0.15)" : "rgba(22,162,73,0.1)", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 }}>
+              <Text style={{ fontSize: 11, fontWeight: "800", color: "#16a34a", textTransform: "uppercase", letterSpacing: 1 }}>Admin</Text>
+            </View>
+          </View>
+          <View style={{ marginTop: 14 }}>
+            <Text style={{ fontSize: 28, fontWeight: "800", color: isDark ? "#f9fafb" : "#0f172a", letterSpacing: -0.5 }}>More</Text>
+            {tenantName && (
+              <Text style={{ fontSize: 14, color: isDark ? "#6b7280" : "#64748b", fontWeight: "500", marginTop: 2 }}>{tenantName}</Text>
+            )}
+          </View>
+        </View>
+
+        {/* Menu sections */}
         {MENU_SECTIONS.map(section => (
-          <View key={section.title} className="mt-4">
-            <Text className="px-5 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-widest">
+          <View key={section.title} style={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8 }}>
+            <Text style={{ fontSize: 11, fontWeight: "800", color: sectionTitleColor, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 12 }}>
               {section.title}
             </Text>
-            <View className="bg-white rounded-2xl mx-4 overflow-hidden shadow-sm">
-              {section.items.map(item => (
+            <View>
+              {section.items.map((item, i) => (
                 <MenuRow
                   key={item.route}
                   item={item}
                   isLocked={isLocked(item.featureKey)}
+                  isDark={isDark}
                 />
               ))}
             </View>
           </View>
         ))}
 
+        {/* Appearance section */}
+        <View style={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8 }}>
+          <Text style={{ fontSize: 11, fontWeight: "800", color: sectionTitleColor, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 12 }}>
+            Appearance
+          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14 }}>
+            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: isDark ? "rgba(22,162,73,0.15)" : "rgba(22,162,73,0.1)", alignItems: "center", justifyContent: "center", marginRight: 14 }}>
+              <MaterialCommunityIcons name="weather-night" size={22} color="#16a34a" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: isDark ? "#f9fafb" : "#0f172a" }}>Night Mode</Text>
+              <Text style={{ fontSize: 12, color: isDark ? "#6b7280" : "#94a3b8", marginTop: 1 }}>Easier on the eyes in the dark</Text>
+            </View>
+            <Switch
+              value={isDark}
+              onValueChange={toggleNightMode}
+              trackColor={{ false: isDark ? "#374151" : "#e2e8f0", true: "#16a34a" }}
+              thumbColor="#ffffff"
+            />
+          </View>
+        </View>
+
         {/* Sign out */}
-        <View className="mt-4 mx-4 mb-8">
+        <View style={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32 }}>
           <TouchableOpacity
-            className="bg-white rounded-2xl py-4 items-center shadow-sm"
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              paddingVertical: 16,
+              paddingHorizontal: 16,
+              borderRadius: 12,
+              backgroundColor: isDark ? "rgba(239,68,68,0.08)" : "#fef2f2",
+              borderWidth: 1,
+              borderColor: isDark ? "rgba(239,68,68,0.15)" : "#fee2e2",
+            }}
+            activeOpacity={0.7}
             onPress={handleSignOut}
           >
-            <Text className="text-red-500 font-semibold">Sign Out</Text>
+            <MaterialCommunityIcons name="logout" size={20} color={isDark ? "#f87171" : "#dc2626"} />
+            <Text style={{ fontSize: 15, fontWeight: "700", color: isDark ? "#f87171" : "#dc2626" }}>Sign Out</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

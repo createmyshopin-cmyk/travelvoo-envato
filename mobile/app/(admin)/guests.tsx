@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { FlashList } from "@shopify/flash-list";
 import { supabase } from "@/lib/supabase";
 import { useTenant } from "@/context/TenantContext";
+import { ListSkeleton } from "@/components/SkeletonLoader";
 
 interface Guest {
   phone: string;
@@ -86,11 +87,11 @@ export default function GuestsScreen() {
       </View>
 
       {loading ? (
-        <View className="flex-1 items-center justify-center"><Text className="text-gray-400">Loading guests…</Text></View>
+        <ListSkeleton count={6} />
       ) : (
         <FlashList
           data={filtered}
-          
+          estimatedItemSize={90}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={<View className="py-16 items-center"><Text className="text-gray-400">No guests found</Text></View>}
           renderItem={({ item: g }) => (

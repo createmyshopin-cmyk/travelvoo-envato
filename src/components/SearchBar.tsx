@@ -52,7 +52,11 @@ async function searchStaysDB(q: string, tenantId: string | null): Promise<Search
   return (data || []) as SearchResult[];
 }
 
-const SearchBar = () => {
+interface SearchBarProps {
+  onPopularClick?: (term: string) => void;
+}
+
+const SearchBar = ({ onPopularClick }: SearchBarProps) => {
   const { tenantId } = useTenant();
   const [focused, setFocused] = useState(false);
   const [query, setQuery] = useState("");
@@ -122,6 +126,9 @@ const SearchBar = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     doSearch(term);
     setFocused(true);
+    if (onPopularClick) {
+      onPopularClick(term);
+    }
   };
 
   const handleResultClick = (stay: SearchResult) => {

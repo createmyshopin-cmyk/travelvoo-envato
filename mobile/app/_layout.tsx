@@ -1,7 +1,11 @@
 import "../global.css";
+import { View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TenantProvider } from "@/context/TenantContext";
+import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -9,12 +13,27 @@ const queryClient = new QueryClient({
   },
 });
 
+function InnerLayout() {
+  const { isDark } = useTheme();
+
+  return (
+    <View className={`flex-1 ${isDark ? "dark" : ""}`}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <Stack screenOptions={{ headerShown: false }} />
+    </View>
+  );
+}
+
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TenantProvider>
-        <Stack screenOptions={{ headerShown: false }} />
-      </TenantProvider>
-    </QueryClientProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <TenantProvider>
+          <ThemeProvider>
+            <InnerLayout />
+          </ThemeProvider>
+        </TenantProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }

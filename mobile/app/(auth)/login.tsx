@@ -6,6 +6,7 @@ import {
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { registerPushToken } from "@/lib/pushNotifications";
+import { useTheme } from "@/context/ThemeContext";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -57,30 +58,34 @@ export default function LoginScreen() {
     }
   };
 
+  const { isDark } = useTheme();
+  const bgColor = isDark ? "bg-gray-950" : "bg-white";
+  const inputBg = isDark ? "bg-gray-800 border-gray-700 text-white" : "bg-gray-50 border-gray-200 text-gray-900";
+  const labelColor = isDark ? "text-gray-300" : "text-gray-700";
+  const titleColor = isDark ? "text-white" : "text-gray-900";
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className="flex-1 bg-white"
+      className={`flex-1 ${bgColor}`}
     >
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         <View className="flex-1 justify-center px-8 py-12">
-          {/* Logo / Header */}
           <View className="items-center mb-10">
             <View className="w-16 h-16 rounded-2xl bg-primary items-center justify-center mb-4">
               <Text className="text-white text-2xl font-bold">S</Text>
             </View>
-            <Text className="text-2xl font-bold text-gray-900">Stay Admin</Text>
-            <Text className="text-gray-500 mt-1">Manage your property on the go</Text>
+            <Text className={`text-2xl font-bold ${titleColor}`}>Stay Admin</Text>
+            <Text className={isDark ? "text-gray-400 mt-1" : "text-gray-500 mt-1"}>Manage your property on the go</Text>
           </View>
 
-          {/* Form */}
           <View className="space-y-4">
             <View>
-              <Text className="text-sm font-medium text-gray-700 mb-1">Email</Text>
+              <Text className={`text-sm font-medium ${labelColor} mb-1`}>Email</Text>
               <TextInput
-                className="border border-gray-200 rounded-xl px-4 py-3 text-gray-900 bg-gray-50"
+                className={`border rounded-xl px-4 py-3 ${inputBg}`}
                 placeholder="admin@example.com"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -90,11 +95,11 @@ export default function LoginScreen() {
             </View>
 
             <View className="mt-4">
-              <Text className="text-sm font-medium text-gray-700 mb-1">Password</Text>
+              <Text className={`text-sm font-medium ${labelColor} mb-1`}>Password</Text>
               <TextInput
-                className="border border-gray-200 rounded-xl px-4 py-3 text-gray-900 bg-gray-50"
+                className={`border rounded-xl px-4 py-3 ${inputBg}`}
                 placeholder="••••••••"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry

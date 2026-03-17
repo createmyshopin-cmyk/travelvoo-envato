@@ -45,7 +45,13 @@ const Index = () => {
         <AnnouncementBanner />
         <CouponBanner />
         <HeroBanner />
-        <SearchBar />
+        <SearchBar
+          onPopularClick={(term) => {
+            if (term === "Luxury Resorts") {
+              setSelectedCategory("Luxury Resort");
+            }
+          }}
+        />
         <LazySection rootMargin="300px">
           <ResortStories />
         </LazySection>

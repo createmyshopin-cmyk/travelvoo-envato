@@ -1,22 +1,13 @@
 import { useEffect } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Platform } from "react-native";
 import { Tabs, router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useTenant } from "@/context/TenantContext";
 import { useSubscriptionGuard } from "@/hooks/useSubscriptionGuard";
 import { usePendingBookingsCount } from "@/hooks/usePendingBookingsCount";
-
-// Simple icon components (using text glyphs for dependency-free icons)
-function Icon({ name, color = "#6b7280", size = 22 }: { name: string; color?: string; size?: number }) {
-  const glyphs: Record<string, string> = {
-    dashboard: "⊞",
-    bookings: "📋",
-    stays: "🏨",
-    calendar: "📅",
-    more: "☰",
-  };
-  return <Text style={{ fontSize: size, color }}>{glyphs[name] || "•"}</Text>;
-}
+import { useTheme } from "@/context/ThemeContext";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function SubscriptionLockScreen() {
   const { status, isSuspended } = useSubscriptionGuard();
@@ -48,10 +39,12 @@ function SubscriptionLockScreen() {
 function AdminTabsLayout() {
   const { isExpired, isSuspended, loading } = useSubscriptionGuard();
   const pendingCount = usePendingBookingsCount();
+  const { isDark } = useTheme();
+  const insets = useSafeAreaInsets();
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View className={`flex-1 items-center justify-center ${isDark ? "bg-gray-950" : "bg-white"}`}>
         <Text className="text-gray-400">Loading…</Text>
       </View>
     );
@@ -61,57 +54,87 @@ function AdminTabsLayout() {
     return <SubscriptionLockScreen />;
   }
 
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === "android" ? 10 : 6);
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#1a73e8",
-        tabBarInactiveTintColor: "#9ca3af",
+        lazy: true,
+        tabBarActiveTintColor: "#16a34a",
+        tabBarInactiveTintColor: isDark ? "#6b7280" : "#9ca3af",
         tabBarStyle: {
-          backgroundColor: "#ffffff",
-          borderTopColor: "#e5e7eb",
-          borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: isDark ? "rgba(17,24,39,0.95)" : "rgba(255,255,255,0.95)",
+          borderTopColor: isDark ? "#1f2937" : "#e5e7eb",
+          borderTopWidth: 0.5,
+          height: 56 + bottomPadding,
+          paddingBottom: bottomPadding,
+          paddingTop: 6,
+          elevation: 0,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
         },
-        tabBarLabelStyle: { fontSize: 10, fontWeight: "600" },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: "700",
+          marginTop: 2,
+        },
+        tabBarIconStyle: {
+          marginBottom: -2,
+        },
       }}
     >
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: "Dashboard",
-          tabBarIcon: ({ color }) => <Icon name="dashboard" color={color} />,
+          title: "Home",
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons name={focused ? "home" : "home-outline"} size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="bookings"
         options={{
           title: "Bookings",
-          tabBarIcon: ({ color }) => <Icon name="bookings" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons name={focused ? "ticket-confirmation" : "ticket-confirmation-outline"} size={24} color={color} />
+          ),
           tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: "#ef4444", fontSize: 10 },
+          tabBarBadgeStyle: { backgroundColor: "#ef4444", fontSize: 9, fontWeight: "700", minWidth: 18, height: 18, lineHeight: 18 },
         }}
       />
       <Tabs.Screen
         name="stays"
         options={{
           title: "Stays",
-          tabBarIcon: ({ color }) => <Icon name="stays" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons name={focused ? "bed" : "bed-outline"} size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
           title: "Calendar",
-          tabBarIcon: ({ color }) => <Icon name="calendar" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons name={focused ? "calendar-month" : "calendar-month-outline"} size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="more"
         options={{
           title: "More",
-          tabBarIcon: ({ color }) => <Icon name="more" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="dots-horizontal" size={24} color={color} />
+          ),
         }}
       />
       {/* Hidden tabs — accessible from More screen */}
