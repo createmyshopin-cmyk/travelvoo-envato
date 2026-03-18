@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { WishlistProvider } from "./context/WishlistContext";
-import { TenantProvider } from "./context/TenantContext";
+import { TenantProvider, useTenant } from "./context/TenantContext";
 import { BrandingProvider } from "./context/BrandingContext";
 import MaintenancePage from "./components/MaintenancePage";
 import { useSiteSettings } from "./hooks/useSiteSettings";
@@ -98,6 +98,41 @@ const MaintenanceGate = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+/**
+ * Shows a clean "subdomain not found" page when the URL is a subdomain
+ * that has no registered tenant in the database.
+ */
+const TenantGuard = ({ children }: { children: React.ReactNode }) => {
+  const { notFound, loading } = useTenant();
+  if (loading) return <PageLoader />;
+  if (notFound) {
+    const subdomain = window.location.hostname.split(".")[0];
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/10 p-6 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
+          <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+          </svg>
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Subdomain Not Found</h1>
+        <p className="text-muted-foreground mb-1 max-w-sm">
+          <span className="font-mono font-medium text-foreground">{subdomain}</span> is not registered as a property on this platform.
+        </p>
+        <p className="text-sm text-muted-foreground mb-8 max-w-sm">
+          If you're trying to set up a new property, create an account first.
+        </p>
+        <a
+          href={`${window.location.protocol}//${window.location.hostname.split(".").slice(1).join(".")}/create-account`}
+          className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2.5 rounded-lg font-medium transition-colors"
+        >
+          Create an Account
+        </a>
+      </div>
+    );
+  }
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -108,6 +143,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AnalyticsScripts />
+          <TenantGuard>
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<MaintenanceGate><Index /></MaintenanceGate>} />
@@ -164,6 +200,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          </TenantGuard>
         </BrowserRouter>
       </WishlistProvider>
       </BrandingProvider>

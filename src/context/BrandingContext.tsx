@@ -66,7 +66,7 @@ function hexToHsl(hex: string): string | null {
 }
 
 export function BrandingProvider({ children }: { children: ReactNode }) {
-  const { tenantId } = useTenant();
+  const { tenantId, notFound } = useTenant();
   const [branding, setBranding] = useState<BrandingConfig>(defaultBranding);
 
   useDocumentHead(
@@ -86,6 +86,12 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function loadBranding() {
+      // If on an unregistered subdomain, skip branding load entirely
+      if (notFound) {
+        setBranding({ ...defaultBranding, loading: false });
+        return;
+      }
+
       let tenantData: any = null;
 
       if (tenantId) {
@@ -202,7 +208,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
       root.style.removeProperty("--sidebar-primary");
       root.style.removeProperty("--accent");
     };
-  }, [tenantId]);
+  }, [tenantId, notFound]);
 
   return (
     <BrandingContext.Provider value={branding}>
