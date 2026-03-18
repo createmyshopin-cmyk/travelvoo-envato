@@ -26,6 +26,27 @@ const CreateTenantSignup = () => {
   const checkingRef = useRef<string | null>(null);
   const navigate = useNavigate();
 
+  // Guard: /create-account must only be accessible on the root/main domain.
+  // If someone visits it on a tenant subdomain (e.g. demo.travelvoo.in/create-account),
+  // redirect them to the same path on the root domain (travelvoo.in/create-account).
+  useEffect(() => {
+    const hostname = window.location.hostname;
+    // Skip for localhost and known preview/CI domains
+    if (
+      hostname === "localhost" ||
+      hostname.includes("lovable.app") ||
+      hostname.includes("lovableproject.com") ||
+      hostname.includes("vercel.app")
+    ) return;
+
+    const parts = hostname.split(".");
+    // 3+ parts means we're on a subdomain (e.g. demo.travelvoo.in)
+    if (parts.length >= 3) {
+      const rootDomain = parts.slice(1).join(".");
+      window.location.replace(`https://${rootDomain}/create-account`);
+    }
+  }, []);
+
   const [form, setForm] = useState({
     companyName: "",
     subdomain: "",
@@ -38,6 +59,16 @@ const CreateTenantSignup = () => {
   // Handle OAuth callback: session + pendingTenantSignup in sessionStorage
   useEffect(() => {
     const run = async () => {
+      // If an OAuth redirect landed back on a subdomain, let the domain guard above handle it
+      const hostname = window.location.hostname;
+      const parts = hostname.split(".");
+      if (
+        parts.length >= 3 &&
+        !hostname.includes("lovable.app") &&
+        !hostname.includes("lovableproject.com") &&
+        !hostname.includes("vercel.app")
+      ) return;
+
       const pending = sessionStorage.getItem("pendingTenantSignup");
       const { data: { session } } = await supabase.auth.getSession();
       if (!session || !pending) return;
@@ -380,9 +411,20 @@ const CreateTenantSignup = () => {
                       whatsappNumber: form.whatsappNumber?.trim().replace(/\D/g, "") || undefined,
                     })
                   );
+                  // Always redirect OAuth back to the root domain, never a tenant subdomain
+                  const hostname = window.location.hostname;
+                  const parts = hostname.split(".");
+                  const rootOrigin =
+                    parts.length >= 3 &&
+                    !hostname.includes("localhost") &&
+                    !hostname.includes("lovable.app") &&
+                    !hostname.includes("vercel.app")
+                      ? `https://${parts.slice(1).join(".")}`
+                      : window.location.origin;
+
                   const { error } = await supabase.auth.signInWithOAuth({
                     provider: "google",
-                    options: { redirectTo: `${window.location.origin}/create-account` },
+                    options: { redirectTo: `${rootOrigin}/create-account` },
                   });
                   if (error) throw error;
                 } catch (err: any) {
