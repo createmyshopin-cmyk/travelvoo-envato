@@ -40,10 +40,11 @@ const CreateTenantSignup = () => {
     ) return;
 
     const parts = hostname.split(".");
-    // 3+ parts means we're on a subdomain (e.g. demo.travelvoo.in)
-    if (parts.length >= 3) {
+    // 3+ parts AND first part is not "www" means a real tenant subdomain
+    // e.g. demo.travelvoo.in → redirect, but www.travelvoo.in → allow
+    if (parts.length >= 3 && parts[0] !== "www") {
       const rootDomain = parts.slice(1).join(".");
-      window.location.replace(`https://${rootDomain}/create-account`);
+      window.location.replace(`https://www.${rootDomain}/create-account`);
     }
   }, []);
 
@@ -64,6 +65,7 @@ const CreateTenantSignup = () => {
       const parts = hostname.split(".");
       if (
         parts.length >= 3 &&
+        parts[0] !== "www" &&
         !hostname.includes("lovable.app") &&
         !hostname.includes("lovableproject.com") &&
         !hostname.includes("vercel.app")
@@ -416,10 +418,11 @@ const CreateTenantSignup = () => {
                   const parts = hostname.split(".");
                   const rootOrigin =
                     parts.length >= 3 &&
+                    parts[0] !== "www" &&
                     !hostname.includes("localhost") &&
                     !hostname.includes("lovable.app") &&
                     !hostname.includes("vercel.app")
-                      ? `https://${parts.slice(1).join(".")}`
+                      ? `https://www.${parts.slice(1).join(".")}`
                       : window.location.origin;
 
                   const { error } = await supabase.auth.signInWithOAuth({
