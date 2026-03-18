@@ -86,14 +86,22 @@ export function useAdminAuth() {
 
         setTenantId(resolvedTenantId);
       } else {
-        // No subdomain (localhost / root domain) — fall back to looking up by user_id
+        // No subdomain (localhost / root domain).
+        // Look up the tenant that belongs to THIS specific logged-in user.
+        // Must match user_id exactly — never fall back to "first tenant in DB".
         const { data: tenantRow } = await supabase
           .from("tenants")
           .select("id")
           .eq("user_id", session.user.id)
           .maybeSingle();
 
-        setTenantId(tenantRow?.id ?? null);
+        if (!tenantRow) {
+          // Authenticated admin but no tenant found for their user_id (e.g. super_admin
+          // with no personal tenant). Allow access but without a specific tenant scope.
+          setTenantId(null);
+        } else {
+          setTenantId(tenantRow.id);
+        }
       }
 
       setIsAdmin(true);

@@ -171,6 +171,10 @@ const CreateTenantSignup = () => {
 
     setLoading(true);
     try {
+      // Snapshot whether a super admin is creating this account on behalf of someone else
+      const { data: { session: existingSession } } = await supabase.auth.getSession();
+      const isSuperAdminCreating = !!existingSession;
+
       const { data, error } = await supabase.functions.invoke("create-tenant-signup", {
         body: {
           companyName: form.companyName.trim(),
@@ -184,6 +188,19 @@ const CreateTenantSignup = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
+      if (isSuperAdminCreating) {
+        // Super admin created the account — stay logged in as super admin,
+        // don't hijack their session by signing in as the new user.
+        toast({
+          title: "Account created!",
+          description: `New tenant account for "${form.companyName.trim()}" is ready. They can now log in at their subdomain.`,
+        });
+        setLoading(false);
+        return;
+      }
+
+      // New visitor signup — sign out any stale session first, then sign in as the new account
+      await supabase.auth.signOut();
       const { error: signInErr } = await supabase.auth.signInWithPassword({
         email: form.email.trim().toLowerCase(),
         password: form.password,

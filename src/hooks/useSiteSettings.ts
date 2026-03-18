@@ -41,6 +41,13 @@ export function clearSiteSettingsCache() {
   fetchPromise = null;
 }
 
+// Automatically clear cache on any auth state change (login / logout / signup).
+// Prevents a previous admin's settings leaking into a newly logged-in session.
+supabase.auth.onAuthStateChange(() => {
+  cachedSettings = null;
+  fetchPromise = null;
+});
+
 /**
  * Fetches site_settings for the current tenant (resolved from subdomain).
  * Falls back to the first row when running on localhost / root domain.
@@ -63,6 +70,19 @@ export function useSiteSettings(): UseSiteSettingsReturn {
 
         if (tenantId) {
           query = query.eq("tenant_id", tenantId);
+        } else {
+          // No subdomain — resolve by the currently logged-in user's tenant
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user?.id) {
+            const { data: tenant } = await supabase
+              .from("tenants")
+              .select("id")
+              .eq("user_id", session.user.id)
+              .maybeSingle();
+            if (tenant?.id) {
+              query = query.eq("tenant_id", tenant.id);
+            }
+          }
         }
 
         const { data } = await query.limit(1).maybeSingle();
