@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Lock } from "lucide-react";
+import { resolveTenantFromHostname } from "@/hooks/useAdminAuth";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -37,6 +38,29 @@ export default function AdminLogin() {
       toast({ title: "Access denied", description: "You don't have admin privileges.", variant: "destructive" });
       setLoading(false);
       return;
+    }
+
+    // Verify this user owns the tenant for the current subdomain
+    const resolvedTenantId = await resolveTenantFromHostname();
+
+    if (resolvedTenantId) {
+      const { data: tenantRow } = await supabase
+        .from("tenants")
+        .select("id")
+        .eq("id", resolvedTenantId)
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+
+      if (!tenantRow) {
+        await supabase.auth.signOut();
+        toast({
+          title: "Access denied",
+          description: "This account does not belong to this property.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
     }
 
     toast({ title: "Welcome back!", description: "Redirecting to dashboard..." });

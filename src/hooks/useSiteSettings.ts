@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveTenantFromHostname } from "@/hooks/useAdminAuth";
 
 interface SiteSettings {
   id: string;
+  tenant_id: string | null;
   site_name: string;
   contact_email: string;
   contact_phone: string;
@@ -40,8 +42,9 @@ export function clearSiteSettingsCache() {
 }
 
 /**
- * Fetches site_settings from Supabase with a module-level cache so the
- * DB is only hit once per page load, even if multiple components call this hook.
+ * Fetches site_settings for the current tenant (resolved from subdomain).
+ * Falls back to the first row when running on localhost / root domain.
+ * Module-level cache so the DB is hit only once per page load.
  */
 export function useSiteSettings(): UseSiteSettingsReturn {
   const [settings, setSettings] = useState<SiteSettings | null>(cachedSettings);
@@ -55,13 +58,14 @@ export function useSiteSettings(): UseSiteSettingsReturn {
     }
 
     if (!fetchPromise) {
-      fetchPromise = Promise.resolve(
-        supabase
-          .from("site_settings")
-          .select("*")
-          .limit(1)
-          .single()
-      ).then(({ data }) => {
+      fetchPromise = resolveTenantFromHostname().then(async (tenantId) => {
+        let query = supabase.from("site_settings").select("*");
+
+        if (tenantId) {
+          query = query.eq("tenant_id", tenantId);
+        }
+
+        const { data } = await query.limit(1).maybeSingle();
         cachedSettings = data as SiteSettings | null;
         fetchPromise = null;
         return cachedSettings;
