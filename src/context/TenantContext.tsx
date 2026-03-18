@@ -64,6 +64,12 @@ async function resolveTenant(): Promise<ResolveResult> {
   const parts = hostname.split(".");
   if (parts.length >= 3) {
     const subdomain = parts[0];
+
+    // "www" is the canonical main-domain prefix — never treat it as a tenant
+    if (subdomain === "www") {
+      return { tenant: null, isSubdomain: false };
+    }
+
     const { data: subMatch } = await supabase
       .from("tenant_domains")
       .select("tenant_id, tenants(id, tenant_name)")
