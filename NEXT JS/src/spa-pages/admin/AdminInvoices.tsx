@@ -14,6 +14,7 @@ import { clearSiteSettingsCache } from "@/hooks/useSiteSettings";
 import { InvoiceDetailDialog } from "@/components/admin/InvoiceDetailDialog";
 import { generateInvoicePdf } from "@/lib/pdfUtils";
 import { format } from "date-fns";
+import { useCurrency } from "@/context/CurrencyContext";
 
 const paymentColors: Record<string, string> = {
   pending: "secondary",
@@ -23,6 +24,7 @@ const paymentColors: Record<string, string> = {
 };
 
 export default function AdminInvoices() {
+  const { format: formatMoney } = useCurrency();
   const { settings: siteSettings } = useSiteSettings();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [stays, setStays] = useState<any[]>([]);
@@ -62,7 +64,7 @@ export default function AdminInvoices() {
 
   const sendWhatsApp = (inv: any) => {
     const stay = stays.find((s) => s.id === inv.stay_id);
-    const msg = `Hello ${inv.guest_name},\n\nHere is your invoice.\n\n*Invoice:* ${inv.invoice_id}\n*Stay:* ${stay?.name || "—"}\n\n*Check-in:* ${inv.checkin ? format(new Date(inv.checkin), "dd MMM yyyy") : "—"}\n*Check-out:* ${inv.checkout ? format(new Date(inv.checkout), "dd MMM yyyy") : "—"}\n\n*Total:* ₹${inv.total_price?.toLocaleString("en-IN")}\n*Status:* ${inv.payment_status}\n\nThank you!`;
+    const msg = `Hello ${inv.guest_name},\n\nHere is your invoice.\n\n*Invoice:* ${inv.invoice_id}\n*Stay:* ${stay?.name || "—"}\n\n*Check-in:* ${inv.checkin ? format(new Date(inv.checkin), "dd MMM yyyy") : "—"}\n*Check-out:* ${inv.checkout ? format(new Date(inv.checkout), "dd MMM yyyy") : "—"}\n\n*Total:* ${formatMoney(inv.total_price ?? 0)}\n*Status:* ${inv.payment_status}\n\nThank you!`;
     window.open(`https://wa.me/${inv.phone?.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
@@ -119,7 +121,7 @@ export default function AdminInvoices() {
                 <TableCell className="font-medium">{inv.guest_name}</TableCell>
                 <TableCell className="text-sm">{getStayName(inv.stay_id)}</TableCell>
                 <TableCell className="text-sm">{inv.checkin ? format(new Date(inv.checkin), "dd MMM") : "—"}</TableCell>
-                <TableCell className="font-semibold">₹{inv.total_price?.toLocaleString("en-IN")}</TableCell>
+                <TableCell className="font-semibold">{formatMoney(inv.total_price ?? 0)}</TableCell>
                 <TableCell>
                   <Select value={inv.payment_status} onValueChange={(v) => updatePaymentStatus(inv.id, v)}>
                     <SelectTrigger className="h-7 text-xs w-[130px]">
@@ -167,7 +169,7 @@ export default function AdminInvoices() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">{getStayName(inv.stay_id)}</p>
-                <p className="text-sm font-semibold">₹{inv.total_price?.toLocaleString("en-IN")}</p>
+                <p className="text-sm font-semibold">{formatMoney(inv.total_price ?? 0)}</p>
               </div>
               <div className="flex gap-1">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewInvoice(inv)}><Eye className="h-4 w-4" /></Button>

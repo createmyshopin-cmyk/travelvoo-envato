@@ -13,7 +13,13 @@ DO $$
 DECLARE
   v_user_id uuid := gen_random_uuid();
   v_existing_id uuid;
+  v_inst uuid;
 BEGIN
+  SELECT id INTO v_inst FROM auth.instances LIMIT 1;
+  IF v_inst IS NULL THEN
+    v_inst := '00000000-0000-0000-0000-000000000000';
+  END IF;
+
   -- Check if super admin already exists
   SELECT id INTO v_existing_id FROM auth.users WHERE email = 'superadmin@stay.com' LIMIT 1;
 
@@ -23,8 +29,10 @@ BEGIN
     VALUES (v_existing_id, 'super_admin')
     ON CONFLICT (user_id, role) DO NOTHING;
 
-    -- Confirm email
-    UPDATE auth.users SET email_confirmed_at = now() WHERE id = v_existing_id;
+    -- Confirm email and align instance (required for password login on hosted Supabase)
+    UPDATE auth.users
+    SET email_confirmed_at = now(), instance_id = v_inst, updated_at = now()
+    WHERE id = v_existing_id;
 
     RAISE NOTICE 'Super admin already exists. Role confirmed for %', v_existing_id;
     RETURN;
@@ -38,7 +46,7 @@ BEGIN
     is_super_admin, role
   ) VALUES (
     v_user_id,
-    '00000000-0000-0000-0000-000000000000',
+    v_inst,
     'superadmin@stay.com',
     crypt('superadmin123', gen_salt('bf')),
     now(), now(), now(),

@@ -5,8 +5,7 @@
 - App source was copied from the root Vite project (`src/`).
 - **`src/pages` → `src/spa-pages`**: Next.js reserves `src/pages` for the **Pages Router**. Screen modules live under `spa-pages`; **URLs are defined only in `src/app/`**.
 - **Env**: `VITE_SUPABASE_*` → **`NEXT_PUBLIC_SUPABASE_*`** in `src/integrations/supabase/client.ts`. Use `.env.local`.
-- **Clerk** (optional): `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in `.env.local` for a permanent app in the Clerk dashboard. **Keyless mode** runs without them (temporary keys + “Configure your application” in the UI). Middleware lives in **`src/proxy.ts`** and is re-exported from **`src/middleware.ts`** (Next.js 15 still resolves `middleware.ts`).
-- **Clerk MCP (Cursor)**: use MCP server **`user-clerk`**. Tools: **`list_clerk_sdk_snippets`** (optional `tag`, e.g. `auth`), **`clerk_sdk_snippet`** with **`slug`** (e.g. `server-auth-nextjs`, `show-component`, or bundle `server-side`). Confirms: `clerkMiddleware()` + App Router; `<Show>` needs **`@clerk/nextjs` ≥ 7** (we use 7.x).
+- **Middleware**: optional Envato license gate in **`src/proxy.ts`**, re-exported from **`src/middleware.ts`**. Set **`LICENSE_GATE_ENABLED=true`** with **`LICENSE_SECRET`** and **`ENVATO_ITEM_ID`** (see `.env.example`). No third-party auth framework is bundled in this package — tenant and SaaS admins use **Supabase Auth** (`/admin/login`, `/saas-admin/login`).
 
 ## Phase 2 (done) — real App Router
 

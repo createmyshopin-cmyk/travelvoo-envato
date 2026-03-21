@@ -19,6 +19,7 @@ import {
   Sparkles, Eye, Package, TrendingUp, X, Filter, ArrowUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/context/CurrencyContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -70,6 +71,7 @@ const COMMON_AMENITIES = [
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AdminRoomCategories() {
+  const { format, formatCompact, symbol } = useCurrency();
   const [rooms, setRooms] = useState<RoomRow[]>([]);
   const [stays, setStays] = useState<StayOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -374,7 +376,7 @@ export default function AdminRoomCategories() {
         {[
           { label: "Categories", value: stats.totalRooms, icon: BedDouble, color: "text-primary", bg: "bg-primary/5" },
           { label: "Total Capacity", value: stats.totalCapacity, icon: Package, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
-          { label: "Avg Price", value: stats.avgPrice > 0 ? `₹${stats.avgPrice.toLocaleString("en-IN")}` : "—", icon: IndianRupee, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
+          { label: "Avg Price", value: stats.avgPrice > 0 ? format(stats.avgPrice) : "—", icon: IndianRupee, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
           { label: "Active Bookings", value: stats.totalBookings, icon: TrendingUp, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
@@ -546,10 +548,10 @@ export default function AdminRoomCategories() {
                   </td>
                   <td className="p-3 text-right">
                     <div className="text-right">
-                      <span className="font-semibold text-sm">₹{r.price.toLocaleString("en-IN")}</span>
+                      <span className="font-semibold text-sm">{format(r.price)}</span>
                       {disc > 0 && (
                         <div className="flex items-center gap-1 justify-end">
-                          <span className="text-[10px] text-muted-foreground line-through">₹{r.original_price.toLocaleString("en-IN")}</span>
+                          <span className="text-[10px] text-muted-foreground line-through">{format(r.original_price)}</span>
                           <Badge className="text-[9px] px-1 py-0 bg-emerald-500 text-white">{disc}% off</Badge>
                         </div>
                       )}
@@ -667,7 +669,7 @@ export default function AdminRoomCategories() {
                 </div>
                 <div className="bg-muted/50 rounded-lg py-1.5">
                   <p className="text-[9px] text-muted-foreground">Price</p>
-                  <p className="text-xs font-bold">₹{r.price >= 10000 ? `${(r.price / 1000).toFixed(r.price % 1000 === 0 ? 0 : 1)}k` : r.price.toLocaleString("en-IN")}</p>
+                  <p className="text-xs font-bold">{formatCompact(r.price)}</p>
                 </div>
                 <div className="bg-muted/50 rounded-lg py-1.5">
                   <p className="text-[9px] text-muted-foreground">Bookings</p>
@@ -678,7 +680,7 @@ export default function AdminRoomCategories() {
               {/* Discount badge */}
               {disc > 0 && (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-muted-foreground line-through">₹{r.original_price.toLocaleString("en-IN")}</span>
+                  <span className="text-[10px] text-muted-foreground line-through">{format(r.original_price)}</span>
                   <Badge className="text-[9px] px-1 py-0 bg-emerald-500 text-white">{disc}% off</Badge>
                 </div>
               )}
@@ -771,7 +773,7 @@ export default function AdminRoomCategories() {
             {/* Price + Original */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Price (₹)</Label>
+                <Label className="text-xs font-medium">Price ({symbol})</Label>
                 <Input
                   type="number"
                   min={0}
@@ -782,7 +784,7 @@ export default function AdminRoomCategories() {
                 {formErrors.price && <p className="text-[10px] text-destructive">{formErrors.price}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Original Price (₹)</Label>
+                <Label className="text-xs font-medium">Original Price ({symbol})</Label>
                 <Input
                   type="number"
                   min={0}

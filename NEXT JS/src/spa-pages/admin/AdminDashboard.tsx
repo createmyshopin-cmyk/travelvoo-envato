@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, DoorOpen, CalendarCheck, IndianRupee } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
+import { useCurrency } from "@/context/CurrencyContext";
 
 interface Stats {
   totalStays: number;
@@ -15,6 +16,7 @@ interface Stats {
 const COLORS = ["hsl(358, 82%, 55%)", "hsl(174, 100%, 33%)", "hsl(25, 95%, 53%)", "hsl(270, 60%, 50%)", "hsl(142, 71%, 45%)", "hsl(45, 100%, 51%)"];
 
 export default function AdminDashboard() {
+  const { format } = useCurrency();
   const [stats, setStats] = useState<Stats>({ totalStays: 0, totalRooms: 0, totalBookings: 0, estimatedRevenue: 0 });
   const [loading, setLoading] = useState(true);
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
@@ -96,7 +98,7 @@ export default function AdminDashboard() {
     { label: "Total Stays", value: stats.totalStays, icon: Building2, color: "text-primary" },
     { label: "Total Rooms", value: stats.totalRooms, icon: DoorOpen, color: "text-secondary" },
     { label: "Total Bookings", value: stats.totalBookings, icon: CalendarCheck, color: "text-primary" },
-    { label: "Revenue", value: `₹${stats.estimatedRevenue.toLocaleString("en-IN")}`, icon: IndianRupee, color: "text-secondary" },
+    { label: "Revenue", value: format(stats.estimatedRevenue), icon: IndianRupee, color: "text-secondary" },
   ];
 
   const chartConfig = {

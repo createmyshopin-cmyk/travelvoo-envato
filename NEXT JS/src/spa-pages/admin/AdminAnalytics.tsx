@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useCurrency } from "@/context/CurrencyContext";
 
 // ─── Colours ────────────────────────────────────────────────────────────────
 
@@ -47,7 +48,6 @@ interface KPI {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const fmt = (n: number) => n.toLocaleString("en-IN");
-const fmtCur = (n: number) => "₹" + fmt(n);
 const pct = (curr: number, prev: number) =>
   prev === 0 ? null : Math.round(((curr - prev) / prev) * 100);
 
@@ -156,6 +156,7 @@ function Empty({ label }: { label: string }) {
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function AdminAnalytics() {
+  const { format, symbol } = useCurrency();
   const [range, setRange] = useState<Range>("30d");
   const [loading, setLoading] = useState(true);
 
@@ -208,9 +209,9 @@ export default function AdminAnalytics() {
     : 0;
 
   const kpis: KPI[] = [
-    { label: "Revenue", value: fmtCur(curRevenue), raw: curRevenue, prev: prevRevenue, icon: IndianRupee, color: C.primary, prefix: "₹" },
+    { label: "Revenue", value: format(curRevenue), raw: curRevenue, prev: prevRevenue, icon: IndianRupee, color: C.primary, prefix: symbol },
     { label: "Bookings", value: fmt(curBookings.length), raw: curBookings.length, prev: prevBookings.length, icon: CalendarCheck, color: C.teal },
-    { label: "Avg Booking Value", value: fmtCur(curAvg), raw: curAvg, prev: prevAvg, icon: TrendingUp, color: C.orange },
+    { label: "Avg Booking Value", value: format(curAvg), raw: curAvg, prev: prevAvg, icon: TrendingUp, color: C.orange },
     { label: "Avg Rating", value: curRating ? curRating + " / 5" : "—", raw: curRating, prev: 0, icon: Star, color: C.yellow },
   ];
 
@@ -381,7 +382,7 @@ export default function AdminAnalytics() {
                   />
                   <YAxis yAxisId="left" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
                   <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} tickLine={false} axisLine={false}
-                    tickFormatter={v => `₹${v >= 1000 ? (v / 1000).toFixed(0) + "k" : v}`}
+                    tickFormatter={v => `${symbol}${v >= 1000 ? (v / 1000).toFixed(0) + "k" : v}`}
                   />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Area yAxisId="left" type="monotone" dataKey="bookings" stroke={C.primary} fill="url(#gradBook)" strokeWidth={2} dot={false} />
@@ -462,7 +463,7 @@ export default function AdminAnalytics() {
                           <span className="font-medium truncate max-w-[160px]">{s.name}</span>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="font-bold text-xs text-primary">₹{fmt(s.revenue)}</p>
+                          <p className="font-bold text-xs text-primary">{format(s.revenue)}</p>
                           <p className="text-[10px] text-muted-foreground">{s.count} bookings</p>
                         </div>
                       </div>
@@ -689,7 +690,7 @@ export default function AdminAnalytics() {
                     <div className="flex-1 min-w-0">
                       <p className="font-mono text-sm font-semibold truncate">{c.code}</p>
                       <p className="text-[10px] text-muted-foreground">
-                        {c.type === "percent" ? `${c.value}% off` : `₹${c.value} off`} · {c.active ? "Active" : "Inactive"}
+                        {c.type === "percent" ? `${c.value}% off` : `${format(c.value)} off`} · {c.active ? "Active" : "Inactive"}
                       </p>
                     </div>
                     <div className="text-right shrink-0">

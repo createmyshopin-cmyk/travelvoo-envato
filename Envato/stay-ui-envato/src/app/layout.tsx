@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { AppProviders } from "@/components/AppProviders";
-import { ClerkAuthBar } from "@/components/ClerkAuthBar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -34,14 +32,9 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://aoyznmofhgibmuhstrio.supabase.co" />
       </head>
       <body className="font-sans antialiased">
-        <ClerkProvider>
-          <ErrorBoundary>
-            <AppProviders>
-              <ClerkAuthBar />
-              {children}
-            </AppProviders>
-          </ErrorBoundary>
-        </ClerkProvider>
+        <ErrorBoundary>
+          <AppProviders>{children}</AppProviders>
+        </ErrorBoundary>
       </body>
     </html>
   );

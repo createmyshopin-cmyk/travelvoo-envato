@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrency } from "@/context/CurrencyContext";
 import { Badge } from "@/components/ui/badge";
 
 interface Coupon {
@@ -19,6 +20,7 @@ interface SiteSettingsLite {
 }
 
 const CouponBanner = () => {
+  const { format } = useCurrency();
   const [settings, setSettings] = useState<SiteSettingsLite | null>(null);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
 
@@ -47,8 +49,8 @@ const CouponBanner = () => {
   if (!settings?.coupon_banner_enabled || coupons.length === 0) return null;
 
   const formatLabel = (c: Coupon) => {
-    const value = c.type === "percentage" ? `${c.value}% off` : `₹${c.value} off`;
-    return `${value} • Min ₹${c.min_purchase.toLocaleString()}`;
+    const value = c.type === "percentage" ? `${c.value}% off` : `${format(c.value)} off`;
+    return `${value} • Min ${format(c.min_purchase)}`;
   };
 
   return (

@@ -8,9 +8,11 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { dispatchPlatformCurrencyChange, useCurrency } from "@/context/CurrencyContext";
 import { Settings, Shield, Globe, Mail, CreditCard, Clock, Save, Building2, Server, Copy, CheckCheck } from "lucide-react";
 
 const SaasAdminSettings = () => {
+  const { format } = useCurrency();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dnsSaving, setDnsSaving] = useState(false);
@@ -19,7 +21,7 @@ const SaasAdminSettings = () => {
     platformName: "TravelVoo",
     supportEmail: "support@travelvoo.in",
     defaultTrialDays: 14,
-    defaultCurrency: "INR",
+    defaultCurrency: "USD",
     maintenanceMode: false,
     autoApproveSignups: true,
     requireEmailVerification: true,
@@ -78,16 +80,38 @@ const SaasAdminSettings = () => {
         platformDnsTtl: map.platform_dns_ttl || "600",
       }));
     }
+    const { data: curRow } = await supabase.from("saas_platform_settings").select("setting_value").eq("setting_key", "default_currency").maybeSingle();
+    if (curRow?.setting_value) {
+      setSettings((s) => ({ ...s, defaultCurrency: curRow.setting_value }));
+      try {
+        const raw = localStorage.getItem("saas_platform_settings");
+        const obj = raw ? JSON.parse(raw) : {};
+        localStorage.setItem("saas_platform_settings", JSON.stringify({ ...obj, defaultCurrency: curRow.setting_value }));
+      } catch { /* ignore */ }
+    }
     setLoading(false);
   };
 
-  const save = () => {
+  const upsertPlatformSetting = async (key: string, value: string) => {
+    const { data: existing } = await supabase.from("saas_platform_settings" as any).select("id").eq("setting_key", key).maybeSingle();
+    if (existing) {
+      await supabase.from("saas_platform_settings" as any).update({ setting_value: value, updated_at: new Date().toISOString() } as any).eq("setting_key", key);
+    } else {
+      await supabase.from("saas_platform_settings" as any).insert({ setting_key: key, setting_value: value } as any);
+    }
+  };
+
+  const save = async () => {
     setSaving(true);
     localStorage.setItem("saas_platform_settings", JSON.stringify(settings));
-    setTimeout(() => {
-      toast({ title: "Settings saved" });
-      setSaving(false);
-    }, 300);
+    try {
+      await upsertPlatformSetting("default_currency", settings.defaultCurrency);
+      dispatchPlatformCurrencyChange(settings.defaultCurrency);
+    } catch (err: any) {
+      toast({ title: "Could not sync currency to server", description: err?.message, variant: "destructive" });
+    }
+    toast({ title: "Settings saved" });
+    setSaving(false);
   };
 
   const saveEntriCredentials = async () => {
@@ -176,11 +200,22 @@ const SaasAdminSettings = () => {
             </div>
             <div>
               <Label>Default Currency</Label>
-              <Select value={settings.defaultCurrency} onValueChange={(v) => update("defaultCurrency", v)}>
+              <Select
+                value={settings.defaultCurrency}
+                onValueChange={(v) => {
+                  update("defaultCurrency", v);
+                  try {
+                    const raw = localStorage.getItem("saas_platform_settings");
+                    const obj = raw ? JSON.parse(raw) : {};
+                    localStorage.setItem("saas_platform_settings", JSON.stringify({ ...obj, defaultCurrency: v }));
+                  } catch { /* ignore */ }
+                  dispatchPlatformCurrencyChange(v);
+                }}
+              >
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="INR">INR (₹)</SelectItem>
                   <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="INR">INR (₹)</SelectItem>
                   <SelectItem value="EUR">EUR (€)</SelectItem>
                   <SelectItem value="GBP">GBP (£)</SelectItem>
                 </SelectContent>
@@ -214,7 +249,7 @@ const SaasAdminSettings = () => {
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
                   {plans.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.plan_name} — ₹{p.price}</SelectItem>
+                    <SelectItem key={p.id} value={p.id}>{p.plan_name} — {format(p.price)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

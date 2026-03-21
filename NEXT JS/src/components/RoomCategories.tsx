@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, ChevronLeft, ChevronRight, Zap, Sparkles, Minus, Plus, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/context/CurrencyContext";
 import type { RoomCategory } from "@/types/stay";
 
 export interface RoomSelection {
@@ -138,14 +139,14 @@ const RoomCard = ({
         {/* Price row */}
         <div className="flex items-center gap-2 mt-2">
           {hasSavings && (
-            <span className="text-[11px] text-muted-foreground line-through">₹{room.originalPrice.toLocaleString()}</span>
+            <span className="text-[11px] text-muted-foreground line-through">{format(room.originalPrice)}</span>
           )}
-          <span className="text-base font-extrabold text-primary">₹{room.price.toLocaleString()}</span>
+          <span className="text-base font-extrabold text-primary">{format(room.price)}</span>
           <span className="text-[10px] text-muted-foreground">/night</span>
           {hasSavings && (
             <span className="ml-auto inline-flex items-center gap-0.5 bg-savings/10 text-savings text-[9px] font-bold px-1.5 py-0.5 rounded-full">
               <Sparkles className="w-2.5 h-2.5" />
-              -₹{savings.toLocaleString()}
+              {format(-savings)}
             </span>
           )}
         </div>

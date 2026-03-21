@@ -27,6 +27,7 @@ import {
 import { format, differenceInDays, isToday, isTomorrow, isPast, parseISO, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { formatPhoneForWhatsApp } from "@/lib/countryCodes";
+import { useCurrency } from "@/context/CurrencyContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -96,6 +97,7 @@ function whatsappUrl(phone: string, guestName: string, bookingId: string, countr
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminBookings() {
+  const { format } = useCurrency();
   const [bookings, setBookings] = useState<any[]>([]);
   const [stays, setStays] = useState<StayMap>({});
   const [loading, setLoading] = useState(true);
@@ -397,7 +399,7 @@ export default function AdminBookings() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {[
-          { label: "Revenue", value: loading ? "…" : `₹${stats.revenue.toLocaleString("en-IN")}`, icon: IndianRupee, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
+          { label: "Revenue", value: loading ? "…" : format(stats.revenue), icon: IndianRupee, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
           { label: "Pending", value: loading ? "…" : stats.pending, icon: Clock, color: "text-yellow-600", bg: "bg-yellow-50 dark:bg-yellow-950/30" },
           { label: "Arriving", value: loading ? "…" : stats.arrivingToday, icon: CalendarCheck, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
           { label: "Departing", value: loading ? "…" : stats.departingToday, icon: CalendarClock, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30" },
@@ -559,7 +561,7 @@ export default function AdminBookings() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline justify-between gap-2">
                     <p className="font-bold text-sm text-foreground truncate">{b.guest_name}</p>
-                    <span className="font-bold text-sm text-primary shrink-0 tabular-nums">₹{(b.total_price || 0).toLocaleString("en-IN")}</span>
+                    <span className="font-bold text-sm text-primary shrink-0 tabular-nums">{format(b.total_price || 0)}</span>
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="text-[10px] text-muted-foreground font-mono">{b.booking_id}</span>
@@ -690,7 +692,7 @@ export default function AdminBookings() {
       {!loading && filtered.length > 0 && (
         <p className="text-[10px] text-muted-foreground text-center">
           Showing {filtered.length} of {bookings.length} booking{bookings.length !== 1 ? "s" : ""}
-          {filtered.length > 0 && ` · ₹${filtered.reduce((s, b) => s + (b.total_price || 0), 0).toLocaleString("en-IN")} total`}
+          {filtered.length > 0 && ` · ${format(filtered.reduce((s, b) => s + (b.total_price || 0), 0))} total`}
         </p>
       )}
 

@@ -14,6 +14,7 @@ import { RefreshCw, Plus, Eye, Building2, CreditCard, RotateCcw, ShieldOff, Cale
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { initiateRazorpayCheckout } from "@/lib/razorpay";
 import { format } from "date-fns";
+import { useCurrency } from "@/context/CurrencyContext";
 
 interface Plan { id: string; plan_name: string; price: number; max_stays: number; max_rooms: number; max_bookings_per_month: number; max_ai_search: number; }
 interface Tenant { id: string; tenant_name: string; owner_name: string; email: string; phone: string; domain: string; plan_id: string | null; status: string; created_at: string; user_id?: string | null; }
@@ -31,6 +32,7 @@ const slugifySubdomain = (s: string) => s.toLowerCase().replace(/[^a-z0-9-]/g, "
 const PAGE_SIZE = 25;
 
 const SaasAdminTenants = () => {
+  const { format: formatMoney } = useCurrency();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [usages, setUsages] = useState<TenantUsage[]>([]);
@@ -483,7 +485,7 @@ const SaasAdminTenants = () => {
               <Label>Plan</Label>
               <Select value={form.plan_id} onValueChange={v => setForm({ ...form, plan_id: v })}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Select plan" /></SelectTrigger>
-                <SelectContent>{plans.map(p => <SelectItem key={p.id} value={p.id}>{p.plan_name} — ₹{p.price}</SelectItem>)}</SelectContent>
+                <SelectContent>{plans.map(p => <SelectItem key={p.id} value={p.id}>{p.plan_name} — {formatMoney(p.price)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="flex justify-end gap-2">
@@ -529,7 +531,7 @@ const SaasAdminTenants = () => {
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Select plan" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="no-plan" disabled>Select plan</SelectItem>
-                    {plans.map(p => <SelectItem key={p.id} value={p.id}>{p.plan_name} — ₹{p.price}</SelectItem>)}
+                    {plans.map(p => <SelectItem key={p.id} value={p.id}>{p.plan_name} — {formatMoney(p.price)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { TenantProvider } from "@/context/TenantContext";
 import { BrandingProvider } from "@/context/BrandingContext";
+import { CurrencyProvider } from "@/context/CurrencyContext";
 import { TenantGuard } from "@/components/TenantGuard";
 import AnalyticsScripts from "@/components/AnalyticsScripts";
 
@@ -29,18 +30,20 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <TenantProvider>
-          <BrandingProvider>
-            <WishlistProvider>
-              <Toaster />
-              <Sonner />
-              <AnalyticsScripts />
-              <TenantGuard>{children}</TenantGuard>
-            </WishlistProvider>
-          </BrandingProvider>
-        </TenantProvider>
-      </TooltipProvider>
+      <CurrencyProvider>
+        <TooltipProvider>
+          <TenantProvider>
+            <BrandingProvider>
+              <WishlistProvider>
+                <Toaster />
+                <Sonner />
+                <AnalyticsScripts />
+                <TenantGuard>{children}</TenantGuard>
+              </WishlistProvider>
+            </BrandingProvider>
+          </TenantProvider>
+        </TooltipProvider>
+      </CurrencyProvider>
     </QueryClientProvider>
   );
 }

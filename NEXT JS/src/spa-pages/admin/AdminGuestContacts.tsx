@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/context/TenantContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import {
   User,
   Users,
@@ -150,6 +151,7 @@ function exportGuestContactsCSV(guests: GuestContact[]) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminGuestContacts() {
+  const { format } = useCurrency();
   const [bookings, setBookings] = useState<any[]>([]);
   const [stays, setStays] = useState<StayMap>({});
   const [loading, setLoading] = useState(true);
@@ -334,7 +336,7 @@ export default function AdminGuestContacts() {
           },
           {
             label: "Total Spend",
-            value: loading ? "…" : `₹${stats.totalSpend.toLocaleString("en-IN")}`,
+            value: loading ? "…" : format(stats.totalSpend),
             icon: IndianRupee,
             color: "text-green-600",
             bg: "bg-green-50 dark:bg-green-950/30",
@@ -447,7 +449,7 @@ export default function AdminGuestContacts() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-bold text-sm text-primary tabular-nums">
-                        ₹{g.totalSpend.toLocaleString("en-IN")}
+                        {format(g.totalSpend)}
                       </p>
                       <p className="text-[10px] text-muted-foreground">{g.totalBookings} stays</p>
                     </div>
@@ -561,6 +563,7 @@ interface GiveDiscountDialogProps {
 }
 
 function GiveDiscountDialog({ guest, onClose, onSuccess, tenantId, toast }: GiveDiscountDialogProps) {
+  const { format, symbol } = useCurrency();
   const [code, setCode] = useState("");
   const [type, setType] = useState<"percent" | "flat">("percent");
   const [value, setValue] = useState(10);
@@ -614,7 +617,7 @@ function GiveDiscountDialog({ guest, onClose, onSuccess, tenantId, toast }: Give
     const discountText =
       type === "percent"
         ? `${value}% off`
-        : `₹${value.toLocaleString("en-IN")} off`;
+        : `${format(value)} off`;
     const message = `Hi ${guest.name}! Thank you for being a valued guest. Use coupon ${code.trim().toUpperCase()} for ${discountText} on your next stay!`;
     const waUrl = whatsappUrl(guest.phone, message, guest.phone_country_code);
 
@@ -650,7 +653,7 @@ function GiveDiscountDialog({ guest, onClose, onSuccess, tenantId, toast }: Give
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="percent">Percentage</SelectItem>
-                  <SelectItem value="flat">Flat (₹)</SelectItem>
+                  <SelectItem value="flat">Flat ({symbol})</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -667,7 +670,7 @@ function GiveDiscountDialog({ guest, onClose, onSuccess, tenantId, toast }: Give
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Min. Purchase (₹)</Label>
+              <Label>Min. purchase ({symbol})</Label>
               <Input
                 type="number"
                 min={0}

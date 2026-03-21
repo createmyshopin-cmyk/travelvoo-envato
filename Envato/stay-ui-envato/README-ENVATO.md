@@ -27,7 +27,6 @@ This folder is a **sanitized copy** of the application for marketplace distribut
 4. Edit `.env.local`:
 
    - **Supabase**: [Project Settings → API](https://supabase.com/dashboard) — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-   - **Clerk**: [Clerk Dashboard → API Keys](https://dashboard.clerk.com/) — publishable + secret keys
    - **Envato license (optional)**: verify buyers’ purchase codes against your item ([Envato API](https://build.envato.com/api/)):
      - **`ENVATO_API_TOKEN`** — [Create a personal token](https://build.envato.com/create-token/) on the **seller** account that owns the item. Enable permissions that allow **author / private** sale lookups (as shown in the API docs for “Look up sale by code”).
      - **`ENVATO_ITEM_ID`** — numeric ID from your item URL (e.g. `codecanyon.net/item/your-item-name/12345678` → `12345678`).
@@ -44,6 +43,8 @@ This folder is a **sanitized copy** of the application for marketplace distribut
 
    Open [http://localhost:8080](http://localhost:8080).
 
+   **Demo admin logins (local dev only):** After you run the Supabase seed (`supabase/seed_admin_saas_stays.sql` in the main project, or your equivalent), **`/admin/login`** and **`/saas-admin/login`** show demo email and password plus a “Fill demo” button. The panel is hidden in production builds unless you set **`NEXT_PUBLIC_SHOW_DEMO_LOGIN=true`** (not recommended for live sites).
+
 6. Production build:
 
    ```bash
@@ -58,11 +59,10 @@ This folder is a **sanitized copy** of the application for marketplace distribut
 | `node_modules/` | Run `npm install` |
 | `.next/` | Run `npm run dev` or `npm run build` |
 | `.env.local` | **Secrets** — buyer creates their own |
-| `.clerk/` | Local Clerk dev cache |
 
 ## Third-party services
 
-Buyers must create their own accounts for **Supabase**, **Clerk**, **hosting** (e.g. Vercel), and any payment/analytics integrations you enable in code. Review each vendor’s terms of use.
+Buyers must create their own accounts for **Supabase**, **hosting** (e.g. Vercel), and any payment/analytics integrations you enable in code. Review each vendor’s terms of use.
 
 ## Documentation
 

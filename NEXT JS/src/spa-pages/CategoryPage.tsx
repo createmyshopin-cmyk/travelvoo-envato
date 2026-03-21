@@ -9,6 +9,7 @@ import {
 import { useStays } from "@/hooks/useStays";
 import type { Stay } from "@/types/stay";
 import { useWishlist } from "@/context/WishlistContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import StickyHeader from "@/components/StickyHeader";
 import StickyBottomNav from "@/components/StickyBottomNav";
 import Footer from "@/components/Footer";
@@ -67,6 +68,7 @@ type SortKey = "top" | "price-asc" | "price-desc";
 
 // ── Listing card ──────────────────────────────────────────────────────────────
 const ListingCard = ({ stay, index }: { stay: Stay; index: number }) => {
+  const { format } = useCurrency();
   const router = useRouter();
   const { isWishlisted, toggleWishlist } = useWishlist();
   const wishlisted = isWishlisted(stay.id);
@@ -189,9 +191,9 @@ const ListingCard = ({ stay, index }: { stay: Stay; index: number }) => {
         <div className="flex items-end justify-between mt-3 pt-3 border-t border-border/40">
           <div>
             {savings > 0 && (
-              <p className="text-xs text-muted-foreground line-through">₹{stay.originalPrice.toLocaleString("en-IN")}</p>
+              <p className="text-xs text-muted-foreground line-through">{format(stay.originalPrice)}</p>
             )}
-            <p className="text-xl font-bold text-foreground">₹{stay.price.toLocaleString("en-IN")}</p>
+            <p className="text-xl font-bold text-foreground">{format(stay.price)}</p>
             <p className="text-[11px] text-muted-foreground">Per night + Taxes</p>
           </div>
           <button

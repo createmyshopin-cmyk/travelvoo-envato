@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, CreditCard, BarChart3, CalendarCheck, Sparkles, TrendingUp } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid } from "recharts";
 import { format, subMonths, startOfMonth } from "date-fns";
+import { useCurrency } from "@/context/CurrencyContext";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
 const SaasAdminAnalytics = () => {
+  const { format: formatMoney } = useCurrency();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ tenants: 0, activeSubs: 0, mrr: 0, totalBookings: 0, aiSearches: 0 });
   const [mrrTrend, setMrrTrend] = useState<any[]>([]);
@@ -82,7 +84,7 @@ const SaasAdminAnalytics = () => {
   const statCards = [
     { label: "Total Tenants", value: stats.tenants, icon: Building2 },
     { label: "Active Subscriptions", value: stats.activeSubs, icon: CreditCard },
-    { label: "Monthly Revenue", value: `₹${stats.mrr.toLocaleString()}`, icon: TrendingUp },
+    { label: "Monthly Revenue", value: formatMoney(stats.mrr), icon: TrendingUp },
     { label: "Total Bookings", value: stats.totalBookings, icon: CalendarCheck },
     { label: "AI Searches", value: stats.aiSearches, icon: Sparkles },
   ];

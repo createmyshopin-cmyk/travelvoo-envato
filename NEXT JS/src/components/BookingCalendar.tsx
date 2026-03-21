@@ -17,6 +17,7 @@ import {
   getDay,
 } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/context/CurrencyContext";
 
 export interface DatePricing {
   date: Date;
@@ -60,6 +61,7 @@ const BookingCalendar = ({
   isCooldownDate,
   cooldownMinutes = 0,
 }: BookingCalendarProps) => {
+  const { format: formatMoney } = useCurrency();
   const [currentMonth, setCurrentMonth] = useState(() => checkIn || new Date());
   const [direction, setDirection] = useState(0);
   const [dragStart, setDragStart] = useState<Date | null>(null);
@@ -389,7 +391,7 @@ const BookingCalendar = ({
                         "text-[7px] leading-none line-through",
                         start || end ? "text-primary-foreground/50" : "text-muted-foreground/60"
                       )}>
-                        ₹{custom!.originalPrice!.toLocaleString("en-IN")}
+                        {formatMoney(custom!.originalPrice!)}
                       </span>
                     )}
                     <span className={cn(
@@ -402,7 +404,7 @@ const BookingCalendar = ({
                         ? "text-amber-600 dark:text-amber-400"
                         : "text-price-low"
                     )}>
-                      ₹{price.toLocaleString("en-IN")}
+                      {formatMoney(price)}
                     </span>
                   </span>
                 )}
@@ -440,7 +442,7 @@ const BookingCalendar = ({
                 <span className="flex items-center gap-1.5">
                   {n.originalPrice && n.originalPrice > n.price && (
                     <span className="text-muted-foreground/60 line-through text-[10px]">
-                      ₹{n.originalPrice.toLocaleString("en-IN")}
+                      {formatMoney(n.originalPrice)}
                     </span>
                   )}
                   <span className={cn(
@@ -449,7 +451,7 @@ const BookingCalendar = ({
                       ? "text-emerald-600 dark:text-emerald-400"
                       : "text-price-low"
                   )}>
-                    ₹{n.price.toLocaleString("en-IN")}/night
+                    {formatMoney(n.price)}/night
                   </span>
                 </span>
               </div>
@@ -463,7 +465,7 @@ const BookingCalendar = ({
             <div className="border-t border-border pt-2 flex justify-between">
               <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">You save</span>
               <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                ₹{nightBreakdown.reduce((s, n) => s + ((n.originalPrice && n.originalPrice > n.price ? n.originalPrice - n.price : 0)), 0).toLocaleString("en-IN")}
+                {formatMoney(nightBreakdown.reduce((s, n) => s + ((n.originalPrice && n.originalPrice > n.price ? n.originalPrice - n.price : 0)), 0))}
               </span>
             </div>
           )}
@@ -471,7 +473,7 @@ const BookingCalendar = ({
           <div className="border-t border-border pt-2 flex justify-between">
             <span className="text-xs font-bold text-foreground">Avg per night</span>
             <span className="text-xs font-extrabold text-primary">
-              ₹{Math.round(dynamicTotal / totalNights).toLocaleString("en-IN")}/night
+              {formatMoney(Math.round(dynamicTotal / totalNights))}/night
             </span>
           </div>
         </motion.div>

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { loginFailureDescription } from "@/lib/loginFailureMessage";
 
 /**
  * Password login + super_admin check via server-side fetch to Supabase.
@@ -41,12 +42,14 @@ export async function POST(req: Request) {
   const tokenJson = (await tokenRes.json()) as Record<string, unknown>;
 
   if (!tokenRes.ok) {
-    const msg =
+    const raw =
       (tokenJson.error_description as string) ||
       (tokenJson.msg as string) ||
       (tokenJson.message as string) ||
+      (tokenJson.error as string) ||
       "Invalid credentials";
-    return NextResponse.json({ error: String(msg) }, { status: tokenRes.status >= 400 ? tokenRes.status : 401 });
+    const msg = loginFailureDescription(String(raw));
+    return NextResponse.json({ error: msg }, { status: tokenRes.status >= 400 ? tokenRes.status : 401 });
   }
 
   const access_token = tokenJson.access_token as string | undefined;

@@ -19,7 +19,7 @@ const SaasAdminSettings = () => {
     platformName: "TravelVoo",
     supportEmail: "support@travelvoo.in",
     defaultTrialDays: 14,
-    defaultCurrency: "INR",
+    defaultCurrency: "USD",
     maintenanceMode: false,
     autoApproveSignups: true,
     requireEmailVerification: true,
@@ -179,8 +179,8 @@ const SaasAdminSettings = () => {
               <Select value={settings.defaultCurrency} onValueChange={(v) => update("defaultCurrency", v)}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="INR">INR (₹)</SelectItem>
                   <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="INR">INR (₹)</SelectItem>
                   <SelectItem value="EUR">EUR (€)</SelectItem>
                   <SelectItem value="GBP">GBP (£)</SelectItem>
                 </SelectContent>

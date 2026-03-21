@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { compressImage } from "@/lib/compressImage";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrency } from "@/context/CurrencyContext";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, GripVertical, Play, MapPin, Image, Star, Film, Navigation, Wifi, Waves, UtensilsCrossed, Car, TreePine, Flame, Coffee, Dumbbell, Wind, Tv, ShowerHead, Mountain, Tent, Dog, Baby, Sparkles, Music, Gamepad2, BookOpen, Shirt, Phone, ShieldCheck, Clock, Zap, Check, Search, Upload, Loader2, BedDouble, Users, Pencil, ImagePlus, ChevronLeft, ChevronRight, Save, Package } from "lucide-react";
 import { SortablePhotoGrid } from "./SortablePhotoGrid";
@@ -96,6 +97,7 @@ interface StayFormProps {
 }
 
 export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
+  const { format, symbol } = useCurrency();
   const { toast } = useToast();
   const categories = useLiveCategories();
   const [loading, setLoading] = useState(false);
@@ -517,11 +519,11 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Price (₹)</label>
+                  <label className="text-sm font-medium">Price ({symbol})</label>
                   <Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Original Price (₹)</label>
+                  <label className="text-sm font-medium">Original price ({symbol})</label>
                   <Input type="number" value={form.original_price} onChange={(e) => setForm({ ...form, original_price: Number(e.target.value) })} />
                 </div>
               </div>
@@ -731,9 +733,9 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
                         <span className="flex items-center gap-1"><Users className="h-3 w-3" />{room.max_guests} guests</span>
                         <span>{room.available} available</span>
                         <span className="font-medium text-foreground">
-                          ₹{room.price.toLocaleString("en-IN")}
+                          {format(room.price)}
                           {room.original_price > room.price && (
-                            <span className="line-through text-muted-foreground ml-1">₹{room.original_price.toLocaleString("en-IN")}</span>
+                            <span className="line-through text-muted-foreground ml-1">{format(room.original_price)}</span>
                           )}
                         </span>
                       </div>
@@ -789,7 +791,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium">Price (₹) *</label>
+                      <label className="text-xs font-medium">Price ({symbol}) *</label>
                       <Input
                         type="number"
                         value={roomForm.price || ""}
@@ -800,7 +802,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium">Original Price (₹)</label>
+                      <label className="text-xs font-medium">Original price ({symbol})</label>
                       <Input
                         type="number"
                         value={roomForm.original_price || ""}
@@ -965,7 +967,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
                           value={addon.price}
                           min={0}
                           onChange={(e) => setAddons(prev => prev.map((a, idx) => idx === i ? { ...a, price: Number(e.target.value) } : a))}
-                          placeholder="₹ Price"
+                          placeholder={`${symbol} price`}
                           className="w-24 text-sm bg-background border border-input rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                         <button

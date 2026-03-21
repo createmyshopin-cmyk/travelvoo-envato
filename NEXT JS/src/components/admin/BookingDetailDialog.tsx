@@ -6,10 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Users, Baby, PawPrint, UserCheck, UsersRound, Copy, Check,
   MessageCircle, Phone, FileText, Receipt, CalendarDays,
-  Clock, CheckCircle2, X as XIcon, Tag, IndianRupee,
+  Clock, CheckCircle2, X as XIcon, Tag,
 } from "lucide-react";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/context/CurrencyContext";
 import { formatPhoneForWhatsApp } from "@/lib/countryCodes";
 
 interface BookingDetailDialogProps {
@@ -40,6 +41,7 @@ function whatsappUrl(phone: string, guestName: string, bookingId: string, countr
 }
 
 export function BookingDetailDialog({ open, onOpenChange, booking, stayInfo, onStatusChange, onCreateQuotation, onCreateInvoice }: BookingDetailDialogProps) {
+  const { format } = useCurrency();
   const [copiedId, setCopiedId] = useState(false);
 
   if (!booking) return null;
@@ -192,7 +194,7 @@ export function BookingDetailDialog({ open, onOpenChange, booking, stayInfo, onS
                 {rooms.map((r: any, i: number) => (
                   <div key={i} className="flex justify-between text-sm">
                     <span>{r.name} <span className="text-muted-foreground">× {r.count}</span></span>
-                    <span className="font-medium">₹{((r.price || 0) * (r.count || 1)).toLocaleString("en-IN")}</span>
+                    <span className="font-medium">{format(((r.price || 0) * (r.count || 1)))}</span>
                   </div>
                 ))}
               </div>
@@ -207,7 +209,7 @@ export function BookingDetailDialog({ open, onOpenChange, booking, stayInfo, onS
                 {addons.map((a: any, i: number) => (
                   <div key={i} className="flex justify-between text-sm">
                     <span>{a.label}</span>
-                    <span className="font-medium">₹{(a.price || 0).toLocaleString("en-IN")}</span>
+                    <span className="font-medium">{format(a.price || 0)}</span>
                   </div>
                 ))}
               </div>
@@ -220,13 +222,13 @@ export function BookingDetailDialog({ open, onOpenChange, booking, stayInfo, onS
             {rooms.length > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Room Total</span>
-                <span>₹{roomTotal.toLocaleString("en-IN")}</span>
+                <span>{format(roomTotal)}</span>
               </div>
             )}
             {addonsTotal > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Add-ons</span>
-                <span>₹{addonsTotal.toLocaleString("en-IN")}</span>
+                <span>{format(addonsTotal)}</span>
               </div>
             )}
             {booking.coupon_code && (
@@ -239,9 +241,8 @@ export function BookingDetailDialog({ open, onOpenChange, booking, stayInfo, onS
             )}
             <div className="border-t pt-2 flex justify-between items-center">
               <span className="font-bold text-sm">Grand Total</span>
-              <span className="font-bold text-lg text-primary flex items-center gap-0.5">
-                <IndianRupee className="w-4 h-4" />
-                {(booking.total_price || 0).toLocaleString("en-IN")}
+              <span className="font-bold text-lg text-primary tabular-nums">
+                {format(booking.total_price || 0)}
               </span>
             </div>
           </div>

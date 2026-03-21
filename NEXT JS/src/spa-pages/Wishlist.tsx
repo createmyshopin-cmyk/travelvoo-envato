@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Heart, Star, MapPin } from "lucide-react";
 import { useWishlist } from "@/context/WishlistContext";
 import { useTenant } from "@/context/TenantContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Stay } from "@/types/stay";
@@ -10,6 +11,7 @@ import type { Stay } from "@/types/stay";
 const fallbackImages = ["/assets/stay-1.jpg", "/assets/stay-2.jpg", "/assets/stay-3.jpg", "/assets/stay-4.jpg"];
 
 const Wishlist = () => {
+  const { format } = useCurrency();
   const router = useRouter();
   const { tenantId } = useTenant();
   const { wishlist, toggleWishlist } = useWishlist();
@@ -116,7 +118,7 @@ const Wishlist = () => {
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-primary">₹{stay.price.toLocaleString()}<span className="text-xs font-normal text-muted-foreground">/night</span></p>
+                    <p className="text-sm font-bold text-primary">{format(stay.price)}<span className="text-xs font-normal text-muted-foreground">/night</span></p>
                     <motion.button
                       whileTap={{ scale: 1.3 }}
                       onClick={() => toggleWishlist(stay.id)}

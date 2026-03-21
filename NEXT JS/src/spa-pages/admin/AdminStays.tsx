@@ -26,6 +26,7 @@ import {
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/context/CurrencyContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -99,6 +100,7 @@ function StayImageCarousel({ images }: { images: string[] }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminStays() {
+  const { format } = useCurrency();
   const [stays, setStays] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -385,7 +387,7 @@ export default function AdminStays() {
 
   const shareStay = (stay: any) => {
     const url = `${window.location.origin}/stay/${stay.id}`;
-    const text = `Check out ${stay.name}${stay.location ? ` in ${stay.location}` : ""} — starting at ₹${stay.price?.toLocaleString("en-IN")}/night!\n${url}`;
+    const text = `Check out ${stay.name}${stay.location ? ` in ${stay.location}` : ""} — starting at ${format(stay.price ?? 0)}/night!\n${url}`;
     if (navigator.share) navigator.share({ text, url });
     else { navigator.clipboard.writeText(text); toast({ title: "Copied to clipboard" }); }
   };
@@ -432,7 +434,7 @@ export default function AdminStays() {
           { label: "Live Stays", value: loading ? "…" : stats.live, icon: Eye, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
           { label: "Total Bookings", value: loading ? "…" : stats.totalBookings, icon: BookOpen, color: "text-primary", bg: "bg-primary/5" },
           { label: "Avg Rating", value: loading ? "…" : `${stats.avgRating} ★`, icon: Star, color: "text-yellow-600", bg: "bg-yellow-50 dark:bg-yellow-950/30" },
-          { label: "Avg Price", value: loading ? "…" : `₹${stats.avgPrice.toLocaleString("en-IN")}`, icon: IndianRupee, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/30" },
+          { label: "Avg Price", value: loading ? "…" : format(stats.avgPrice), icon: IndianRupee, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/30" },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Card className={`${s.bg} border-0`}>
@@ -630,9 +632,9 @@ export default function AdminStays() {
                           </TableCell>
                           <TableCell>
                             <div>
-                              <p className="font-semibold text-sm">₹{stay.price?.toLocaleString("en-IN")}</p>
+                              <p className="font-semibold text-sm">{format(stay.price ?? 0)}</p>
                               {stay.original_price > stay.price && (
-                                <p className="text-[10px] text-muted-foreground line-through">₹{stay.original_price?.toLocaleString("en-IN")}</p>
+                                <p className="text-[10px] text-muted-foreground line-through">{format(stay.original_price ?? 0)}</p>
                               )}
                             </div>
                           </TableCell>
@@ -781,9 +783,9 @@ export default function AdminStays() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div>
-                              <p className="text-sm font-bold">₹{stay.price?.toLocaleString("en-IN")}</p>
+                              <p className="text-sm font-bold">{format(stay.price ?? 0)}</p>
                               {stay.original_price > stay.price && (
-                                <p className="text-[10px] text-muted-foreground line-through">₹{stay.original_price?.toLocaleString("en-IN")}</p>
+                                <p className="text-[10px] text-muted-foreground line-through">{format(stay.original_price ?? 0)}</p>
                               )}
                             </div>
                             <span className="flex items-center gap-1 text-xs text-muted-foreground">

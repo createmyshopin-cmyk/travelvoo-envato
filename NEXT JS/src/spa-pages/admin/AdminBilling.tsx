@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "@/hooks/use-toast";
 import { RefreshCw, CreditCard, Users, TrendingUp, IndianRupee, Plus, Eye, Building2, Zap } from "lucide-react";
 import { format } from "date-fns";
+import { useCurrency } from "@/context/CurrencyContext";
 
 interface Plan {
   id: string;
@@ -89,6 +90,7 @@ const txStatusVariant = (s: string) => {
 const limitLabel = (v: number) => v === -1 ? "Unlimited" : v.toString();
 
 const AdminBilling = () => {
+  const { format: formatMoney } = useCurrency();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -180,7 +182,7 @@ const AdminBilling = () => {
         <Card><CardContent className="pt-6"><div className="flex items-center gap-3"><Users className="w-8 h-8 text-primary" /><div><p className="text-2xl font-bold">{tenants.length}</p><p className="text-xs text-muted-foreground">Total Tenants</p></div></div></CardContent></Card>
         <Card><CardContent className="pt-6"><div className="flex items-center gap-3"><Zap className="w-8 h-8 text-emerald-500" /><div><p className="text-2xl font-bold">{activeCount}</p><p className="text-xs text-muted-foreground">Active Subscriptions</p></div></div></CardContent></Card>
         <Card><CardContent className="pt-6"><div className="flex items-center gap-3"><Building2 className="w-8 h-8 text-amber-500" /><div><p className="text-2xl font-bold">{trialCount}</p><p className="text-xs text-muted-foreground">On Trial</p></div></div></CardContent></Card>
-        <Card><CardContent className="pt-6"><div className="flex items-center gap-3"><IndianRupee className="w-8 h-8 text-primary" /><div><p className="text-2xl font-bold">₹{totalRevenue.toLocaleString()}</p><p className="text-xs text-muted-foreground">Total Revenue</p></div></div></CardContent></Card>
+        <Card><CardContent className="pt-6"><div className="flex items-center gap-3"><IndianRupee className="w-8 h-8 text-primary" /><div><p className="text-2xl font-bold">{formatMoney(totalRevenue)}</p><p className="text-xs text-muted-foreground">Total Revenue</p></div></div></CardContent></Card>
       </div>
 
       {/* Plans */}
@@ -198,7 +200,7 @@ const AdminBilling = () => {
                     <h3 className="font-bold text-lg">{plan.plan_name}</h3>
                     <Badge variant={plan.status === "active" ? "default" : "secondary"}>{plan.status}</Badge>
                   </div>
-                  <p className="text-3xl font-bold text-primary">₹{plan.price}<span className="text-sm font-normal text-muted-foreground">/{plan.billing_cycle}</span></p>
+                  <p className="text-3xl font-bold text-primary">{formatMoney(plan.price)}<span className="text-sm font-normal text-muted-foreground">/{plan.billing_cycle}</span></p>
                   <div className="space-y-1 text-sm text-muted-foreground">
                     <p>Stays: {limitLabel(plan.max_stays)}</p>
                     <p>Rooms: {limitLabel(plan.max_rooms)}</p>
@@ -294,7 +296,7 @@ const AdminBilling = () => {
                   <TableRow key={tx.id}>
                     <TableCell className="font-mono text-xs">{tx.transaction_id}</TableCell>
                     <TableCell>{getTenantName(tx.tenant_id)}</TableCell>
-                    <TableCell>₹{tx.amount.toLocaleString()}</TableCell>
+                    <TableCell>{formatMoney(tx.amount)}</TableCell>
                     <TableCell>{tx.payment_method || "—"}</TableCell>
                     <TableCell><Badge variant={txStatusVariant(tx.status)}>{tx.status}</Badge></TableCell>
                     <TableCell className="text-xs text-muted-foreground">{format(new Date(tx.created_at), "dd MMM yyyy")}</TableCell>
@@ -322,7 +324,7 @@ const AdminBilling = () => {
               <Label>Plan</Label>
               <Select value={newTenant.plan_id} onValueChange={v => setNewTenant({ ...newTenant, plan_id: v })}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Select plan" /></SelectTrigger>
-                <SelectContent>{plans.map(p => <SelectItem key={p.id} value={p.id}>{p.plan_name} — ₹{p.price}</SelectItem>)}</SelectContent>
+                <SelectContent>{plans.map(p => <SelectItem key={p.id} value={p.id}>{p.plan_name} — {formatMoney(p.price)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="flex justify-end gap-2">

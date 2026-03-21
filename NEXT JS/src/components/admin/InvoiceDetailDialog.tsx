@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { useCurrency } from "@/context/CurrencyContext";
 
 const paymentColors: Record<string, string> = {
   pending: "secondary",
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export function InvoiceDetailDialog({ invoice: inv, stayName, onClose, onStatusChange }: Props) {
+  const { format: formatMoney, symbol } = useCurrency();
   const [notes, setNotes] = useState(inv.payment_notes || "");
   const [savingNotes, setSavingNotes] = useState(false);
 
@@ -60,7 +62,7 @@ export function InvoiceDetailDialog({ invoice: inv, stayName, onClose, onStatusC
             <div>
               <p className="font-semibold text-xs text-muted-foreground mb-1">Rooms</p>
               {(inv.rooms as any[]).map((r: any, i: number) => (
-                <p key={i}>• {r.name} × {r.qty} — ₹{(r.price * r.qty).toLocaleString("en-IN")}</p>
+                <p key={i}>• {r.name} × {r.qty} — {formatMoney((r.price * r.qty) || 0)}</p>
               ))}
             </div>
           )}
@@ -69,18 +71,18 @@ export function InvoiceDetailDialog({ invoice: inv, stayName, onClose, onStatusC
             <div>
               <p className="font-semibold text-xs text-muted-foreground mb-1">Add-ons</p>
               {(inv.addons as any[]).map((a: any, i: number) => (
-                <p key={i}>• {a.name} — ₹{a.price?.toLocaleString("en-IN")}</p>
+                <p key={i}>• {a.name} — {formatMoney(a.price ?? 0)}</p>
               ))}
             </div>
           )}
 
           <div className="rounded-lg bg-muted/50 p-3 space-y-1">
-            <div className="flex justify-between"><span>Room Total</span><span>₹{inv.room_total?.toLocaleString("en-IN")}</span></div>
-            <div className="flex justify-between"><span>Add-ons</span><span>₹{inv.addons_total?.toLocaleString("en-IN")}</span></div>
-            <div className="flex justify-between"><span>Discount</span><span className="text-destructive">-₹{inv.discount?.toLocaleString("en-IN")}</span></div>
+            <div className="flex justify-between"><span>Room Total</span><span>{formatMoney(inv.room_total ?? 0)}</span></div>
+            <div className="flex justify-between"><span>Add-ons</span><span>{formatMoney(inv.addons_total ?? 0)}</span></div>
+            <div className="flex justify-between"><span>Discount</span><span className="text-destructive">{formatMoney(-(inv.discount ?? 0))}</span></div>
             {inv.coupon_code && <div className="flex justify-between"><span>Coupon</span><span>{inv.coupon_code}</span></div>}
             <div className="border-t pt-1 flex justify-between font-bold">
-              <span>Total</span><span>₹{inv.total_price?.toLocaleString("en-IN")}</span>
+              <span>Total</span><span>{formatMoney(inv.total_price ?? 0)}</span>
             </div>
           </div>
 
@@ -99,7 +101,7 @@ export function InvoiceDetailDialog({ invoice: inv, stayName, onClose, onStatusC
 
           <div className="space-y-2">
             <Label>Payment Notes</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="e.g. Advance paid ₹3000 via UPI" />
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder={`e.g. Advance paid ${symbol}3000 via UPI`} />
             <Button size="sm" variant="outline" onClick={saveNotes} disabled={savingNotes}>
               {savingNotes ? "Saving..." : "Save Notes"}
             </Button>

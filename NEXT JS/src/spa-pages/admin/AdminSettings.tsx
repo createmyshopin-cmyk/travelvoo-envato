@@ -12,6 +12,7 @@ import { clearSiteSettingsCache } from "@/hooks/useSiteSettings";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { useCurrency } from "@/context/CurrencyContext";
 
 interface SiteSettings {
   id: string;
@@ -89,6 +90,7 @@ interface FeatureItem {
 }
 
 const AdminSettings = () => {
+  const { format } = useCurrency();
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [branding, setBranding] = useState<TenantBranding>({
     logo_url: "", favicon_url: "", primary_color: "#6366f1", secondary_color: "#8b5cf6", footer_text: "",
@@ -975,7 +977,7 @@ const AdminSettings = () => {
                               </div>
                               <div className="text-right">
                                 <div className="text-[11px] font-semibold">
-                                  ₹{item.price || 0}
+                                  {format(item.price || 0)}
                                 </div>
                                 {!item.is_available && (
                                   <div className="text-[10px] text-red-500">Sold out</div>

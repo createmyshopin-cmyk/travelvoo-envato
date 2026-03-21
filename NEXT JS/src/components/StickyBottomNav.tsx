@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { reelsQueryKey, fetchReels } from "@/hooks/useReels";
 import { Badge } from "@/components/ui/badge";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
+import { useCurrency } from "@/context/CurrencyContext";
 
 const placeholders = [
   "romantic stay with pool...",
@@ -35,6 +36,7 @@ interface SearchResult {
 }
 
 const StickyBottomNav = () => {
+  const { format } = useCurrency();
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
@@ -306,7 +308,7 @@ const StickyBottomNav = () => {
                         <p className="text-xs text-muted-foreground">{r.location}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-bold text-primary">₹{r.price.toLocaleString()}</p>
+                        <p className="text-sm font-bold text-primary">{format(r.price)}</p>
                         {r.rating > 0 && <p className="text-[11px] text-muted-foreground">⭐ {r.rating}</p>}
                       </div>
                     </button>

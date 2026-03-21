@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RefreshCw, Receipt, IndianRupee, TrendingUp, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
+import { useCurrency } from "@/context/CurrencyContext";
 
 interface Tx { id: string; transaction_id: string; tenant_id: string; amount: number; currency: string; payment_method: string; status: string; payment_gateway: string; created_at: string; }
 interface Tenant { id: string; tenant_name: string; }
@@ -16,6 +17,7 @@ const txVariant = (s: string) => {
 };
 
 const SaasAdminTransactions = () => {
+  const { format: formatMoney } = useCurrency();
   const [txs, setTxs] = useState<Tx[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +62,7 @@ const SaasAdminTransactions = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card><CardContent className="p-4 flex items-center gap-3"><IndianRupee className="h-8 w-8 text-primary" /><div><p className="text-xs text-muted-foreground">Total Revenue</p><p className="text-xl font-bold">₹{totalRevenue.toLocaleString()}</p></div></CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center gap-3"><IndianRupee className="h-8 w-8 text-primary" /><div><p className="text-xs text-muted-foreground">Total Revenue</p><p className="text-xl font-bold">{formatMoney(totalRevenue)}</p></div></CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3"><TrendingUp className="h-8 w-8 text-primary" /><div><p className="text-xs text-muted-foreground">Total Transactions</p><p className="text-xl font-bold">{txs.length}</p></div></CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3"><AlertCircle className="h-8 w-8 text-destructive" /><div><p className="text-xs text-muted-foreground">Failed</p><p className="text-xl font-bold">{failedCount}</p></div></CardContent></Card>
       </div>
@@ -109,7 +111,7 @@ const SaasAdminTransactions = () => {
                     <TableRow key={tx.id}>
                       <TableCell className="font-mono text-xs">{tx.transaction_id}</TableCell>
                       <TableCell className="font-medium">{getName(tx.tenant_id)}</TableCell>
-                      <TableCell>₹{tx.amount.toLocaleString()}</TableCell>
+                      <TableCell>{formatMoney(tx.amount)}</TableCell>
                       <TableCell className="capitalize">{tx.payment_method || "—"}</TableCell>
                       <TableCell className="capitalize">{tx.payment_gateway || "—"}</TableCell>
                       <TableCell><Badge variant={txVariant(tx.status)}>{tx.status}</Badge></TableCell>

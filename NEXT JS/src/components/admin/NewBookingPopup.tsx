@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { CalendarCheck, User, Phone, IndianRupee } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { useCurrency } from "@/context/CurrencyContext";
 
 interface NewBookingPopupProps {
   booking: Record<string, any> | null;
@@ -11,6 +12,7 @@ interface NewBookingPopupProps {
 }
 
 export function NewBookingPopup({ booking, onClose }: NewBookingPopupProps) {
+  const { format } = useCurrency();
   const router = useRouter();
 
   const handleViewBooking = () => {
@@ -80,7 +82,7 @@ export function NewBookingPopup({ booking, onClose }: NewBookingPopupProps) {
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <IndianRupee className="w-4 h-4 shrink-0" />
                   <span className="text-foreground font-semibold">
-                    ₹{Number(booking.total_price).toLocaleString("en-IN")}
+                    {format(Number(booking.total_price))}
                   </span>
                 </div>
               )}

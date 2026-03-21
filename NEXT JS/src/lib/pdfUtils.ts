@@ -1,5 +1,10 @@
 import jsPDF from "jspdf";
 import { format } from "date-fns";
+import { formatMoneyAmount, getStoredCurrencyCode } from "@/lib/currency";
+
+function fmtMoney(n: number) {
+  return formatMoneyAmount(n, getStoredCurrencyCode());
+}
 
 function addHeader(doc: jsPDF, title: string, docId: string) {
   doc.setFontSize(20);
@@ -41,9 +46,9 @@ function addPriceSummary(doc: jsPDF, data: any, startY: number) {
   y += 10;
 
   const rows = [
-    ["Room Total", `₹${(data.room_total || 0).toLocaleString("en-IN")}`],
-    ["Add-ons", `₹${(data.addons_total || 0).toLocaleString("en-IN")}`],
-    ["Discount", `-₹${(data.discount || 0).toLocaleString("en-IN")}`],
+    ["Room Total", fmtMoney(data.room_total || 0)],
+    ["Add-ons", fmtMoney(data.addons_total || 0)],
+    ["Discount", formatMoneyAmount(-(data.discount || 0), getStoredCurrencyCode())],
   ];
 
   doc.setFontSize(10);
@@ -61,7 +66,7 @@ function addPriceSummary(doc: jsPDF, data: any, startY: number) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
   doc.text("Total", 20, y);
-  doc.text(`₹${(data.total_price || 0).toLocaleString("en-IN")}`, 190, y, { align: "right" });
+  doc.text(fmtMoney(data.total_price || 0), 190, y, { align: "right" });
 
   return y + 15;
 }
@@ -91,7 +96,7 @@ export function generateQuotationPdf(q: any, stayName: string) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     rooms.forEach((r: any) => {
-      doc.text(`• ${r.name || "Room"} × ${r.qty || 1} — ₹${(r.price || 0).toLocaleString("en-IN")}`, 24, y);
+      doc.text(`• ${r.name || "Room"} × ${r.qty || 1} — ${fmtMoney(r.price || 0)}`, 24, y);
       y += 6;
     });
     y += 4;
@@ -107,7 +112,7 @@ export function generateQuotationPdf(q: any, stayName: string) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     addons.forEach((a: any) => {
-      doc.text(`• ${a.name || "Add-on"} — ₹${(a.price || 0).toLocaleString("en-IN")}`, 24, y);
+      doc.text(`• ${a.name || "Add-on"} — ${fmtMoney(a.price || 0)}`, 24, y);
       y += 6;
     });
     y += 4;
@@ -160,7 +165,7 @@ export function generateInvoicePdf(inv: any, stayName: string) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     rooms.forEach((r: any) => {
-      doc.text(`• ${r.name || "Room"} × ${r.qty || 1} — ₹${(r.price || 0).toLocaleString("en-IN")}`, 24, y);
+      doc.text(`• ${r.name || "Room"} × ${r.qty || 1} — ${fmtMoney(r.price || 0)}`, 24, y);
       y += 6;
     });
     y += 4;
@@ -175,7 +180,7 @@ export function generateInvoicePdf(inv: any, stayName: string) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     addons.forEach((a: any) => {
-      doc.text(`• ${a.name || "Add-on"} — ₹${(a.price || 0).toLocaleString("en-IN")}`, 24, y);
+      doc.text(`• ${a.name || "Add-on"} — ${fmtMoney(a.price || 0)}`, 24, y);
       y += 6;
     });
     y += 4;

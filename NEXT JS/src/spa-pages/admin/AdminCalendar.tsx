@@ -22,6 +22,7 @@ import {
   isToday, isBefore, startOfDay, addWeeks, subWeeks, addDays, subDays, getDay,
 } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/context/CurrencyContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,7 @@ const validatePrice = (raw: string): number | null => {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AdminCalendar() {
+  const { format: formatMoney, formatCompact, symbol } = useCurrency();
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [stays, setStays] = useState<Stay[]>([]);
   const [rooms, setRooms] = useState<RoomCategory[]>([]);
@@ -354,7 +356,7 @@ export default function AdminCalendar() {
   const saveBulkPricing = async () => {
     if (!selectedStay) return;
     if (bulkPrice && validatePrice(bulkPrice) === null) {
-      toast({ title: "Invalid price", description: "Price must be ₹100 – ₹1,00,000", variant: "destructive" });
+      toast({ title: "Invalid price", description: `Price must be ${formatMoney(100)} – ${formatMoney(100000)}`, variant: "destructive" });
       return;
     }
 
@@ -521,7 +523,7 @@ export default function AdminCalendar() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {[
-          { label: "Avg Price", value: stats.avgPrice > 0 ? `₹${stats.avgPrice.toLocaleString("en-IN")}` : "—", icon: IndianRupee, color: "text-primary", bg: "bg-primary/5" },
+          { label: "Avg Price", value: stats.avgPrice > 0 ? formatMoney(stats.avgPrice) : "—", icon: IndianRupee, color: "text-primary", bg: "bg-primary/5" },
           { label: "Occupancy", value: `${stats.occupancy}%`, icon: TrendingUp, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
           { label: "Booked Days", value: `${stats.bookedDays}/${stats.totalDays}`, icon: CalendarDays, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
           { label: "Blocked", value: stats.blockedDays, icon: Ban, color: "text-red-500", bg: "bg-red-50 dark:bg-red-950/30" },
@@ -689,7 +691,7 @@ export default function AdminCalendar() {
                   {/* Price */}
                   {entry && !entry.is_blocked && (
                     <p className="text-[9px] sm:text-xs font-semibold text-foreground mt-0.5 sm:mt-1 leading-tight truncate" title="Custom price">
-                      ₹{entry.price >= 10000 ? `${(entry.price / 1000).toFixed(entry.price % 1000 === 0 ? 0 : 1)}k` : entry.price.toLocaleString("en-IN")}
+                      {formatCompact(entry.price)}
                     </p>
                   )}
                   {!entry && !entry?.is_blocked && inMonth && (() => {
@@ -698,7 +700,7 @@ export default function AdminCalendar() {
                     const calcPrice = getDefaultPrice(day, basePrice);
                     return (
                       <p className="text-[9px] sm:text-xs font-medium text-muted-foreground/70 mt-0.5 sm:mt-1 leading-tight truncate italic" title="Calculated price (no custom entry)">
-                        ₹{calcPrice >= 10000 ? `${(calcPrice / 1000).toFixed(calcPrice % 1000 === 0 ? 0 : 1)}k` : calcPrice.toLocaleString("en-IN")}
+                        {formatCompact(calcPrice)}
                       </p>
                     );
                   })()}
@@ -794,10 +796,10 @@ export default function AdminCalendar() {
 
           <div className="space-y-3">
             <div>
-              <Label className="text-xs">Price (₹)</Label>
+              <Label className="text-xs">Price ({symbol})</Label>
               <Input type="number" min={100} max={100000} value={bulkPrice} onChange={e => setBulkPrice(e.target.value)} placeholder="Keep current" className="h-9" />
               {bulkPrice && validatePrice(bulkPrice) === null && (
-                <p className="text-[10px] text-destructive mt-0.5">Must be ₹100 – ₹1,00,000</p>
+                <p className="text-[10px] text-destructive mt-0.5">Must be {formatMoney(100)} – {formatMoney(100000)}</p>
               )}
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -876,11 +878,11 @@ export default function AdminCalendar() {
           <div className="space-y-3">
             <div>
               <Label className="text-xs">Weekday (Mon–Thu)</Label>
-              <Input type="number" min={100} max={100000} value={weekdayPrice} onChange={e => setWeekdayPrice(e.target.value)} placeholder="₹" className="h-9" />
+              <Input type="number" min={100} max={100000} value={weekdayPrice} onChange={e => setWeekdayPrice(e.target.value)} placeholder={symbol} className="h-9" />
             </div>
             <div>
               <Label className="text-xs">Weekend (Fri–Sun)</Label>
-              <Input type="number" min={100} max={100000} value={weekendPrice} onChange={e => setWeekendPrice(e.target.value)} placeholder="₹" className="h-9" />
+              <Input type="number" min={100} max={100000} value={weekendPrice} onChange={e => setWeekendPrice(e.target.value)} placeholder={symbol} className="h-9" />
             </div>
           </div>
           <DialogFooter>
@@ -910,8 +912,8 @@ export default function AdminCalendar() {
               </div>
             </div>
             <div>
-              <Label className="text-xs">Price Override (₹)</Label>
-              <Input type="number" min={100} max={100000} value={seasonPrice} onChange={e => setSeasonPrice(e.target.value)} placeholder="₹" className="h-9" />
+              <Label className="text-xs">Price Override ({symbol})</Label>
+              <Input type="number" min={100} max={100000} value={seasonPrice} onChange={e => setSeasonPrice(e.target.value)} placeholder={symbol} className="h-9" />
             </div>
           </div>
           <DialogFooter>

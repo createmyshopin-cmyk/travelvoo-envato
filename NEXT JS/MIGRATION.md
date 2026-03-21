@@ -26,6 +26,10 @@ If you point `.env.local` at a **fresh** Supabase project, you must apply the **
 
 **SaaS super admin only:** if `seed_super_admin.sql` errors with **`public.user_roles` does not exist**, run **`supabase/manual_apply_user_roles_core.sql`** first, then run the seed again. For production, prefer the full migration instead of this minimal roles-only script.
 
+**Tenants / plans missing:** if **`seed_admin_saas_stays.sql`** errors with **`public.tenants` does not exist**, run **`supabase/manual_apply_plans_tenants_core.sql`** after `manual_apply_user_roles_core.sql`.
+
+**Stays missing:** if the seed errors with **`public.stays` does not exist**, run **`supabase/manual_apply_stays_room_categories_core.sql`** after the plans/tenants script (or use the full migration).
+
 ## How to run
 
 ```bash

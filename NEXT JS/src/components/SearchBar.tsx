@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/context/TenantContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 
 const placeholders = [
@@ -57,6 +58,7 @@ interface SearchBarProps {
 }
 
 const SearchBar = ({ onPopularClick }: SearchBarProps) => {
+  const { format } = useCurrency();
   const { tenantId } = useTenant();
   const [focused, setFocused] = useState(false);
   const [query, setQuery] = useState("");
@@ -268,9 +270,9 @@ const SearchBar = ({ onPopularClick }: SearchBarProps) => {
                       )}
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-bold text-primary">₹{r.price.toLocaleString()}</p>
+                      <p className="text-sm font-bold text-primary">{format(r.price)}</p>
                       {r.original_price > r.price && (
-                        <p className="text-[11px] line-through text-muted-foreground">₹{r.original_price.toLocaleString()}</p>
+                        <p className="text-[11px] line-through text-muted-foreground">{format(r.original_price)}</p>
                       )}
                       {r.rating > 0 && <p className="text-[11px] text-muted-foreground">⭐ {r.rating}</p>}
                     </div>

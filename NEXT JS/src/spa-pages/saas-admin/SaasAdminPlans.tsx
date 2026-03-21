@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { useCurrency } from "@/context/CurrencyContext";
 import { RefreshCw, Plus, Package, Pencil, Trash2 } from "lucide-react";
 
 interface Plan {
@@ -50,6 +51,7 @@ const emptyForm = {
 };
 
 const SaasAdminPlans = () => {
+  const { format: formatMoney, symbol } = useCurrency();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -140,7 +142,7 @@ const SaasAdminPlans = () => {
                 </div>
               </div>
               <p className="text-3xl font-bold text-primary">
-                ₹{plan.price}
+                {formatMoney(plan.price)}
                 <span className="text-sm font-normal text-muted-foreground">/{BILLING_CYCLES.find(b => b.value === plan.billing_cycle)?.label ?? plan.billing_cycle}</span>
               </p>
               <div className="space-y-1 text-sm text-muted-foreground">
@@ -179,7 +181,7 @@ const SaasAdminPlans = () => {
             {/* Price + Billing Cycle */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Price (₹)</Label>
+                <Label>Price ({symbol})</Label>
                 <Input type="number" value={form.price} onChange={e => setForm({ ...form, price: +e.target.value })} className="mt-1" />
               </div>
               <div>

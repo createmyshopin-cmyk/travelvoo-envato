@@ -28,6 +28,8 @@ import {
   Timer, Infinity as InfinityIcon, FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatMoneyAmount, getStoredCurrencyCode } from "@/lib/currency";
+import { useCurrency } from "@/context/CurrencyContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,9 +82,10 @@ function randomCode() {
 }
 
 function discountLabel(c: Coupon) {
+  const cur = getStoredCurrencyCode();
   return c.type === "percent" || c.type === "percentage"
     ? `${c.value}% OFF`
-    : `₹${c.value.toLocaleString("en-IN")} OFF`;
+    : `${formatMoneyAmount(c.value, cur)} OFF`;
 }
 
 type CouponStatus = "active" | "expired" | "scheduled" | "exhausted" | "inactive";
@@ -188,9 +191,10 @@ function DatePicker({ date, onSelect, placeholder, minDate }: {
 // ─── Live Preview Card ────────────────────────────────────────────────────────
 
 function CouponPreview({ form }: { form: CouponForm }) {
+  const cur = getStoredCurrencyCode();
   const code = form.code || "YOURCODE";
   const isPercent = form.type === "percent" || form.type === "percentage";
-  const discount = isPercent ? `${form.value}% OFF` : `₹${Number(form.value).toLocaleString("en-IN")} OFF`;
+  const discount = isPercent ? `${form.value}% OFF` : `${formatMoneyAmount(Number(form.value), cur)} OFF`;
 
   return (
     <div className="relative rounded-2xl overflow-hidden border-2 border-dashed border-primary/30 bg-gradient-to-br from-primary/5 to-orange-50 dark:to-orange-950/20 p-4">
@@ -210,8 +214,8 @@ function CouponPreview({ form }: { form: CouponForm }) {
         <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{form.description}</p>
       )}
       <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[11px] text-muted-foreground">
-        {form.min_purchase > 0 && <span>Min ₹{Number(form.min_purchase).toLocaleString("en-IN")}</span>}
-        {form.max_discount && <span>Cap ₹{Number(form.max_discount).toLocaleString("en-IN")}</span>}
+        {form.min_purchase > 0 && <span>Min {formatMoneyAmount(Number(form.min_purchase), cur)}</span>}
+        {form.max_discount && <span>Cap {formatMoneyAmount(Number(form.max_discount), cur)}</span>}
         {form.usage_limit && <span>Limit: {form.usage_limit} uses</span>}
         {form.expires_at && <span>Until {format(form.expires_at, "dd MMM")}</span>}
       </div>
@@ -254,6 +258,7 @@ function UsageBar({ count, limit }: { count: number; limit: number | null }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminCoupons() {
+  const { symbol } = useCurrency();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -482,8 +487,9 @@ export default function AdminCoupons() {
 
   const shareCode = (c: Coupon) => {
     const lines = [`🎉 Use code *${c.code}* to get ${discountLabel(c)} on your next booking!`];
-    if (c.min_purchase > 0) lines.push(`🛒 Min booking: ₹${c.min_purchase.toLocaleString("en-IN")}`);
-    if (c.max_discount) lines.push(`💰 Max discount: ₹${c.max_discount.toLocaleString("en-IN")}`);
+    const cur = getStoredCurrencyCode();
+    if (c.min_purchase > 0) lines.push(`🛒 Min booking: ${formatMoneyAmount(c.min_purchase, cur)}`);
+    if (c.max_discount) lines.push(`💰 Max discount: ${formatMoneyAmount(c.max_discount, cur)}`);
     if (c.expires_at) lines.push(`⏰ Valid until: ${format(new Date(c.expires_at), "dd MMM yyyy")}`);
     const text = lines.join("\n");
     if (navigator.share) {
@@ -706,16 +712,16 @@ export default function AdminCoupons() {
                         }`}>
                           {c.type === "percent" || c.type === "percentage"
                             ? <><Percent className="w-3.5 h-3.5" />{c.value}%</>
-                            : <><IndianRupee className="w-3.5 h-3.5" />₹{c.value.toLocaleString("en-IN")}</>}
+                            : <><IndianRupee className="w-3.5 h-3.5" />{formatMoneyAmount(c.value, getStoredCurrencyCode())}</>}
                         </span>
                         {c.max_discount && (
-                          <p className="text-[10px] text-muted-foreground mt-0.5">Cap ₹{c.max_discount.toLocaleString("en-IN")}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">Cap {formatMoneyAmount(c.max_discount, getStoredCurrencyCode())}</p>
                         )}
                       </TableCell>
 
                       {/* Min Purchase */}
                       <TableCell className="text-muted-foreground text-sm hidden md:table-cell">
-                        {c.min_purchase > 0 ? `₹${c.min_purchase.toLocaleString("en-IN")}` : <span className="text-muted-foreground/40">—</span>}
+                        {c.min_purchase > 0 ? formatMoneyAmount(c.min_purchase, getStoredCurrencyCode()) : <span className="text-muted-foreground/40">—</span>}
                       </TableCell>
 
                       {/* Usage */}
@@ -859,14 +865,14 @@ export default function AdminCoupons() {
                       <div className="flex items-center gap-2"><Percent className="w-4 h-4 text-purple-500" /> Percentage (%)</div>
                     </SelectItem>
                     <SelectItem value="flat">
-                      <div className="flex items-center gap-2"><IndianRupee className="w-4 h-4 text-primary" /> Flat Amount (₹)</div>
+                      <div className="flex items-center gap-2"><IndianRupee className="w-4 h-4 text-primary" /> Flat amount ({symbol})</div>
                     </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
                 <Label>
-                  {form.type === "percent" || form.type === "percentage" ? "Discount (%)" : "Discount (₹)"} *
+                  {form.type === "percent" || form.type === "percentage" ? "Discount (%)" : `Discount (${symbol})`} *
                 </Label>
                 <Input
                   type="number"
@@ -882,7 +888,7 @@ export default function AdminCoupons() {
             {/* Min + Max */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Min Order (₹)</Label>
+                <Label>Min order ({symbol})</Label>
                 <Input
                   type="number"
                   min={0}
@@ -892,7 +898,7 @@ export default function AdminCoupons() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Max Discount Cap (₹)</Label>
+                <Label>Max discount cap ({symbol})</Label>
                 <Input
                   type="number"
                   min={0}

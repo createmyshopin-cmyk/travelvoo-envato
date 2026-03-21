@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import type { Stay } from "@/types/stay";
 import { useWishlist } from "@/context/WishlistContext";
+import { useCurrency } from "@/context/CurrencyContext";
 
 const badgeColorMap: Record<string, string> = {
   orange: "bg-[hsl(var(--badge-orange))]",
@@ -19,6 +20,7 @@ interface StayCardProps {
 
 const StayCard = ({ stay, index }: StayCardProps) => {
   const router = useRouter();
+  const { format } = useCurrency();
   const { isWishlisted, toggleWishlist: toggle } = useWishlist();
   const [currentImage, setCurrentImage] = useState(0);
   const [swipeStartX, setSwipeStartX] = useState<number | null>(null);
@@ -175,9 +177,9 @@ const StayCard = ({ stay, index }: StayCardProps) => {
         <div className="flex items-end justify-between mt-2">
           <div>
             {hasDiscount && (
-              <p className="text-xs text-muted-foreground line-through">₹{stay.originalPrice.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground line-through">{format(stay.originalPrice)}</p>
             )}
-            <p className="text-sm font-bold text-primary">From ₹{stay.price.toLocaleString()}</p>
+            <p className="text-sm font-bold text-primary">From {format(stay.price)}</p>
           </div>
           <button
             onClick={(e) => {

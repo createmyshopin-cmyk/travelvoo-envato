@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrency } from "@/context/CurrencyContext";
 import { Button } from "@/components/ui/button";
 import { X, Utensils } from "lucide-react";
 
@@ -19,6 +20,7 @@ interface SiteSettingsLite {
 }
 
 const MenuPopup = () => {
+  const { format } = useCurrency();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<MenuItem[]>([]);
   const [settings, setSettings] = useState<SiteSettingsLite | null>(null);
@@ -114,7 +116,7 @@ const MenuPopup = () => {
                         </div>
                         <div className="text-right">
                           <div className="text-[11px] font-semibold text-primary">
-                            ₹{Number(item.price || 0).toLocaleString()}
+                            {format(Number(item.price || 0))}
                           </div>
                         </div>
                       </div>

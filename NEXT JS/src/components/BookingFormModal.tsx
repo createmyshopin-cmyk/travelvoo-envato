@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE, getMinDigitsForCountry } from "@/lib/countryCodes";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/context/CurrencyContext";
 import BookingCalendar, { getDefaultPrice } from "@/components/BookingCalendar";
 import type { RoomCategory } from "@/types/stay";
 
@@ -69,6 +70,7 @@ const Stepper = ({ value, onChange, min = 0, max = 10, label }: { value: number;
 );
 
 const BookingFormModal = ({ open, onOpenChange, stayName, stayId, roomCategories: initialRoomCategories, preselectedRooms, autoAppliedCoupon, maxAdults = 20, maxChildren = 5, maxPets = 5 }: BookingFormModalProps) => {
+  const { format: formatMoney } = useCurrency();
   const { settings: siteSettings } = useSiteSettings();
   const [roomCategories, setRoomCategories] = useState(initialRoomCategories);
   const [name, setName] = useState("");
@@ -162,11 +164,11 @@ const BookingFormModal = ({ open, onOpenChange, stayName, stayId, roomCategories
         code: autoAppliedCoupon.code,
         type: "flat",
         value: autoAppliedCoupon.discount,
-        label: `₹${autoAppliedCoupon.discount} OFF`,
+        label: `${formatMoney(autoAppliedCoupon.discount)} OFF`,
       });
       setCouponError("");
     }
-  }, [open, autoAppliedCoupon]);
+  }, [open, autoAppliedCoupon, formatMoney]);
 
   // Real-time pricing from admin calendar — pass all room category IDs
   const allRoomCategoryIds = useMemo(() => roomCategories.map((r) => r.id), [roomCategories]);
@@ -361,14 +363,14 @@ const BookingFormModal = ({ open, onOpenChange, stayName, stayId, roomCategories
       return;
     }
     if (data.min_purchase > 0 && subtotal < data.min_purchase) {
-      setCouponError(`Min order ₹${data.min_purchase.toLocaleString("en-IN")} required`);
+      setCouponError(`Min order ${formatMoney(data.min_purchase)} required`);
       setAppliedCoupon(null);
       setApplyingCoupon(false);
       return;
     }
 
     const type: "percentage" | "flat" = (data.type === "percent" || data.type === "percentage") ? "percentage" : "flat";
-    const label = type === "percentage" ? `${data.value}% OFF` : `₹${data.value.toLocaleString("en-IN")} OFF`;
+    const label = type === "percentage" ? `${data.value}% OFF` : `${formatMoney(data.value)} OFF`;
 
     setAppliedCoupon({ code: data.code, type, value: data.value, max_discount: data.max_discount, min_purchase: data.min_purchase, label });
     setShowCouponBanner(true);
@@ -505,7 +507,7 @@ const BookingFormModal = ({ open, onOpenChange, stayName, stayId, roomCategories
 
     const roomLines = selectedRooms.map((r) => `${r.name} — ${r.count} room(s)`).join("\n");
     const addOnLines = dbAddOns.filter((a) => selectedAddOns.includes(a.label))
-      .map((a) => `${a.label} — ₹${a.price}`)
+      .map((a) => `${a.label} — ${formatMoney(a.price)}`)
       .join("\n");
 
     const guestLine = soloTraveller
@@ -550,7 +552,7 @@ ${dateLines || "📅 *Dates:* Not selected"}
 🌙 *Total Nights:* ${totalNights}
 
 ${addOnLines ? `*Add-ons:*\n${addOnLines}\n` : ""}${appliedCoupon ? `🏷 *Coupon Applied:* ${appliedCoupon.code}\n` : ""}${specialRequestLine}
-💰 *Estimated Total:* ₹${grandTotal.toLocaleString()}`;
+💰 *Estimated Total:* ${formatMoney(grandTotal)}`;
 
     whatsappMessageRef.current = message;
     setShowConfirmation(true);
@@ -820,10 +822,10 @@ ${addOnLines ? `*Add-ons:*\n${addOnLines}\n` : ""}${appliedCoupon ? `🏷 *Coupo
                       <span className="text-sm font-semibold text-foreground">{room.name}</span>
                     </div>
                     <span className="text-sm font-bold text-primary" aria-live="polite">
-                      ₹{getDisplayPriceForRoom(
+                      {formatMoney(getDisplayPriceForRoom(
                         room,
                         (roomCategories.find((rc) => rc.name === room.name) ?? roomCategories[index])?.id
-                      ).toLocaleString()}
+                      ))}
                       <span className="text-xs font-normal text-muted-foreground"> /night</span>
                     </span>
                   </button>
@@ -1045,7 +1047,7 @@ ${addOnLines ? `*Add-ons:*\n${addOnLines}\n` : ""}${appliedCoupon ? `🏷 *Coupo
                         />
                         <span className="text-sm font-medium text-foreground">{addon.label}</span>
                       </div>
-                      <span className="text-sm font-semibold text-foreground">₹{addon.price.toLocaleString()}</span>
+                      <span className="text-sm font-semibold text-foreground">{formatMoney(addon.price)}</span>
                     </label>
                   ))}
                 </div>
@@ -1157,7 +1159,7 @@ ${addOnLines ? `*Add-ons:*\n${addOnLines}\n` : ""}${appliedCoupon ? `🏷 *Coupo
                           <span className="text-muted-foreground">
                             {totalNights} {totalNights === 1 ? "night" : "nights"} × {room.count} {room.count === 1 ? "room" : "rooms"}
                           </span>
-                          <span className="font-semibold text-foreground">₹{roomNightTotal.toLocaleString()}</span>
+                          <span className="font-semibold text-foreground">{formatMoney(roomNightTotal)}</span>
                         </div>
                       </div>
                     );
@@ -1170,7 +1172,7 @@ ${addOnLines ? `*Add-ons:*\n${addOnLines}\n` : ""}${appliedCoupon ? `🏷 *Coupo
                     {dbAddOns.filter((a) => selectedAddOns.includes(a.label)).map((a) => (
                       <div key={a.label} className="flex justify-between">
                         <span className="text-muted-foreground">{a.label}</span>
-                        <span className="text-foreground">₹{a.price.toLocaleString()}</span>
+                        <span className="text-foreground">{formatMoney(a.price)}</span>
                       </div>
                     ))}
                   </div>
@@ -1179,13 +1181,13 @@ ${addOnLines ? `*Add-ons:*\n${addOnLines}\n` : ""}${appliedCoupon ? `🏷 *Coupo
                 {couponDiscount > 0 && (
                   <div className="border-t border-border pt-3 flex justify-between text-sm">
                     <span className="text-savings font-medium">Coupon Discount ({appliedCoupon?.label})</span>
-                    <span className="text-savings font-bold">-₹{couponDiscount.toLocaleString()}</span>
+                    <span className="text-savings font-bold">{formatMoney(-couponDiscount)}</span>
                   </div>
                 )}
 
                 <div className="border-t border-border pt-3 flex justify-between items-center">
                   <span className="text-sm font-bold text-foreground">Total Estimate</span>
-                  <span className="text-xl font-extrabold text-primary">₹{grandTotal.toLocaleString()}</span>
+                  <span className="text-xl font-extrabold text-primary">{formatMoney(grandTotal)}</span>
                 </div>
               </motion.div>
             )}

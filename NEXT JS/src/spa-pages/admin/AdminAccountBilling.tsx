@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { CreditCard, Package, Receipt, ArrowUpCircle, Check, Crown, Zap, Building2, Loader2, ArrowDownCircle, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
+import { useCurrency } from "@/context/CurrencyContext";
 
 interface Plan {
   id: string;
@@ -46,6 +47,7 @@ function loadRazorpayScript(): Promise<boolean> {
 }
 
 const AdminAccountBilling = () => {
+  const { format: formatMoney } = useCurrency();
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [tenant, setTenant] = useState<any>(null);
@@ -230,7 +232,7 @@ const AdminAccountBilling = () => {
                 </Badge>
               </div>
               <p className="text-2xl font-bold text-primary">
-                ₹{plan?.price || 0}<span className="text-sm text-muted-foreground font-normal">/{plan?.billing_cycle || "month"}</span>
+                {formatMoney(plan?.price || 0)}<span className="text-sm text-muted-foreground font-normal">/{plan?.billing_cycle || "month"}</span>
               </p>
             </div>
             <div className="flex flex-col items-end gap-1 text-sm text-muted-foreground">
@@ -303,7 +305,7 @@ const AdminAccountBilling = () => {
                   </div>
 
                   <p className="text-3xl font-bold mb-4">
-                    ₹{p.price}
+                    {formatMoney(p.price)}
                     <span className="text-sm text-muted-foreground font-normal">/{p.billing_cycle}</span>
                   </p>
 
@@ -368,7 +370,7 @@ const AdminAccountBilling = () => {
                 {transactions.map((tx) => (
                   <TableRow key={tx.id}>
                     <TableCell className="font-mono text-xs">{tx.transaction_id}</TableCell>
-                    <TableCell className="font-medium">₹{tx.amount}</TableCell>
+                    <TableCell className="font-medium">{formatMoney(tx.amount)}</TableCell>
                     <TableCell className="text-xs capitalize">{tx.payment_method || tx.payment_gateway || "—"}</TableCell>
                     <TableCell>
                       <Badge variant={tx.status === "success" ? "default" : tx.status === "failed" ? "destructive" : "outline"}>
@@ -405,7 +407,7 @@ const AdminAccountBilling = () => {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Price</span>
-              <span className="font-medium">₹{confirmDialog.plan?.price}/{confirmDialog.plan?.billing_cycle}</span>
+              <span className="font-medium">{formatMoney(confirmDialog.plan?.price || 0)}/{confirmDialog.plan?.billing_cycle}</span>
             </div>
             {confirmDialog.action === "downgrade" && subscription?.renewal_date && (
               <div className="flex justify-between">

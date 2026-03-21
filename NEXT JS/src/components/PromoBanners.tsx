@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrency } from "@/context/CurrencyContext";
 
 import banner1 from "@/assets/banner-1.jpg";
 import banner2 from "@/assets/banner-2.jpg";
@@ -16,14 +17,17 @@ interface PromoBanner {
   link: string;
 }
 
-const FALLBACK_BANNERS: PromoBanner[] = [
-  { id: 1, image: banner1, title: "Explore Wayanad",      subtitle: "Up to 30% Off on Premium Stays",   cta: "View Offers", link: "#stays" },
-  { id: 2, image: banner2, title: "Pool Villa Escapes",   subtitle: "Starting from ₹4,999/night",       cta: "Book Now",    link: "#stays" },
-  { id: 3, image: banner3, title: "Treehouse Adventures", subtitle: "Limited Availability — Book Today", cta: "Explore",     link: "#stays" },
-];
-
 const PromoBanners = () => {
-  const [banners, setBanners] = useState<PromoBanner[]>(FALLBACK_BANNERS);
+  const { format } = useCurrency();
+  const fallbackBanners = useMemo(
+    (): PromoBanner[] => [
+      { id: 1, image: banner1, title: "Explore Wayanad", subtitle: "Up to 30% Off on Premium Stays", cta: "View Offers", link: "#stays" },
+      { id: 2, image: banner2, title: "Pool Villa Escapes", subtitle: `Starting from ${format(4999)}/night`, cta: "Book Now", link: "#stays" },
+      { id: 3, image: banner3, title: "Treehouse Adventures", subtitle: "Limited Availability — Book Today", cta: "Explore", link: "#stays" },
+    ],
+    [format]
+  );
+  const [banners, setBanners] = useState<PromoBanner[]>(fallbackBanners);
   const [current, setCurrent] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -47,9 +51,18 @@ const PromoBanners = () => {
       );
       setCurrent(0);
     } else {
-      setBanners(FALLBACK_BANNERS);
+      setBanners(fallbackBanners);
     }
-  }, []);
+  }, [fallbackBanners]);
+
+  useEffect(() => {
+    setBanners((prev) => {
+      if (prev.length === 3 && prev[0]?.id === 1 && prev[1]?.id === 2 && prev[2]?.id === 3) {
+        return fallbackBanners;
+      }
+      return prev;
+    });
+  }, [fallbackBanners]);
 
   useEffect(() => {
     fetchBanners();

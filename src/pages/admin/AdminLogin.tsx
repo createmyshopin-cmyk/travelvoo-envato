@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Lock } from "lucide-react";
 import { resolveTenantFromHostname } from "@/hooks/useAdminAuth";
+import { DemoLoginHint, DEMO_TENANT_ADMIN } from "@/components/DemoLoginHint";
+import { loginFailureDescription } from "@/lib/loginFailureMessage";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -78,7 +80,14 @@ export default function AdminLogin() {
           <CardTitle className="text-2xl">Admin Login</CardTitle>
           <CardDescription>Sign in to manage your stays and bookings</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <DemoLoginHint
+            variant="tenant"
+            onFillDemo={() => {
+              setEmail(DEMO_TENANT_ADMIN.email);
+              setPassword(DEMO_TENANT_ADMIN.password);
+            }}
+          />
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Email</label>

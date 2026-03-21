@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2 } from "lucide-react";
+import { useCurrency } from "@/context/CurrencyContext";
 
 interface Props {
   open: boolean;
@@ -21,6 +22,7 @@ interface RoomLine { name: string; qty: number; price: number; }
 interface AddonLine { name: string; price: number; }
 
 export function QuotationForm({ open, onOpenChange, quotation, stays, onSaved }: Props) {
+  const { format, symbol } = useCurrency();
   const [loading, setLoading] = useState(false);
   const [guestName, setGuestName] = useState("");
   const [phone, setPhone] = useState("");
@@ -189,7 +191,7 @@ export function QuotationForm({ open, onOpenChange, quotation, stays, onSaved }:
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>Discount (₹)</Label>
+              <Label>Discount ({symbol})</Label>
               <Input type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} />
             </div>
             <div className="space-y-1">
@@ -220,11 +222,11 @@ export function QuotationForm({ open, onOpenChange, quotation, stays, onSaved }:
 
           {/* Price Summary */}
           <div className="rounded-lg bg-muted/50 p-3 space-y-1 text-sm">
-            <div className="flex justify-between"><span>Room Total</span><span>₹{roomTotal.toLocaleString("en-IN")}</span></div>
-            <div className="flex justify-between"><span>Add-ons</span><span>₹{addonsTotal.toLocaleString("en-IN")}</span></div>
-            <div className="flex justify-between"><span>Discount</span><span className="text-destructive">-₹{discount.toLocaleString("en-IN")}</span></div>
+            <div className="flex justify-between"><span>Room Total</span><span>{format(roomTotal)}</span></div>
+            <div className="flex justify-between"><span>Add-ons</span><span>{format(addonsTotal)}</span></div>
+            <div className="flex justify-between"><span>Discount</span><span className="text-destructive">{format(-discount)}</span></div>
             <div className="border-t pt-1 flex justify-between font-bold">
-              <span>Total</span><span>₹{totalPrice.toLocaleString("en-IN")}</span>
+              <span>Total</span><span>{format(totalPrice)}</span>
             </div>
           </div>
 

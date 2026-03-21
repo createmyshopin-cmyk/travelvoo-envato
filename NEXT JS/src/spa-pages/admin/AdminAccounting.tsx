@@ -26,6 +26,7 @@ import {
 } from "recharts";
 import { format, parseISO, startOfMonth, endOfMonth, subMonths, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/context/CurrencyContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -122,10 +123,6 @@ function exportCSV(data: Txn[]) {
   URL.revokeObjectURL(url);
 }
 
-function formatCurrency(n: number) {
-  return `₹${n.toLocaleString("en-IN")}`;
-}
-
 function categoryLabel(cat: string) {
   return cat.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
 }
@@ -140,6 +137,7 @@ function generateRefNumber(type: TxnType) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminAccounting() {
+  const { format: formatCurrency, symbol } = useCurrency();
   const { toast } = useToast();
 
   // Data
@@ -636,7 +634,7 @@ CREATE INDEX IF NOT EXISTS idx_booking_ledger_entries_booking ON public.booking_
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                     <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
+                    <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${symbol}${(v / 1000).toFixed(0)}k`} />
                     <Tooltip formatter={(v: number) => formatCurrency(v)} />
                     <Legend wrapperStyle={{ fontSize: 10 }} />
                     <Area type="monotone" dataKey="income" stroke="#22c55e" fill="url(#gi)" strokeWidth={2} name="Income" />
@@ -647,7 +645,7 @@ CREATE INDEX IF NOT EXISTS idx_booking_ledger_entries_booking ON public.booking_
                   <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                     <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
+                    <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${symbol}${(v / 1000).toFixed(0)}k`} />
                     <Tooltip formatter={(v: number) => formatCurrency(v)} />
                     <Legend wrapperStyle={{ fontSize: 10 }} />
                     <Bar dataKey="income" fill="#22c55e" radius={[4, 4, 0, 0]} name="Income" />
@@ -919,14 +917,14 @@ CREATE INDEX IF NOT EXISTS idx_booking_ledger_entries_booking ON public.booking_
                         <span className="text-[10px] font-mono text-muted-foreground">{bk.booking_id}</span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] font-medium text-foreground">₹{(bk.total_price || 0).toLocaleString("en-IN")}</span>
+                        <span className="text-[10px] font-medium text-foreground">{formatCurrency(bk.total_price || 0)}</span>
                         <Badge variant={bk.status === "confirmed" ? "default" : bk.status === "cancelled" ? "destructive" : "secondary"} className="text-[8px] py-0 px-1">{bk.status}</Badge>
                         {entries.length > 0 && <span className="text-[9px] text-muted-foreground ml-auto">{entries.length} entries</span>}
                       </div>
                       {entries.length > 0 && (
                         <div className="flex gap-2 mt-1">
-                          {ledgerIncome > 0 && <span className="text-[9px] text-green-600">+₹{ledgerIncome.toLocaleString("en-IN")}</span>}
-                          {ledgerExpense > 0 && <span className="text-[9px] text-red-600">-₹{ledgerExpense.toLocaleString("en-IN")}</span>}
+                          {ledgerIncome > 0 && <span className="text-[9px] text-green-600">+{formatCurrency(ledgerIncome)}</span>}
+                          {ledgerExpense > 0 && <span className="text-[9px] text-red-600">-{formatCurrency(ledgerExpense)}</span>}
                         </div>
                       )}
                     </button>
@@ -1124,7 +1122,7 @@ CREATE INDEX IF NOT EXISTS idx_booking_ledger_entries_booking ON public.booking_
             </DialogTitle>
             {currentBooking && (
               <p className="text-xs text-muted-foreground">
-                {currentBooking.booking_id} — {currentBooking.guest_name} · ₹{(currentBooking.total_price || 0).toLocaleString("en-IN")}
+                {currentBooking.booking_id} — {currentBooking.guest_name} · {formatCurrency(currentBooking.total_price || 0)}
               </p>
             )}
           </DialogHeader>

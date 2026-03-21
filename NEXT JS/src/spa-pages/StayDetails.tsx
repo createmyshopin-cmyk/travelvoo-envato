@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDocumentHead } from "@/hooks/useDocumentHead";
 import { getOgImageUrl } from "@/lib/ogImage";
 import { useBranding } from "@/context/BrandingContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import { JsonLd } from "@/components/seo/JsonLd";
 
 const amenityIcons: Record<string, React.ElementType> = {
@@ -38,6 +39,7 @@ interface CouponTier {
 }
 
 const StayDetails = () => {
+  const { format } = useCurrency();
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
@@ -138,7 +140,7 @@ const StayDetails = () => {
             name: a,
           })),
         }),
-        ...(stay.price > 0 && { priceRange: `₹${stay.price}` }),
+        ...(stay.price > 0 && { priceRange: format(stay.price) }),
         url: typeof window !== "undefined" ? `${window.location.origin}/stay/${stay.id}` : undefined,
       }
     : null;
@@ -306,7 +308,7 @@ const couponDiscount = bestCoupon ? bestCoupon.discount : 0;
           >
             <div className="max-w-lg w-full bg-savings text-primary-foreground px-4 py-3 flex items-center justify-center gap-2 shadow-lg">
               <PartyPopper className="w-5 h-5" />
-              <span className="font-bold text-sm">🎉 Coupon Applied! {bannerCoupon?.code} — ₹{bannerCoupon?.discount} OFF</span>
+              <span className="font-bold text-sm">🎉 Coupon Applied! {bannerCoupon?.code} — {format(bannerCoupon?.discount ?? 0)} OFF</span>
               <Sparkles className="w-4 h-4" />
             </div>
           </motion.div>
@@ -468,12 +470,12 @@ const couponDiscount = bestCoupon ? bestCoupon.discount : 0;
                         <span className={cn("text-[11px] font-bold", isUnlocked ? "text-savings" : "text-muted-foreground")}>{coupon.code}</span>
                         {isBest && <span className="text-[9px] font-bold bg-savings/15 text-savings px-1.5 py-0.5 rounded-full">Active</span>}
                       </div>
-                      <span className={cn("text-[11px] font-bold", isUnlocked ? "text-savings" : "text-foreground")}>₹{coupon.discount} OFF</span>
+                      <span className={cn("text-[11px] font-bold", isUnlocked ? "text-savings" : "text-foreground")}>{format(coupon.discount)} OFF</span>
                     </div>
                     <Progress value={progress} className={cn("h-1.5 bg-border", isUnlocked && "[&>div]:bg-savings")} />
                     {!isUnlocked && (
                       <p className="text-[10px] text-muted-foreground mt-0.5">
-                        Add <span className="font-bold text-savings">₹{amountLeft.toLocaleString()}</span> more (min ₹{coupon.minValue.toLocaleString()})
+                        Add <span className="font-bold text-savings">{format(amountLeft)}</span> more (min {format(coupon.minValue)})
                       </p>
                     )}
                   </div>
@@ -528,7 +530,7 @@ const couponDiscount = bestCoupon ? bestCoupon.discount : 0;
               >
                 <div className="flex items-center gap-1.5 bg-savings/10 rounded-lg px-2.5 py-1.5">
                   <Tag className="w-3 h-3 text-savings" />
-                  <span className="text-[11px] font-bold text-savings">Coupon: {bestCoupon?.code} • -₹{bestCoupon?.discount}</span>
+                  <span className="text-[11px] font-bold text-savings">Coupon: {bestCoupon?.code} • {format(-(bestCoupon?.discount ?? 0))}</span>
                 </div>
               </motion.div>
             )}
@@ -540,7 +542,7 @@ const couponDiscount = bestCoupon ? bestCoupon.discount : 0;
                 <>
                   <div className="flex items-baseline gap-1.5">
                     {totalSavings > 0 && (
-                      <span className="text-xs text-muted-foreground line-through">₹{compareTotal.toLocaleString()}</span>
+                      <span className="text-xs text-muted-foreground line-through">{format(compareTotal)}</span>
                     )}
                     <motion.span
                       key={finalTotal}
@@ -548,14 +550,14 @@ const couponDiscount = bestCoupon ? bestCoupon.discount : 0;
                       animate={{ scale: 1 }}
                       className={cn("text-lg font-extrabold text-primary", bestCoupon && "text-savings")}
                     >
-                      ₹{finalTotal.toLocaleString()}
+                      {format(finalTotal)}
                     </motion.span>
                   </div>
                   {(totalSavings + couponDiscount) > 0 && (
                     <div className="flex items-center gap-1 mt-0.5">
                       <Sparkles className="w-3 h-3 text-savings" />
                       <span className="text-[11px] font-bold text-savings">
-                        Save ₹{(totalSavings + couponDiscount).toLocaleString()}
+                        Save {format(totalSavings + couponDiscount)}
                       </span>
                     </div>
                   )}
@@ -563,10 +565,11 @@ const couponDiscount = bestCoupon ? bestCoupon.discount : 0;
               ) : (
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-lg font-extrabold text-primary">
-                    ₹{(roomsWithCalendarPrices.length > 0
-                      ? Math.min(...roomsWithCalendarPrices.map((r) => r.price))
-                      : stay.price
-                    ).toLocaleString()}
+                    {format(
+                      roomsWithCalendarPrices.length > 0
+                        ? Math.min(...roomsWithCalendarPrices.map((r) => r.price))
+                        : stay.price
+                    )}
                   </span>
                   <span className="text-xs text-muted-foreground">/night</span>
                 </div>

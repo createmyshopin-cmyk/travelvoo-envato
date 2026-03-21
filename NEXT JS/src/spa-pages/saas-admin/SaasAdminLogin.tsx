@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Shield, Eye, EyeOff } from "lucide-react";
+import { DemoLoginHint, DEMO_SAAS_SUPER_ADMIN } from "@/components/DemoLoginHint";
+import { loginFailureDescription } from "@/lib/loginFailureMessage";
 
 const SaasAdminLogin = () => {
   const [email, setEmail] = useState("");
@@ -35,7 +37,7 @@ const SaasAdminLogin = () => {
       if (!res.ok) {
         toast({
           title: "Login failed",
-          description: json.error || `HTTP ${res.status}`,
+          description: loginFailureDescription(json.error) || `HTTP ${res.status}`,
           variant: "destructive",
         });
         setLoading(false);
@@ -82,7 +84,14 @@ const SaasAdminLogin = () => {
           <CardTitle>SaaS Super Admin</CardTitle>
           <CardDescription>Platform management login</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <DemoLoginHint
+            variant="saas"
+            onFillDemo={() => {
+              setEmail(DEMO_SAAS_SUPER_ADMIN.email);
+              setPassword(DEMO_SAAS_SUPER_ADMIN.password);
+            }}
+          />
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <Label>Email</Label>

@@ -3,10 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw, Users, CreditCard, IndianRupee, CalendarCheck, Sparkles, TrendingUp } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { useCurrency } from "@/context/CurrencyContext";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
 const SaasAdminDashboard = () => {
+  const { format } = useCurrency();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalTenants: 0,
@@ -79,7 +81,7 @@ const SaasAdminDashboard = () => {
   const statCards = [
     { label: "Total Tenants", value: stats.totalTenants, icon: Users, color: "text-primary" },
     { label: "Active Subscriptions", value: stats.activeSubs, icon: CreditCard, color: "text-emerald-500" },
-    { label: "Monthly Revenue", value: `₹${stats.mrr.toLocaleString()}`, icon: IndianRupee, color: "text-primary" },
+    { label: "Monthly Revenue", value: format(stats.mrr), icon: IndianRupee, color: "text-primary" },
     { label: "Total Bookings", value: stats.totalBookings, icon: CalendarCheck, color: "text-amber-500" },
     { label: "AI Searches", value: stats.totalAiSearches, icon: Sparkles, color: "text-violet-500" },
     { label: "On Trial", value: stats.trialTenants, icon: TrendingUp, color: "text-muted-foreground" },

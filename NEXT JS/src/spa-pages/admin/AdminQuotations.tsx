@@ -10,6 +10,7 @@ import { QuotationForm } from "@/components/admin/QuotationForm";
 import { QuotationDetailDialog } from "@/components/admin/QuotationDetailDialog";
 import { generateQuotationPdf } from "@/lib/pdfUtils";
 import { format } from "date-fns";
+import { useCurrency } from "@/context/CurrencyContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const statusColors: Record<string, string> = {
@@ -21,6 +22,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function AdminQuotations() {
+  const { format: formatMoney } = useCurrency();
   const [quotations, setQuotations] = useState<any[]>([]);
   const [stays, setStays] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +54,7 @@ export default function AdminQuotations() {
 
   const sendWhatsApp = (q: any) => {
     const stay = stays.find((s) => s.id === q.stay_id);
-    const msg = `Hello ${q.guest_name},\n\nHere is your stay quotation.\n\n*Quotation:* ${q.quote_id}\n*Stay:* ${stay?.name || "—"}\n*Stay ID:* ${stay?.stay_id || "—"}\n\n*Check-in:* ${q.checkin ? format(new Date(q.checkin), "dd MMM yyyy") : "—"}\n*Check-out:* ${q.checkout ? format(new Date(q.checkout), "dd MMM yyyy") : "—"}\n\n*Total Quote:* ₹${q.total_price?.toLocaleString("en-IN")}\n\nThank you!`;
+    const msg = `Hello ${q.guest_name},\n\nHere is your stay quotation.\n\n*Quotation:* ${q.quote_id}\n*Stay:* ${stay?.name || "—"}\n*Stay ID:* ${stay?.stay_id || "—"}\n\n*Check-in:* ${q.checkin ? format(new Date(q.checkin), "dd MMM yyyy") : "—"}\n*Check-out:* ${q.checkout ? format(new Date(q.checkout), "dd MMM yyyy") : "—"}\n\n*Total Quote:* ${formatMoney(q.total_price ?? 0)}\n\nThank you!`;
     window.open(`https://wa.me/${q.phone?.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
@@ -135,7 +137,7 @@ export default function AdminQuotations() {
                 <TableCell className="text-sm">{q.phone}</TableCell>
                 <TableCell className="text-sm">{getStayName(q.stay_id)}</TableCell>
                 <TableCell className="text-sm">{q.checkin ? format(new Date(q.checkin), "dd MMM") : "—"}</TableCell>
-                <TableCell className="font-semibold">₹{q.total_price?.toLocaleString("en-IN")}</TableCell>
+                <TableCell className="font-semibold">{formatMoney(q.total_price ?? 0)}</TableCell>
                 <TableCell><Badge variant={statusColors[q.status] as any || "secondary"}>{q.status}</Badge></TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
@@ -171,7 +173,7 @@ export default function AdminQuotations() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">{getStayName(q.stay_id)}</p>
-                <p className="text-sm font-semibold">₹{q.total_price?.toLocaleString("en-IN")}</p>
+                <p className="text-sm font-semibold">{formatMoney(q.total_price ?? 0)}</p>
               </div>
               <div className="flex gap-1">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewQuote(q)}><Eye className="h-4 w-4" /></Button>
