@@ -43,10 +43,14 @@ export function clearSiteSettingsCache() {
 
 // Automatically clear cache on any auth state change (login / logout / signup).
 // Prevents a previous admin's settings leaking into a newly logged-in session.
-supabase.auth.onAuthStateChange(() => {
-  cachedSettings = null;
-  fetchPromise = null;
-});
+// Must not run at module load on the server: touching `supabase` triggers client creation
+// and fails `next build` prerender when NEXT_PUBLIC_* env vars are missing (e.g. CI).
+if (typeof window !== "undefined") {
+  supabase.auth.onAuthStateChange(() => {
+    cachedSettings = null;
+    fetchPromise = null;
+  });
+}
 
 /**
  * Fetches site_settings for the current tenant (resolved from subdomain).
