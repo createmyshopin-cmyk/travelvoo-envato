@@ -74,7 +74,13 @@ export async function POST(req: Request) {
 
   if (body.app_secret) {
     if (!process.env[META_KEY_ENV]) {
-      return NextResponse.json({ error: "META_CREDENTIALS_ENCRYPTION_KEY not set on server" }, { status: 503 });
+      return NextResponse.json(
+        {
+          error:
+            "META_CREDENTIALS_ENCRYPTION_KEY is not set. Add it to your hosting env (e.g. Vercel → Settings → Environment Variables): a 64-character hex string (32 bytes). Generate locally: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+        },
+        { status: 503 },
+      );
     }
     update.app_secret_encrypted = encrypt(body.app_secret, META_KEY_ENV);
   }
