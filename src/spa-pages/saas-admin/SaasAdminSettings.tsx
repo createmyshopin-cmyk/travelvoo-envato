@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { dispatchPlatformCurrencyChange, useCurrency } from "@/context/CurrencyContext";
-import { Settings, Shield, Globe, Mail, CreditCard, Clock, Save, Building2, Server, Copy, CheckCheck, Instagram } from "lucide-react";
+import { Settings, Shield, Globe, Mail, CreditCard, Clock, Save, Building2, Server, Copy, CheckCheck, Instagram, RefreshCw } from "lucide-react";
 
 /** Keys in `saas_platform_settings` for the General + Trial + Security cards (single source of truth in DB). */
 const GENERAL_SETTING_KEYS = [
@@ -307,6 +307,17 @@ const SaasAdminSettings = () => {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  const generateWebhookVerifyToken = () => {
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    const token = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    setMeta((m) => ({ ...m, webhookVerifyToken: token }));
+    toast({
+      title: "Verify token generated",
+      description: "Click Save Meta Credentials to store it in the database, then paste the same value in Meta → Webhooks.",
+    });
+  };
+
   if (loading) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
 
   return (
@@ -487,15 +498,39 @@ const SaasAdminSettings = () => {
               placeholder="e.g. 1484662382996042"
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label>Webhook Verify Token</Label>
-              <Input value={meta.webhookVerifyToken} onChange={(e) => setMeta((m) => ({ ...m, webhookVerifyToken: e.target.value }))} className="mt-1 font-mono text-xs" placeholder="my_verify_token_123" />
+          <div>
+            <Label>Webhook Verify Token</Label>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-1">
+              Must match Meta Developer → Webhooks → Verify Token. Use Generate, then Save Meta Credentials.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 mt-1">
+              <Input
+                value={meta.webhookVerifyToken}
+                onChange={(e) => setMeta((m) => ({ ...m, webhookVerifyToken: e.target.value }))}
+                className="font-mono text-xs flex-1 min-w-0"
+                placeholder="64 hex chars (Generate) or your own secret"
+              />
+              <div className="flex gap-2 shrink-0">
+                <Button type="button" variant="outline" size="sm" onClick={generateWebhookVerifyToken}>
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Generate
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => copyValue("metaWebhook", meta.webhookVerifyToken)}
+                  disabled={!meta.webhookVerifyToken}
+                  aria-label="Copy webhook verify token"
+                >
+                  {copiedKey === "metaWebhook" ? <CheckCheck className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
-            <div>
-              <Label>Graph API Version</Label>
-              <Input value={meta.graphApiVersion} onChange={(e) => setMeta((m) => ({ ...m, graphApiVersion: e.target.value }))} className="mt-1 font-mono text-xs" placeholder="v25.0" />
-            </div>
+          </div>
+          <div>
+            <Label>Graph API Version</Label>
+            <Input value={meta.graphApiVersion} onChange={(e) => setMeta((m) => ({ ...m, graphApiVersion: e.target.value }))} className="mt-1 font-mono text-xs" placeholder="v25.0" />
           </div>
           <div>
             <Label>OAuth Redirect URI</Label>
