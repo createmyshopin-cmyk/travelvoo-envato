@@ -31,6 +31,7 @@ Optional feature/plan wiring: `supabase/seed_marketplace_feature.sql`
 
 | Doc | Purpose |
 | --- | --- |
+| [../OPENAI_SETUP.md](../OPENAI_SETUP.md) | **OpenAI key** for Marketplace AI + Supabase `ai-search` (not stored in DB) |
 | [theme-authoring.md](./theme-authoring.md) | Presets, layouts, adding tokens safely |
 | [plugin-authoring.md](./plugin-authoring.md) | Registering `plugin_key`, config schemas |
 | [rls-api.md](./rls-api.md) | Tables, policies, which routes use service role |
