@@ -21,6 +21,7 @@ const FEATURE_ROUTES: Record<string, { key: string; label: string }> = {
   "/admin/analytics": { key: "analytics", label: "Analytics" },
   "/admin/account/domain": { key: "custom_domain", label: "Custom Domain" },
   "/admin/calendar": { key: "dynamic_pricing", label: "Dynamic Pricing" },
+  "/admin/marketplace": { key: "marketplace", label: "Marketplace" },
 };
 
 function BookingNotificationListener() {

@@ -28,6 +28,7 @@ const ALL_FEATURES = [
   { key: "quotation_generator", label: "Quotation Generator" },
   { key: "custom_domain", label: "Custom Domain" },
   { key: "analytics", label: "Analytics" },
+  { key: "marketplace", label: "Marketplace" },
 ];
 
 const BILLING_CYCLES = [

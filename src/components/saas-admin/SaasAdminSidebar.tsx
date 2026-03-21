@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Building2, CreditCard, Package, Puzzle, Receipt,
-  Sparkles, BarChart3, Globe, Settings, LogOut, Megaphone, KeyRound,
+  Sparkles, BarChart3, Globe, Settings, LogOut, Megaphone, KeyRound, Store,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { usePathname } from "next/navigation";
@@ -23,6 +23,7 @@ const mainItems = [
 const secondaryItems = [
   { title: "AI Usage", url: "/saas-admin/ai-usage", icon: Sparkles },
   { title: "Analytics", url: "/saas-admin/analytics", icon: BarChart3 },
+  { title: "Marketplace", url: "/saas-admin/marketplace", icon: Store },
   { title: "Domains", url: "/saas-admin/domains", icon: Globe },
   { title: "Envato licenses", url: "/saas-admin/envato-licenses", icon: KeyRound },
   { title: "Announcements", url: "/saas-admin/announcements", icon: Megaphone },

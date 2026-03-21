@@ -81,7 +81,18 @@ const AdminAccountBilling = () => {
       }
 
       const { data: tx } = await supabase.from("transactions").select("*").eq("tenant_id", t.id).order("created_at", { ascending: false }).limit(10);
-      setTransactions(tx || []);
+      const mpIds = [...new Set((tx || []).map((row) => row.marketplace_item_id).filter(Boolean))] as string[];
+      let mpMap: Record<string, string> = {};
+      if (mpIds.length) {
+        const { data: mp } = await supabase.from("marketplace_items").select("id, name").in("id", mpIds);
+        mpMap = Object.fromEntries((mp || []).map((m) => [m.id, m.name]));
+      }
+      setTransactions(
+        (tx || []).map((row) => ({
+          ...row,
+          marketplace_item_name: row.marketplace_item_id ? mpMap[row.marketplace_item_id] ?? null : null,
+        }))
+      );
       const { data: allPlans } = await supabase.from("plans").select("*").eq("status", "active").order("price");
       setPlans((allPlans || []) as Plan[]);
     }
@@ -360,6 +371,7 @@ const AdminAccountBilling = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Status</TableHead>
@@ -370,6 +382,13 @@ const AdminAccountBilling = () => {
                 {transactions.map((tx) => (
                   <TableRow key={tx.id}>
                     <TableCell className="font-mono text-xs">{tx.transaction_id}</TableCell>
+                    <TableCell className="text-xs">
+                      {tx.marketplace_item_id ? (
+                        <span title={tx.marketplace_item_name || ""}>Marketplace{tx.marketplace_item_name ? `: ${tx.marketplace_item_name}` : ""}</span>
+                      ) : (
+                        "Subscription"
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">{formatMoney(tx.amount)}</TableCell>
                     <TableCell className="text-xs capitalize">{tx.payment_method || tx.payment_gateway || "—"}</TableCell>
                     <TableCell>

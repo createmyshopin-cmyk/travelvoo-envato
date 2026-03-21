@@ -204,9 +204,16 @@ const CreateTenantSignup = () => {
 
     setLoading(true);
     try {
-      // Snapshot whether a super admin is creating this account on behalf of someone else
+      // Only SaaS super_admins should skip session handoff; any other session still signs in as the new tenant.
       const { data: { session: existingSession } } = await supabase.auth.getSession();
-      const isSuperAdminCreating = !!existingSession;
+      let isSuperAdminCreating = false;
+      if (existingSession?.user?.id) {
+        const { data: isSaas } = await supabase.rpc("has_role", {
+          _user_id: existingSession.user.id,
+          _role: "super_admin",
+        });
+        isSuperAdminCreating = !!isSaas;
+      }
 
       const { data, error } = await supabase.functions.invoke("create-tenant-signup", {
         body: {

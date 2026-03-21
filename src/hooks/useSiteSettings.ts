@@ -5,6 +5,10 @@ import { resolveTenantFromHostname } from "@/hooks/useAdminAuth";
 interface SiteSettings {
   id: string;
   tenant_id: string | null;
+  /** Declarative landing theme preset (allowlisted in app). */
+  landing_theme_slug?: string | null;
+  /** Allowlisted CSS variables as JSON object. */
+  theme_tokens?: import("@/integrations/supabase/types").Json | null;
   site_name: string;
   contact_email: string;
   contact_phone: string;

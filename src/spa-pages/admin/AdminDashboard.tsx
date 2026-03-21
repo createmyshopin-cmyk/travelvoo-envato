@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, DoorOpen, CalendarCheck, IndianRupee } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Building2, DoorOpen, CalendarCheck, IndianRupee, Store, Lock } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useSubscriptionGuard } from "@/hooks/useSubscriptionGuard";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 interface Stats {
   totalStays: number;
@@ -16,8 +20,12 @@ interface Stats {
 const COLORS = ["hsl(358, 82%, 55%)", "hsl(174, 100%, 33%)", "hsl(25, 95%, 53%)", "hsl(270, 60%, 50%)", "hsl(142, 71%, 45%)", "hsl(45, 100%, 51%)"];
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const { format } = useCurrency();
+  const { plan, loading: planLoading } = useSubscriptionGuard();
+  const marketplaceEnabled = !!(plan?.feature_flags as Record<string, boolean> | undefined)?.marketplace;
   const [stats, setStats] = useState<Stats>({ totalStays: 0, totalRooms: 0, totalBookings: 0, estimatedRevenue: 0 });
+  const [mpInstallCount, setMpInstallCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
   const [roomData, setRoomData] = useState<any[]>([]);
@@ -89,6 +97,17 @@ export default function AdminDashboard() {
           .slice(0, 6)
       );
 
+      if (tenantId) {
+        const { count } = await supabase
+          .from("tenant_marketplace_installs")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .eq("status", "installed");
+        setMpInstallCount(count ?? 0);
+      } else {
+        setMpInstallCount(null);
+      }
+
       setLoading(false);
     };
     fetchAll();
@@ -110,6 +129,16 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-foreground">Dashboard</h2>
 
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="flex flex-wrap h-auto gap-1">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="marketplace" className="gap-1.5">
+            <Store className="h-3.5 w-3.5" />
+            Marketplace
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="mt-6 space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card) => (
           <Card key={card.label}>
@@ -125,6 +154,26 @@ export default function AdminDashboard() {
           </Card>
         ))}
       </div>
+
+      {marketplaceEnabled && mpInstallCount !== null && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Store className="h-4 w-4 text-primary" />
+              Marketplace
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={() => router.push("/admin/marketplace")}>
+              Browse
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">{mpInstallCount}</span> installed item
+              {mpInstallCount === 1 ? "" : "s"}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
@@ -188,6 +237,43 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+
+        <TabsContent value="marketplace" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Store className="h-5 w-5 text-primary" />
+                Marketplace
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {planLoading ? (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : !marketplaceEnabled ? (
+                <div className="space-y-4 text-center py-4">
+                  <div className="flex justify-center">
+                    <Lock className="h-10 w-10 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Marketplace is not included in your current plan. Upgrade to unlock this area.
+                  </p>
+                  <Button onClick={() => router.push("/admin/account/billing")}>View plans</Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Browse themes and plugins, install free items, and activate a landing theme for your public site.
+                  </p>
+                  <Button variant="secondary" size="sm" onClick={() => router.push("/admin/marketplace")}>
+                    Open Marketplace
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

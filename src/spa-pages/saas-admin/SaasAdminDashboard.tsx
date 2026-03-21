@@ -1,15 +1,22 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RefreshCw, Users, CreditCard, IndianRupee, CalendarCheck, Sparkles, TrendingUp } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { RefreshCw, Users, CreditCard, IndianRupee, CalendarCheck, Sparkles, TrendingUp, Store } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { useCurrency } from "@/context/CurrencyContext";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
 const SaasAdminDashboard = () => {
+  const router = useRouter();
   const { format } = useCurrency();
   const [loading, setLoading] = useState(true);
+  const [mpCatalog, setMpCatalog] = useState(0);
+  const [mpInstalls, setMpInstalls] = useState(0);
+  const [mpRevenue, setMpRevenue] = useState(0);
   const [stats, setStats] = useState({
     totalTenants: 0,
     activeSubs: 0,
@@ -27,13 +34,16 @@ const SaasAdminDashboard = () => {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [tenantsRes, subsRes, txRes, plansRes, bookingsRes, aiRes] = await Promise.all([
+    const [tenantsRes, subsRes, txRes, plansRes, bookingsRes, aiRes, mpItemsRes, mpInsRes, mpTxRes] = await Promise.all([
       supabase.from("tenants").select("id, status, plan_id, created_at"),
       supabase.from("subscriptions").select("id, status, plan_id"),
       supabase.from("transactions").select("amount, status"),
       supabase.from("plans").select("id, plan_name"),
       supabase.from("bookings").select("id"),
       supabase.from("ai_search_logs").select("id"),
+      supabase.from("marketplace_items").select("id", { count: "exact", head: true }),
+      supabase.from("tenant_marketplace_installs").select("id", { count: "exact", head: true }).eq("status", "installed"),
+      supabase.from("transactions").select("amount").eq("status", "success").not("marketplace_item_id", "is", null),
     ]);
 
     const tenants = tenantsRes.data || [];
@@ -71,6 +81,11 @@ const SaasAdminDashboard = () => {
     });
     setTenantGrowth(Object.entries(monthMap).map(([month, count]) => ({ month, count })));
 
+    setMpCatalog(mpItemsRes.count ?? 0);
+    setMpInstalls(mpInsRes.count ?? 0);
+    const mpT = mpTxRes.data || [];
+    setMpRevenue(mpT.reduce((s, t) => s + (Number(t.amount) || 0), 0));
+
     setLoading(false);
   };
 
@@ -94,6 +109,16 @@ const SaasAdminDashboard = () => {
         <p className="text-sm text-muted-foreground mt-1">SaaS platform metrics and insights</p>
       </div>
 
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="flex flex-wrap h-auto gap-1">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="marketplace" className="gap-1.5">
+            <Store className="h-3.5 w-3.5" />
+            Marketplace
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="mt-6 space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {statCards.map(s => (
           <Card key={s.label}>
@@ -156,6 +181,50 @@ const SaasAdminDashboard = () => {
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+
+        <TabsContent value="marketplace" className="mt-6 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Catalog items</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{mpCatalog}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Active installs</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{mpInstalls}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Marketplace revenue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{format(mpRevenue)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Successful tx with marketplace item</p>
+              </CardContent>
+            </Card>
+          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Store className="h-5 w-5 text-primary" />
+                Marketplace admin
+              </CardTitle>
+              <CardDescription>Themes, plugins, tenant installs, and analytics.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col sm:flex-row gap-2">
+              <Button onClick={() => router.push("/saas-admin/marketplace")}>Open Marketplace admin</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

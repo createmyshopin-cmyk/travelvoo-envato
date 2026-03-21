@@ -1,4 +1,4 @@
-import { LayoutDashboard, Building2, CalendarCheck, Settings, Tag, Star, LogOut, DoorOpen, FileText, Receipt, User, Globe, BarChart3, CreditCard, ChevronDown, CalendarDays, Clapperboard, BookOpen, ImageIcon, Search, Lock, UserPlus } from "lucide-react";
+import { LayoutDashboard, Building2, CalendarCheck, Settings, Tag, Star, LogOut, DoorOpen, FileText, Receipt, User, Globe, BarChart3, CreditCard, ChevronDown, CalendarDays, Clapperboard, BookOpen, ImageIcon, Search, Lock, UserPlus, Store } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -22,6 +22,7 @@ const ROUTE_FEATURE: Record<string, string> = {
   "/admin/reels-stories":  "reels",
   "/admin/account/domain": "custom_domain",
   "/admin/ai-settings":    "ai_search",
+  "/admin/marketplace":    "marketplace",
 };
 
 const staysSubItems = [
@@ -150,6 +151,20 @@ export function AdminSidebar({ onSignOut }: AdminSidebarProps) {
                   <NavLink to="/admin/dashboard" end className="hover:bg-muted/50" activeClassName="bg-muted text-primary font-medium">
                     <LayoutDashboard className="mr-2 h-4 w-4" />
                     {!collapsed && <span>Dashboard</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/admin/marketplace")}>
+                  <NavLink to="/admin/marketplace" end className="hover:bg-muted/50" activeClassName="bg-muted text-primary font-medium">
+                    <Store className={cn("mr-2 h-4 w-4", isLocked("/admin/marketplace") && "text-muted-foreground")} />
+                    {!collapsed && (
+                      <>
+                        <span className={cn("flex-1", isLocked("/admin/marketplace") && "text-muted-foreground")}>Marketplace</span>
+                        {isLocked("/admin/marketplace") && <Lock className="ml-auto h-3 w-3 text-muted-foreground/60" />}
+                      </>
+                    )}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>

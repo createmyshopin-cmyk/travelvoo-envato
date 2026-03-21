@@ -845,6 +845,66 @@ export type Database = {
           },
         ]
       }
+      marketplace_items: {
+        Row: {
+          id: string
+          type: "theme" | "plugin"
+          slug: string
+          name: string
+          description: string
+          version: string
+          is_published: boolean
+          pricing_model: "free" | "one_time" | "recurring"
+          price: number
+          billing_interval: "monthly" | "yearly" | null
+          currency: string
+          manifest: Json
+          preview_image_url: string | null
+          package_storage_path: string | null
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          type: "theme" | "plugin"
+          slug: string
+          name: string
+          description?: string
+          version?: string
+          is_published?: boolean
+          pricing_model?: "free" | "one_time" | "recurring"
+          price?: number
+          billing_interval?: "monthly" | "yearly" | null
+          currency?: string
+          manifest?: Json
+          preview_image_url?: string | null
+          package_storage_path?: string | null
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          type?: "theme" | "plugin"
+          slug?: string
+          name?: string
+          description?: string
+          version?: string
+          is_published?: boolean
+          pricing_model?: "free" | "one_time" | "recurring"
+          price?: number
+          billing_interval?: "monthly" | "yearly" | null
+          currency?: string
+          manifest?: Json
+          preview_image_url?: string | null
+          package_storage_path?: string | null
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       nearby_destinations: {
         Row: {
           created_at: string
@@ -1299,6 +1359,7 @@ export type Database = {
           gcal_enabled: boolean
           gcal_webhook_url: string
           id: string
+          landing_theme_slug: string | null
           maintenance_mode: boolean
           menu_popup_enabled: boolean
           menu_popup_title: string
@@ -1311,6 +1372,7 @@ export type Database = {
           sticky_menu_show_explore: boolean
           sticky_menu_show_reels: boolean
           sticky_menu_show_wishlist: boolean
+          theme_tokens: Json
           updated_at: string
           whatsapp_number: string
         }
@@ -1330,6 +1392,7 @@ export type Database = {
           gcal_enabled?: boolean
           gcal_webhook_url?: string
           id?: string
+          landing_theme_slug?: string | null
           maintenance_mode?: boolean
           menu_popup_enabled?: boolean
           menu_popup_title?: string
@@ -1342,6 +1405,7 @@ export type Database = {
           sticky_menu_show_explore?: boolean
           sticky_menu_show_reels?: boolean
           sticky_menu_show_wishlist?: boolean
+          theme_tokens?: Json
           updated_at?: string
           whatsapp_number?: string
         }
@@ -1361,6 +1425,7 @@ export type Database = {
           gcal_enabled?: boolean
           gcal_webhook_url?: string
           id?: string
+          landing_theme_slug?: string | null
           maintenance_mode?: boolean
           menu_popup_enabled?: boolean
           menu_popup_title?: string
@@ -1373,6 +1438,7 @@ export type Database = {
           sticky_menu_show_explore?: boolean
           sticky_menu_show_reels?: boolean
           sticky_menu_show_wishlist?: boolean
+          theme_tokens?: Json
           updated_at?: string
           whatsapp_number?: string
         }
@@ -1686,6 +1752,57 @@ export type Database = {
           },
         ]
       }
+      tenant_marketplace_installs: {
+        Row: {
+          id: string
+          tenant_id: string
+          item_id: string
+          status: "pending_payment" | "installed" | "disabled"
+          config: Json
+          transaction_id: string | null
+          razorpay_subscription_id: string | null
+          installed_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          item_id: string
+          status?: "pending_payment" | "installed" | "disabled"
+          config?: Json
+          transaction_id?: string | null
+          razorpay_subscription_id?: string | null
+          installed_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          item_id?: string
+          status?: "pending_payment" | "installed" | "disabled"
+          config?: Json
+          transaction_id?: string | null
+          razorpay_subscription_id?: string | null
+          installed_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_marketplace_installs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_marketplace_installs_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_usage: {
         Row: {
           ai_search_count: number
@@ -1804,6 +1921,8 @@ export type Database = {
           created_at: string
           currency: string
           id: string
+          marketplace_item_id: string | null
+          metadata: Json | null
           payment_gateway: string
           payment_method: string
           status: string
@@ -1816,6 +1935,8 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          marketplace_item_id?: string | null
+          metadata?: Json | null
           payment_gateway?: string
           payment_method?: string
           status?: string
@@ -1828,6 +1949,8 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          marketplace_item_id?: string | null
+          metadata?: Json | null
           payment_gateway?: string
           payment_method?: string
           status?: string
@@ -1836,6 +1959,13 @@ export type Database = {
           transaction_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "transactions_marketplace_item_id_fkey"
+            columns: ["marketplace_item_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transactions_subscription_id_fkey"
             columns: ["subscription_id"]

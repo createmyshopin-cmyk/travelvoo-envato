@@ -1,6 +1,7 @@
 "use client";
 
 import MaintenancePage from "@/components/MaintenancePage";
+import { LandingThemeProvider } from "@/components/LandingThemeProvider";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 const PageLoader = () => (
@@ -12,5 +13,9 @@ export function PublicMaintenanceGate({ children }: { children: React.ReactNode 
   const { settings, loading } = useSiteSettings();
   if (loading) return <PageLoader />;
   if (settings?.maintenance_mode) return <MaintenancePage />;
-  return <>{children}</>;
+  return (
+    <LandingThemeProvider landingThemeSlug={settings?.landing_theme_slug} themeTokens={settings?.theme_tokens ?? undefined}>
+      {children}
+    </LandingThemeProvider>
+  );
 }
