@@ -32,7 +32,7 @@ export async function GET(req: Request) {
     .select("meta_app_id, app_secret_encrypted, webhook_verify_token, graph_api_version, oauth_redirect_uri")
     .single();
 
-  if (!data) return NextResponse.json({ meta_app_id: "", webhook_verify_token: "", graph_api_version: "v21.0", oauth_redirect_uri: "", has_secret: false });
+  if (!data) return NextResponse.json({ meta_app_id: "", webhook_verify_token: "", graph_api_version: "v25.0", oauth_redirect_uri: "", has_secret: false });
 
   const row = data as any;
   let hasSecret = false;
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
   return NextResponse.json({
     meta_app_id: row.meta_app_id || "",
     webhook_verify_token: row.webhook_verify_token || "",
-    graph_api_version: row.graph_api_version || "v21.0",
+    graph_api_version: row.graph_api_version || "v25.0",
     oauth_redirect_uri: row.oauth_redirect_uri || "",
     has_secret: hasSecret,
   });

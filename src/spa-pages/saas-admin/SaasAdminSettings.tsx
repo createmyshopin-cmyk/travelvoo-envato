@@ -102,7 +102,7 @@ const SaasAdminSettings = () => {
   const [plans, setPlans] = useState<any[]>([]);
   const [entriSaving, setEntriSaving] = useState(false);
   const [metaSaving, setMetaSaving] = useState(false);
-  const [meta, setMeta] = useState({ metaAppId: "", metaAppSecret: "", webhookVerifyToken: "", graphApiVersion: "v21.0", oauthRedirectUri: "", hasSecret: false });
+  const [meta, setMeta] = useState({ metaAppId: "", metaAppSecret: "", webhookVerifyToken: "", graphApiVersion: "v25.0", oauthRedirectUri: "", hasSecret: false });
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -165,7 +165,7 @@ const SaasAdminSettings = () => {
         const mRes = await fetch("/api/saas-admin/meta-credentials", { headers: { Authorization: `Bearer ${session.access_token}` } });
         if (mRes.ok) {
           const mc = await mRes.json();
-          setMeta((m) => ({ ...m, metaAppId: mc.meta_app_id || "", webhookVerifyToken: mc.webhook_verify_token || "", graphApiVersion: mc.graph_api_version || "v21.0", oauthRedirectUri: mc.oauth_redirect_uri || "", hasSecret: !!mc.has_secret }));
+          setMeta((m) => ({ ...m, metaAppId: mc.meta_app_id || "", webhookVerifyToken: mc.webhook_verify_token || "", graphApiVersion: mc.graph_api_version || "v25.0", oauthRedirectUri: mc.oauth_redirect_uri || "", hasSecret: !!mc.has_secret }));
         }
       }
     } catch { /* ignore */ }
@@ -465,7 +465,7 @@ const SaasAdminSettings = () => {
             </div>
             <div>
               <Label>Graph API Version</Label>
-              <Input value={meta.graphApiVersion} onChange={(e) => setMeta((m) => ({ ...m, graphApiVersion: e.target.value }))} className="mt-1 font-mono text-xs" placeholder="v21.0" />
+              <Input value={meta.graphApiVersion} onChange={(e) => setMeta((m) => ({ ...m, graphApiVersion: e.target.value }))} className="mt-1 font-mono text-xs" placeholder="v25.0" />
             </div>
           </div>
           <div>

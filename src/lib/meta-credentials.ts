@@ -38,7 +38,7 @@ export async function getMetaPlatformCredentials(): Promise<MetaPlatformCredenti
           metaAppId: row.meta_app_id,
           metaAppSecret: secret,
           webhookVerifyToken: row.webhook_verify_token || process.env.META_WEBHOOK_VERIFY_TOKEN || "",
-          graphApiVersion: row.graph_api_version || "v21.0",
+          graphApiVersion: row.graph_api_version || "v25.0",
           oauthRedirectUri: row.oauth_redirect_uri || process.env.INSTAGRAM_OAUTH_REDIRECT_URI || "",
         };
       }
@@ -51,7 +51,7 @@ export async function getMetaPlatformCredentials(): Promise<MetaPlatformCredenti
     metaAppId: process.env.META_APP_ID || "",
     metaAppSecret: process.env.META_APP_SECRET || "",
     webhookVerifyToken: process.env.META_WEBHOOK_VERIFY_TOKEN || "",
-    graphApiVersion: "v21.0",
+    graphApiVersion: "v25.0",
     oauthRedirectUri: process.env.INSTAGRAM_OAUTH_REDIRECT_URI || "",
   };
 }

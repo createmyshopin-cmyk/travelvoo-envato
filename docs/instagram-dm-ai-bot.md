@@ -146,7 +146,7 @@ One **Meta (Facebook) app** powers webhooks and OAuth for **all tenants**; **pla
   - **Meta App ID** (`meta_app_id`)
   - **Meta App Secret** — **masked** in UI after save; rotate supported
   - **Webhook verify token** (`meta_webhook_verify_token`) — must match Meta dashboard subscription
-  - **Instagram / Graph API version** (optional string, e.g. `v21.0`) for outbound calls
+  - **Instagram / Graph API version** (optional string, e.g. `v25.0`) for outbound calls
   - **OAuth redirect URL** base or full path (or derive from existing platform base domain settings in [`saas_platform_settings`](../src/integrations/supabase/types.ts))
   - Short **docs link** / inline help for Meta Developer Console steps
 - **Who can edit**: **`super_admin` only** (same pattern as other sensitive SaaS settings). Tenant admins never see app secret.

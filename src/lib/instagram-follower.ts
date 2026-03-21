@@ -22,7 +22,7 @@ export async function checkSenderFollowsBusinessAccount(
   tenantId: string,
   senderIgId: string,
   conn: { instagram_business_account_id: string; page_access_token_encrypted: string },
-  graphApiVersion: string = "v21.0",
+  graphApiVersion: string = "v25.0",
 ): Promise<FollowerCheckResult> {
   if (process.env.INSTAGRAM_FOLLOWER_CHECK_MOCK === "1" || process.env.INSTAGRAM_FOLLOWER_CHECK_MOCK === "true") {
     const v = process.env.INSTAGRAM_FOLLOWER_MOCK_FOLLOWS;

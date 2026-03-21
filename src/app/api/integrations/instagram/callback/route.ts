@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   }
 
   const redirectUri = creds.oauthRedirectUri || `${req.nextUrl.origin}/api/integrations/instagram/callback`;
-  const graphVersion = creds.graphApiVersion || "v21.0";
+  const graphVersion = creds.graphApiVersion || "v25.0";
 
   try {
     // Exchange code for short-lived token

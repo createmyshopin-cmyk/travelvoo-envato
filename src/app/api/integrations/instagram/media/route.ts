@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
   }
 
   const creds = await getMetaPlatformCredentials();
-  const graphVersion = creds.graphApiVersion || "v21.0";
+  const graphVersion = creds.graphApiVersion || "v25.0";
   const igId = (conn as any).instagram_business_account_id;
 
   const mediaRes = await fetch(

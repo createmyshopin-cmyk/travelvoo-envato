@@ -287,7 +287,7 @@ async function handleMessaging(sb: any, event: any, creds: any, start: number) {
   const dmConfig = settings.channels?.dm ?? {};
   if (dmConfig.enabled === false) return;
 
-  const graphVersion = creds.graphApiVersion || "v21.0";
+  const graphVersion = creds.graphApiVersion || "v25.0";
 
   const { count: priorDmCount } = await sb
     .from("instagram_channel_activity")
@@ -530,7 +530,7 @@ async function handleChange(sb: any, entry: any, change: any, creds: any, start:
 
   if ((totalTargets ?? 0) > 0 && !mediaTarget) return;
 
-  const graphVersion = creds?.graphApiVersion || "v21.0";
+  const graphVersion = creds?.graphApiVersion || "v25.0";
   const sid = senderId || "";
   const { count: priorCommentCount } = await sb
     .from("instagram_channel_activity")
