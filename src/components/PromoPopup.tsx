@@ -248,9 +248,10 @@ const PromoPopup = () => {
                   className="mt-0.5"
                 />
                 <span>
-                  By clicking, you agree to our
-                  {" "}
+                  By clicking, you agree to our{" "}
                   <a href="/privacy-policy" className="underline">Privacy Policy</a>
+                  {", "}
+                  <a href="/terms-of-service" className="underline">Terms of Service</a>
                   {" "}
                   and marketing communication.
                 </span>
