@@ -79,18 +79,24 @@ export default function InstagramBotSetup() {
       const { data: refreshed } = await supabase.auth.refreshSession();
       const token = refreshed.session?.access_token ?? session.access_token;
 
+      // POST returns JSON { url } — avoids fetch + redirect:manual opaque responses on cross-origin 302.
       const res = await fetch("/api/integrations/instagram/auth", {
-        method: "GET",
+        method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-        redirect: "manual",
       });
 
-      if (res.status === 302 || res.status === 307 || res.status === 308) {
-        const loc = res.headers.get("Location");
-        if (loc) {
-          window.location.href = loc;
+      if (res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { url?: string };
+        if (data.url) {
+          window.location.href = data.url;
           return;
         }
+        toast({
+          title: "Could not start Instagram login",
+          description: "Server did not return an OAuth URL.",
+          variant: "destructive",
+        });
+        return;
       }
 
       const errBody = (await res.json().catch(() => ({}))) as { error?: string };
@@ -101,7 +107,7 @@ export default function InstagramBotSetup() {
             ? errBody.error
             : res.status === 401
               ? "Session expired or invalid — try signing out and back in."
-              : res.statusText,
+              : res.statusText || "Unknown error",
         variant: "destructive",
       });
     } finally {
