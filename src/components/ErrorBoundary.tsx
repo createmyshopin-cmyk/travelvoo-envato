@@ -47,8 +47,10 @@ export class ErrorBoundary extends Component<Props, State> {
           </h1>
           {isConfigError && (
             <p style={{ maxWidth: "28rem", textAlign: "center", marginBottom: "1rem", lineHeight: 1.6 }}>
-              This may be a configuration issue. Ensure <code style={{ background: "hsl(0 0% 90%)", padding: "0.2em 0.4em", borderRadius: 4 }}>VITE_SUPABASE_URL</code> and{" "}
-              <code style={{ background: "hsl(0 0% 90%)", padding: "0.2em 0.4em", borderRadius: 4 }}>VITE_SUPABASE_PUBLISHABLE_KEY</code> are set in your Vercel project environment variables.
+              This may be a configuration issue. In Vercel, set{" "}
+              <code style={{ background: "hsl(0 0% 90%)", padding: "0.2em 0.4em", borderRadius: 4 }}>NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
+              <code style={{ background: "hsl(0 0% 90%)", padding: "0.2em 0.4em", borderRadius: 4 }}>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>{" "}
+              (Next.js — not <code style={{ background: "hsl(0 0% 90%)", padding: "0.2em 0.4em", borderRadius: 4 }}>VITE_*</code>) for Production and Preview, then redeploy.
             </p>
           )}
           <button
