@@ -30,13 +30,29 @@ type IgAccountInfo = {
   media_count: number | null;
 };
 
+/** Avoid `[object Object]` in img href when Graph returns nested objects. */
+function stringHttpUrl(value: unknown): string | undefined {
+  if (typeof value === "string" && (value.startsWith("http://") || value.startsWith("https://"))) {
+    return value;
+  }
+  return undefined;
+}
+
 function getMediaThumbnail(m: IgMediaItem): string | undefined {
-  if (m.thumbnail_url) return m.thumbnail_url;
-  if (m.media_type === "IMAGE" && m.media_url) return m.media_url;
+  const t = stringHttpUrl(m.thumbnail_url);
+  if (t) return t;
+  if (m.media_type === "IMAGE") {
+    const u = stringHttpUrl(m.media_url);
+    if (u) return u;
+  }
   const first = m.children?.data?.[0];
-  if (first?.thumbnail_url) return first.thumbnail_url;
-  if (first?.media_url) return first.media_url;
-  return m.media_url;
+  if (first) {
+    const ft = stringHttpUrl(first.thumbnail_url);
+    if (ft) return ft;
+    const fu = stringHttpUrl(first.media_url);
+    if (fu) return fu;
+  }
+  return stringHttpUrl(m.media_url);
 }
 
 function mediaKindLabel(m: IgMediaItem): string {
@@ -200,16 +216,18 @@ export default function InstagramBotAutomations() {
 
   const mediaReels = availableMedia.filter((m) => String(m.media_product_type || "").toUpperCase() === "REELS");
   const mediaPosts = availableMedia.filter((m) => String(m.media_product_type || "").toUpperCase() !== "REELS");
+  const igProfilePicUrl = igAccount ? stringHttpUrl(igAccount.profile_picture_url) : undefined;
 
   const renderMediaCard = (m: IgMediaItem) => {
     const target = mediaTargets.find((t) => t.ig_media_id === m.id);
     const isEnabled = target?.enabled ?? false;
     const thumb = getMediaThumbnail(m);
+    const permalinkLink = stringHttpUrl(m.permalink);
     return (
       <Card key={m.id} className={`overflow-hidden ${isEnabled ? "ring-2 ring-primary" : ""}`}>
         <div className="aspect-square bg-muted relative">
           {thumb ? (
-            <img src={thumb} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+            <img src={thumb} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
             <Image className="h-10 w-10 text-muted-foreground/50" />
@@ -223,8 +241,13 @@ export default function InstagramBotAutomations() {
           <p className="text-xs text-muted-foreground line-clamp-2 min-h-[2.5rem]">{m.caption?.trim() || "No caption"}</p>
           <div className="flex items-center justify-between gap-2">
             <Switch checked={isEnabled} onCheckedChange={() => toggleMedia(m)} />
-            {m.permalink && (
-              <a href={m.permalink} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline shrink-0">
+            {permalinkLink && (
+              <a
+                href={permalinkLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary underline shrink-0"
+              >
                 Open on Instagram
               </a>
             )}
@@ -363,12 +386,13 @@ export default function InstagramBotAutomations() {
           {igAccount && (
             <Card>
               <CardContent className="flex flex-wrap items-center gap-4 py-4">
-                {igAccount.profile_picture_url ? (
+                {igProfilePicUrl ? (
                   <img
-                    src={igAccount.profile_picture_url}
+                    src={igProfilePicUrl}
                     alt=""
                     className="h-16 w-16 rounded-full object-cover border bg-muted"
                     loading="lazy"
+                    referrerPolicy="no-referrer"
                   />
                 ) : (
                   <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center border">

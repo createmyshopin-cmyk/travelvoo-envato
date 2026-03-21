@@ -5,8 +5,15 @@ import { createServiceRoleClient } from "@/integrations/supabase/service-role";
 import { checkInstagramEntitlement } from "@/lib/instagram-entitlement";
 import { decrypt } from "@/lib/encryption";
 import { getMetaPlatformCredentials } from "@/lib/meta-credentials";
+import { isLikelyWrongGraphHostTokenError, resolveInstagramGraphHost } from "@/lib/instagram-graph-host";
 
 const TOKEN_KEY_ENV = "INSTAGRAM_TOKEN_ENCRYPTION_KEY";
+
+const PROFILE_FIELDS = "id,username,profile_picture_url,name,media_count";
+/** Instagram Graph (Login) may reject nested `children` on some accounts — keep fields compatible. */
+const MEDIA_FIELDS_INSTAGRAM =
+  "id,caption,media_type,media_product_type,timestamp,permalink,thumbnail_url,media_url";
+const MEDIA_FIELDS_FACEBOOK = `${MEDIA_FIELDS_INSTAGRAM},children{media_type,media_url,thumbnail_url}`;
 
 /** GET: List recent Posts and Reels for the tenant's connected IG account. */
 export async function GET(req: NextRequest) {
@@ -40,7 +47,7 @@ export async function GET(req: NextRequest) {
   const admin = createServiceRoleClient();
   const { data: conn } = await admin
     .from("tenant_instagram_connections")
-    .select("instagram_business_account_id, page_access_token_encrypted, ig_username")
+    .select("facebook_page_id, instagram_business_account_id, page_access_token_encrypted, ig_username")
     .eq("tenant_id", tenantId)
     .maybeSingle();
 
@@ -59,29 +66,49 @@ export async function GET(req: NextRequest) {
   const graphVersion = creds.graphApiVersion || "v25.0";
   const igId = conn.instagram_business_account_id;
 
-  const profileUrl = new URL(`https://graph.facebook.com/${graphVersion}/${igId}`);
-  profileUrl.searchParams.set("fields", "id,username,profile_picture_url,name,media_count");
-  profileUrl.searchParams.set("access_token", pageToken);
+  const preferredHost = resolveInstagramGraphHost(conn);
 
-  const mediaUrl = new URL(`https://graph.facebook.com/${graphVersion}/${igId}/media`);
-  mediaUrl.searchParams.set(
-    "fields",
-    "id,caption,media_type,media_product_type,timestamp,permalink,thumbnail_url,media_url,children{media_type,media_url,thumbnail_url}",
-  );
-  mediaUrl.searchParams.set("limit", "50");
-  mediaUrl.searchParams.set("access_token", pageToken);
+  const fetchGraph = async (host: string) => {
+    const mediaFields = host === "https://graph.instagram.com" ? MEDIA_FIELDS_INSTAGRAM : MEDIA_FIELDS_FACEBOOK;
 
-  const [profileRes, mediaRes] = await Promise.all([fetch(profileUrl, { cache: "no-store" }), fetch(mediaUrl, { cache: "no-store" })]);
+    const profileUrl = new URL(`${host}/${graphVersion}/${igId}`);
+    profileUrl.searchParams.set("fields", PROFILE_FIELDS);
+    profileUrl.searchParams.set("access_token", pageToken);
 
-  const profileJson = (await profileRes.json().catch(() => ({}))) as {
-    id?: string;
-    username?: string;
-    profile_picture_url?: string;
-    name?: string;
-    media_count?: number;
-    error?: { message?: string };
+    const mediaUrl = new URL(`${host}/${graphVersion}/${igId}/media`);
+    mediaUrl.searchParams.set("fields", mediaFields);
+    mediaUrl.searchParams.set("limit", "50");
+    mediaUrl.searchParams.set("access_token", pageToken);
+
+    const [profileRes, mediaRes] = await Promise.all([
+      fetch(profileUrl, { cache: "no-store" }),
+      fetch(mediaUrl, { cache: "no-store" }),
+    ]);
+
+    const profileJson = (await profileRes.json().catch(() => ({}))) as {
+      id?: string;
+      username?: string;
+      profile_picture_url?: string;
+      name?: string;
+      media_count?: number;
+      error?: { message?: string };
+    };
+    const mediaJson = (await mediaRes.json().catch(() => ({}))) as {
+      data?: unknown[];
+      error?: { message?: string };
+    };
+    return { profileJson, mediaJson };
   };
-  const mediaJson = (await mediaRes.json().catch(() => ({}))) as { data?: unknown[]; error?: { message?: string } };
+
+  let { profileJson, mediaJson } = await fetchGraph(preferredHost);
+
+  if (mediaJson.error && isLikelyWrongGraphHostTokenError(mediaJson.error.message)) {
+    const alternateHost =
+      preferredHost === "https://graph.facebook.com"
+        ? "https://graph.instagram.com"
+        : "https://graph.facebook.com";
+    ({ profileJson, mediaJson } = await fetchGraph(alternateHost));
+  }
 
   if (mediaJson.error) {
     return NextResponse.json(
