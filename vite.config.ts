@@ -7,7 +7,8 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 8080,
+    // Keep off 8080 — Next.js app (`NEXT JS/`) uses 8080 for `npm run dev`
+    port: 5173,
     hmr: {
       overlay: false,
     },

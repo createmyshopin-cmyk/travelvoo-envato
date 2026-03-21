@@ -2,8 +2,9 @@
 -- Seed Super Admin user for SaaS Admin Panel
 -- Login: superadmin@stay.com / superadmin123
 -- URL:   /saas-admin/login
--- Run in Supabase SQL Editor:
--- https://supabase.com/dashboard/project/rqnxtcigfauzzjaqxzut/sql
+-- Run in Supabase Dashboard → SQL Editor (select your project first).
+-- Prerequisite: if you see "relation public.user_roles does not exist", run first:
+--   supabase/manual_apply_user_roles_core.sql
 -- =============================================================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

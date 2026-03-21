@@ -39,7 +39,8 @@
           "color": "#1a73e8",
           "sounds": []
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

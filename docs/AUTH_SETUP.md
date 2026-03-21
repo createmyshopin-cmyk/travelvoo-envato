@@ -16,7 +16,7 @@ The app supports:
 4. In Google Cloud Console:
    - Create OAuth 2.0 credentials (Web application)
    - Add **Authorized redirect URIs**:
-     - `https://rqnxtcigfauzzjaqxzut.supabase.co/auth/v1/callback`
+     - `https://aoyznmofhgibmuhstrio.supabase.co/auth/v1/callback`
 5. In Supabase → **Authentication** → **URL Configuration**:
    - **Site URL**: `https://yourdomain.com` (or Vercel URL)
    - **Redirect URLs**: Add `https://yourdomain.com/login`, `https://yourdomain.com/create-account` (and subdomains if needed)
