@@ -22,9 +22,9 @@ import {
   RefreshCw, CalendarCheck, CalendarClock, Clock,
   IndianRupee, ChevronDown, ChevronUp, XCircle,
   MessageCircle, Phone, Copy, Check,
-  BookOpen, CheckCircle2, X as XIcon,
+  BookOpen, CheckCircle2, X as XIcon, Luggage,
 } from "lucide-react";
-import { format, differenceInDays, isToday, isTomorrow, isPast, parseISO, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { format as formatDate, differenceInDays, isToday, isTomorrow, isPast, parseISO, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { formatPhoneForWhatsApp } from "@/lib/countryCodes";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -37,6 +37,55 @@ interface StayMap {
 
 type StatusTab = "all" | "pending" | "confirmed" | "cancelled";
 type SortKey = "created_at" | "checkin" | "checkout" | "total_price" | "guest_name";
+
+/** Trip/package enquiries stored in `leads` with source `trip_booking` */
+const PACKAGE_BOOKING_LEAD_SOURCE = "trip_booking";
+
+/** Map lead workflow status → booking-style tab filter */
+function leadStatusToBookingTab(leadStatus: string): "pending" | "confirmed" | "cancelled" {
+  if (leadStatus === "converted") return "confirmed";
+  if (leadStatus === "lost") return "cancelled";
+  return "pending";
+}
+
+/** Map booking UI status → `leads.status` */
+function bookingTabToLeadStatus(tab: "pending" | "confirmed" | "cancelled"): string {
+  if (tab === "confirmed") return "converted";
+  if (tab === "cancelled") return "lost";
+  return "new";
+}
+
+function mapPackageLeadToRow(lead: any, tripNames: Record<string, string>) {
+  const meta =
+    lead.meta && typeof lead.meta === "object" && !Array.isArray(lead.meta)
+      ? (lead.meta as Record<string, unknown>)
+      : {};
+  const tripId = meta.trip_id as string | undefined;
+  const tabStatus = leadStatusToBookingTab(lead.status || "new");
+  const ref = (meta.booking_ref as string) || `PKG-${String(lead.id).slice(0, 8)}`;
+  return {
+    _rowType: "package_lead" as const,
+    _leadId: lead.id as string,
+    _selectionKey: `pkg:${lead.id}` as string,
+    id: lead.id as string,
+    booking_id: ref,
+    guest_name: lead.full_name,
+    phone: lead.phone,
+    email: lead.email || "",
+    stay_id: null,
+    checkin: (meta.start_date as string) || null,
+    checkout: (meta.end_date as string) || null,
+    total_price: Number(meta.quoted_price) || 0,
+    status: tabStatus,
+    _leadStatus: lead.status,
+    adults: typeof meta.adults === "number" ? meta.adults : 2,
+    children: typeof meta.children === "number" ? meta.children : 0,
+    created_at: lead.created_at,
+    package_message: lead.message as string,
+    trip_display_name: (tripId && tripNames[tripId]) || (meta.slug as string) || "Package",
+    meta,
+  };
+}
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof CheckCircle2 }> = {
   pending: { label: "Pending", color: "text-yellow-600", variant: "secondary", icon: Clock },
@@ -65,17 +114,54 @@ function getStayLabel(checkin: string | null, checkout: string | null): { label:
 }
 
 function exportBookingsCSV(bookings: any[], stays: StayMap) {
-  const headers = ["Booking ID", "Stay", "Guest", "Phone", "Email", "Adults", "Children", "Pets", "Check-in", "Check-out", "Nights", "Rooms", "Add-ons", "Coupon", "Total", "Status", "Special Requests", "Created"];
-  const rows = bookings.map(b => {
+  const headers = ["Type", "Booking ID", "Stay / Package", "Guest", "Phone", "Email", "Adults", "Children", "Pets", "Check-in", "Check-out", "Nights", "Rooms", "Add-ons", "Coupon", "Total", "Status", "Special Requests", "Created"];
+  const rows = bookings.map((b) => {
+    if (b._rowType === "package_lead") {
+      return [
+        "Package Booking",
+        b.booking_id,
+        b.trip_display_name || "",
+        b.guest_name,
+        b.phone,
+        b.email || "",
+        b.adults ?? 2,
+        b.children ?? 0,
+        "",
+        b.checkin || "",
+        b.checkout || "",
+        getNights(b.checkin, b.checkout),
+        "",
+        "",
+        "",
+        b.total_price || 0,
+        b.status,
+        (b.package_message || "").replace(/\n/g, " "),
+        b.created_at ? formatDate(parseISO(b.created_at), "yyyy-MM-dd HH:mm") : "",
+      ];
+    }
     const stayName = b.stay_id && stays[b.stay_id] ? stays[b.stay_id].name : "";
     const rooms = Array.isArray(b.rooms) ? b.rooms.map((r: any) => `${r.name}×${r.count}`).join("; ") : "";
     const addons = Array.isArray(b.addons) ? b.addons.map((a: any) => a.label).join("; ") : "";
     return [
-      b.booking_id, stayName, b.guest_name, b.phone, b.email || "",
-      b.adults || 1, b.children || 0, b.pets || 0,
-      b.checkin || "", b.checkout || "", getNights(b.checkin, b.checkout),
-      rooms, addons, b.coupon_code || "", b.total_price || 0, b.status,
-      b.special_requests || "", b.created_at ? format(parseISO(b.created_at), "yyyy-MM-dd HH:mm") : "",
+      "Stay booking",
+      b.booking_id,
+      stayName,
+      b.guest_name,
+      b.phone,
+      b.email || "",
+      b.adults || 1,
+      b.children || 0,
+      b.pets || 0,
+      b.checkin || "",
+      b.checkout || "",
+      getNights(b.checkin, b.checkout),
+      rooms,
+      addons,
+      b.coupon_code || "",
+      b.total_price || 0,
+      b.status,
+      b.special_requests || "",
+      b.created_at ? formatDate(parseISO(b.created_at), "yyyy-MM-dd HH:mm") : "",
     ];
   });
   const csv = [headers.join(","), ...rows.map(r => r.map(v => `"${v}"`).join(","))].join("\n");
@@ -83,7 +169,7 @@ function exportBookingsCSV(bookings: any[], stays: StayMap) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `bookings-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a.download = `bookings-${formatDate(new Date(), "yyyy-MM-dd")}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -97,8 +183,9 @@ function whatsappUrl(phone: string, guestName: string, bookingId: string, countr
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminBookings() {
-  const { format } = useCurrency();
+  const { format: formatMoney } = useCurrency();
   const [bookings, setBookings] = useState<any[]>([]);
+  const [packageLeadRows, setPackageLeadRows] = useState<any[]>([]);
   const [stays, setStays] = useState<StayMap>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -118,9 +205,14 @@ export default function AdminBookings() {
   const router = useRouter();
 
   const fetchBookings = useCallback(async () => {
-    const [{ data: bk }, { data: st }] = await Promise.all([
+    const [{ data: bk }, { data: st }, { data: pkgLeads }] = await Promise.all([
       supabase.from("bookings").select("*").order("created_at", { ascending: false }),
       supabase.from("stays").select("id, name, stay_id"),
+      supabase
+        .from("leads")
+        .select("*")
+        .eq("source", PACKAGE_BOOKING_LEAD_SOURCE)
+        .order("created_at", { ascending: false }),
     ]);
     if (bk) setBookings(bk);
     if (st) {
@@ -128,6 +220,28 @@ export default function AdminBookings() {
       st.forEach((s: any) => { map[s.id] = { name: s.name, stay_id: s.stay_id }; });
       setStays(map);
     }
+
+    const leadsList = pkgLeads || [];
+    const tripIds = [
+      ...new Set(
+        leadsList
+          .map((l: any) =>
+            l.meta && typeof l.meta === "object" && !Array.isArray(l.meta)
+              ? (l.meta as Record<string, unknown>).trip_id
+              : null
+          )
+          .filter((id): id is string => typeof id === "string" && id.length > 0)
+      ),
+    ];
+    let tripNames: Record<string, string> = {};
+    if (tripIds.length > 0) {
+      const { data: trips } = await supabase.from("trips").select("id, name").in("id", tripIds);
+      trips?.forEach((t: any) => {
+        tripNames[t.id] = t.name;
+      });
+    }
+    setPackageLeadRows(leadsList.map((l: any) => mapPackageLeadToRow(l, tripNames)));
+
     setLoading(false);
   }, []);
 
@@ -141,29 +255,52 @@ export default function AdminBookings() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchBookings]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("package-leads-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "leads", filter: `source=eq.${PACKAGE_BOOKING_LEAD_SOURCE}` },
+        () => fetchBookings()
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchBookings]);
+
+  const combinedRows = useMemo(
+    () => [
+      ...bookings.map((b) => ({ ...b, _rowType: "stay_booking" as const, _selectionKey: b.id })),
+      ...packageLeadRows,
+    ],
+    [bookings, packageLeadRows]
+  );
+
   // ── Filtered + sorted ─────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
-    let list = [...bookings];
+    let list = [...combinedRows];
 
     if (search) {
       const q = search.toLowerCase();
-      list = list.filter(b =>
+      list = list.filter((b) =>
         b.booking_id?.toLowerCase().includes(q) ||
         b.guest_name?.toLowerCase().includes(q) ||
         b.phone?.includes(q) ||
-        (b.stay_id && stays[b.stay_id]?.name?.toLowerCase().includes(q))
+        (b.stay_id && stays[b.stay_id]?.name?.toLowerCase().includes(q)) ||
+        (b._rowType === "package_lead" &&
+          (String(b.trip_display_name || "").toLowerCase().includes(q) ||
+            String(b.package_message || "").toLowerCase().includes(q)))
       );
     }
 
-    if (statusTab !== "all") list = list.filter(b => b.status === statusTab);
-    if (stayFilter !== "all") list = list.filter(b => b.stay_id === stayFilter);
+    if (statusTab !== "all") list = list.filter((b) => b.status === statusTab);
+    if (stayFilter !== "all") list = list.filter((b) => b._rowType === "package_lead" || b.stay_id === stayFilter);
 
     if (dateFrom) {
-      list = list.filter(b => b.checkin && parseISO(b.checkin) >= startOfDay(dateFrom));
+      list = list.filter((b) => b.checkin && parseISO(b.checkin) >= startOfDay(dateFrom));
     }
     if (dateTo) {
-      list = list.filter(b => b.checkin && parseISO(b.checkin) <= endOfDay(dateTo));
+      list = list.filter((b) => b.checkin && parseISO(b.checkin) <= endOfDay(dateTo));
     }
 
     list.sort((a, b) => {
@@ -179,12 +316,12 @@ export default function AdminBookings() {
     });
 
     return list;
-  }, [bookings, search, statusTab, stayFilter, sortKey, sortAsc, stays, dateFrom, dateTo]);
+  }, [combinedRows, search, statusTab, stayFilter, sortKey, sortAsc, stays, dateFrom, dateTo]);
 
   // ── Stats ─────────────────────────────────────────────────────────────
 
   const stats = useMemo(() => {
-    const todayStr = format(new Date(), "yyyy-MM-dd");
+    const todayStr = formatDate(new Date(), "yyyy-MM-dd");
     let pending = 0, confirmed = 0, cancelled = 0, revenue = 0;
     let arrivingToday = 0, departingToday = 0;
 
@@ -196,8 +333,25 @@ export default function AdminBookings() {
       if (b.checkout === todayStr && b.status !== "cancelled") departingToday++;
     }
 
-    return { total: bookings.length, pending, confirmed, cancelled, revenue, arrivingToday, departingToday };
-  }, [bookings]);
+    for (const p of packageLeadRows) {
+      if (p.status === "pending") pending++;
+      else if (p.status === "confirmed") { confirmed++; revenue += p.total_price || 0; }
+      else if (p.status === "cancelled") cancelled++;
+      if (p.checkin === todayStr && p.status !== "cancelled") arrivingToday++;
+      if (p.checkout === todayStr && p.status !== "cancelled") departingToday++;
+    }
+
+    return {
+      total: bookings.length + packageLeadRows.length,
+      pending,
+      confirmed,
+      cancelled,
+      revenue,
+      arrivingToday,
+      departingToday,
+      packageCount: packageLeadRows.length,
+    };
+  }, [bookings, packageLeadRows]);
 
   // ── Unique stays for filter ───────────────────────────────────────────
 
@@ -208,21 +362,48 @@ export default function AdminBookings() {
 
   // ── Selection ─────────────────────────────────────────────────────────
 
-  const allFilteredSelected = filtered.length > 0 && filtered.every(b => selectedIds.has(b.id));
+  const selectableFiltered = useMemo(
+    () => filtered.filter((b) => b._rowType !== "package_lead"),
+    [filtered]
+  );
+  const allFilteredSelected =
+    selectableFiltered.length > 0 &&
+    selectableFiltered.every((b) => selectedIds.has(b._selectionKey));
   const toggleSelectAll = () => {
-    setSelectedIds(allFilteredSelected ? new Set() : new Set(filtered.map(b => b.id)));
+    setSelectedIds(
+      allFilteredSelected
+        ? new Set()
+        : new Set(selectableFiltered.map((b) => b._selectionKey))
+    );
   };
-  const toggleSelect = (id: string) => {
-    setSelectedIds(prev => {
+  const toggleSelect = (selectionKey: string, isPackage: boolean) => {
+    if (isPackage) return;
+    setSelectedIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      next.has(selectionKey) ? next.delete(selectionKey) : next.add(selectionKey);
       return next;
     });
   };
 
   // ── Handlers ──────────────────────────────────────────────────────────
 
-  const updateStatus = async (id: string, status: string) => {
+  const updateStatus = async (row: any, status: string) => {
+    if (row._rowType === "package_lead") {
+      const leadStatus = bookingTabToLeadStatus(status as "pending" | "confirmed" | "cancelled");
+      const { error } = await supabase.from("leads").update({ status: leadStatus }).eq("id", row._leadId);
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+        return;
+      }
+      toast({ title: `Enquiry marked as ${status}` });
+      fetchBookings();
+      if (selected?._selectionKey === row._selectionKey) {
+        setSelected({ ...row, status, _leadStatus: leadStatus });
+      }
+      return;
+    }
+
+    const id = row.id;
     const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -252,7 +433,7 @@ export default function AdminBookings() {
   };
 
   const handleBulkStatus = async () => {
-    const ids = Array.from(selectedIds);
+    const ids = Array.from(selectedIds).filter((k) => !String(k).startsWith("pkg:"));
     const { error } = await supabase.from("bookings").update({ status: bulkStatus }).in("id", ids);
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else {
@@ -382,6 +563,11 @@ export default function AdminBookings() {
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             {stats.total} total · {stats.pending} pending
+            {stats.packageCount > 0 && (
+              <span className="text-violet-600 dark:text-violet-400 ml-1">
+                · {stats.packageCount} package {stats.packageCount === 1 ? "enquiry" : "enquiries"}
+              </span>
+            )}
             {stats.arrivingToday > 0 && <span className="text-blue-500 ml-1">· {stats.arrivingToday} arriving today</span>}
             {stats.departingToday > 0 && <span className="text-orange-500 ml-1">· {stats.departingToday} departing</span>}
           </p>
@@ -399,7 +585,7 @@ export default function AdminBookings() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {[
-          { label: "Revenue", value: loading ? "…" : format(stats.revenue), icon: IndianRupee, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
+          { label: "Revenue", value: loading ? "…" : formatMoney(stats.revenue), icon: IndianRupee, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
           { label: "Pending", value: loading ? "…" : stats.pending, icon: Clock, color: "text-yellow-600", bg: "bg-yellow-50 dark:bg-yellow-950/30" },
           { label: "Arriving", value: loading ? "…" : stats.arrivingToday, icon: CalendarCheck, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
           { label: "Departing", value: loading ? "…" : stats.departingToday, icon: CalendarClock, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30" },
@@ -435,7 +621,7 @@ export default function AdminBookings() {
         <div className="relative flex-1 min-w-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
-            placeholder="Search ID, guest, phone, stay..."
+            placeholder="Search ID, guest, phone, stay, package..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-8 h-9 text-xs sm:text-sm"
@@ -498,11 +684,16 @@ export default function AdminBookings() {
         <div className="flex items-center gap-2">
           <Checkbox
             className="shrink-0"
-            checked={allFilteredSelected && filtered.length > 0}
+            checked={allFilteredSelected && selectableFiltered.length > 0}
+            disabled={selectableFiltered.length === 0}
             onCheckedChange={() => toggleSelectAll()}
           />
           <span className="text-xs text-muted-foreground">
-            {allFilteredSelected ? "Deselect all" : `Select all ${filtered.length}`}
+            {selectableFiltered.length === 0
+              ? "Package enquiries only (bulk actions apply to stay bookings)"
+              : allFilteredSelected
+                ? "Deselect all"
+                : `Select all ${selectableFiltered.length} stay booking${selectableFiltered.length !== 1 ? "s" : ""}`}
           </span>
           <div className="hidden sm:flex items-center gap-1.5 ml-auto text-[10px] text-muted-foreground">
             {(["created_at", "guest_name", "checkin", "total_price"] as const).map(k => (
@@ -535,36 +726,49 @@ export default function AdminBookings() {
             {hasActiveFilters && <Button variant="link" size="sm" className="mt-2" onClick={clearFilters}>Clear filters</Button>}
           </div>
         ) : filtered.map((b, i) => {
+          const isPackage = b._rowType === "package_lead";
           const stayInfo = b.stay_id ? stays[b.stay_id] : null;
           const nights = getNights(b.checkin, b.checkout);
-          const stayBadge = getStayLabel(b.checkin, b.checkout);
+          const stayBadge = b.checkin && b.checkout ? getStayLabel(b.checkin, b.checkout) : null;
 
           return (
             <motion.div
-              key={b.id}
+              key={b._selectionKey}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.02 }}
               className={cn(
                 "rounded-xl border bg-card hover:shadow-md transition-shadow",
-                selectedIds.has(b.id) && "ring-2 ring-primary",
+                selectedIds.has(b._selectionKey) && "ring-2 ring-primary",
+                isPackage && "border-violet-200/80 dark:border-violet-900/50",
               )}
             >
               {/* Header: guest + price + checkbox */}
               <div className="p-3 pb-2 flex items-start gap-2 cursor-pointer" onClick={() => setSelected(b)}>
-                <div className="mt-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={selectedIds.has(b.id)}
-                    onCheckedChange={() => toggleSelect(b.id)}
-                  />
+                <div className="mt-0.5 shrink-0 w-5 flex justify-center" onClick={(e) => e.stopPropagation()}>
+                  {isPackage ? (
+                    <span className="inline-flex" title="Package enquiry">
+                      <Luggage className="w-4 h-4 text-violet-600 shrink-0" />
+                    </span>
+                  ) : (
+                    <Checkbox
+                      checked={selectedIds.has(b._selectionKey)}
+                      onCheckedChange={() => toggleSelect(b._selectionKey, false)}
+                    />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline justify-between gap-2">
                     <p className="font-bold text-sm text-foreground truncate">{b.guest_name}</p>
-                    <span className="font-bold text-sm text-primary shrink-0 tabular-nums">{format(b.total_price || 0)}</span>
+                    <span className="font-bold text-sm text-primary shrink-0 tabular-nums">{formatMoney(b.total_price || 0)}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     <span className="text-[10px] text-muted-foreground font-mono">{b.booking_id}</span>
+                    {isPackage && (
+                      <Badge variant="secondary" className="text-[8px] py-0 px-1.5 bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-950/50 dark:text-violet-200 dark:border-violet-800">
+                        Package Booking
+                      </Badge>
+                    )}
                     {stayInfo && (
                       <>
                         <span className="text-[10px] text-muted-foreground">·</span>
@@ -572,6 +776,9 @@ export default function AdminBookings() {
                       </>
                     )}
                   </div>
+                  {isPackage && b.trip_display_name && (
+                    <p className="text-[10px] font-medium text-violet-700 dark:text-violet-300 mt-0.5 truncate">{b.trip_display_name}</p>
+                  )}
                   {b.phone && (
                     <p className="text-[10px] text-muted-foreground mt-0.5">{b.phone}</p>
                   )}
@@ -580,23 +787,32 @@ export default function AdminBookings() {
 
               {/* Dates + badges */}
               <div className="px-3 pb-2 cursor-pointer" onClick={() => setSelected(b)}>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <CalendarIcon className="w-3 h-3 text-muted-foreground shrink-0" />
-                  <span className="text-xs font-medium">{b.checkin ? format(parseISO(b.checkin), "dd MMM yy") : "—"}</span>
+                  <span className="text-xs font-medium">
+                    {b.checkin ? formatDate(parseISO(b.checkin), "dd MMM yy") : "—"}
+                  </span>
                   <span className="text-xs text-muted-foreground">→</span>
-                  <span className="text-xs font-medium">{b.checkout ? format(parseISO(b.checkout), "dd MMM yy") : "—"}</span>
+                  <span className="text-xs font-medium">
+                    {b.checkout ? formatDate(parseISO(b.checkout), "dd MMM yy") : "—"}
+                  </span>
                   {nights > 0 && <span className="text-[10px] text-muted-foreground">({nights}N)</span>}
                   {stayBadge && b.status !== "cancelled" && (
                     <Badge variant="outline" className={cn("text-[8px] py-0 px-1 ml-auto", stayBadge.className)}>{stayBadge.label}</Badge>
                   )}
                 </div>
                 {/* Traveller & tag badges */}
-                {(b.coupon_code || b.solo_traveller || b.group_booking) && (
+                {(isPackage || b.coupon_code || b.solo_traveller || b.group_booking) && (
                   <div className="flex items-center gap-1 flex-wrap mt-1.5">
                     {b.coupon_code && <Badge variant="outline" className="text-[8px] py-0 px-1.5 bg-green-50 text-green-600 border-green-200 dark:bg-green-950/30">🏷 {b.coupon_code}</Badge>}
                     {b.solo_traveller && <Badge variant="outline" className="text-[8px] py-0 px-1.5">Solo</Badge>}
                     {b.group_booking && <Badge variant="outline" className="text-[8px] py-0 px-1.5">Group{b.group_name ? `: ${b.group_name}` : ""}</Badge>}
-                    {!b.solo_traveller && (b.adults || b.children > 0 || b.pets > 0) && (
+                    {isPackage && (
+                      <Badge variant="outline" className="text-[8px] py-0 px-1.5 ml-auto">
+                        {b.adults ?? 2}A{b.children > 0 ? ` ${b.children}C` : ""}
+                      </Badge>
+                    )}
+                    {!isPackage && !b.solo_traveller && (b.adults || b.children > 0 || b.pets > 0) && (
                       <Badge variant="outline" className="text-[8px] py-0 px-1.5 ml-auto">
                         {b.adults || 2}A{b.children > 0 ? ` ${b.children}C` : ""}{b.pets > 0 ? ` ${b.pets}P` : ""}
                       </Badge>
@@ -615,7 +831,7 @@ export default function AdminBookings() {
                     return (
                       <button
                         key={st}
-                        onClick={() => { if (!isActive) updateStatus(b.id, st); }}
+                        onClick={() => { if (!isActive) updateStatus(b, st); }}
                         className={cn(
                           "flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all",
                           isActive
@@ -663,22 +879,26 @@ export default function AdminBookings() {
                         {copiedId === b.booking_id ? <Check className="w-3.5 h-3.5 mr-2 text-green-500" /> : <Copy className="w-3.5 h-3.5 mr-2" />}
                         Copy ID
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => createQuotation(b)}><FileText className="w-3.5 h-3.5 mr-2" /> Quotation</DropdownMenuItem>
-                      <DropdownMenuItem onClick={async () => {
-                        const invId = await createInvoice(b);
-                        if (invId) {
-                          toast({
-                            title: "Invoice created",
-                            description: `${invId} for ${b.guest_name}`,
-                            action: (
-                              <ToastAction altText="View Invoice" onClick={() => router.push("/admin/invoices")}>
-                                View Invoice
-                              </ToastAction>
-                            ),
-                          });
-                        }
-                      }}><Receipt className="w-3.5 h-3.5 mr-2" /> Invoice</DropdownMenuItem>
+                      {!isPackage && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => createQuotation(b)}><FileText className="w-3.5 h-3.5 mr-2" /> Quotation</DropdownMenuItem>
+                          <DropdownMenuItem onClick={async () => {
+                            const invId = await createInvoice(b);
+                            if (invId) {
+                              toast({
+                                title: "Invoice created",
+                                description: `${invId} for ${b.guest_name}`,
+                                action: (
+                                  <ToastAction altText="View Invoice" onClick={() => router.push("/admin/invoices")}>
+                                    View Invoice
+                                  </ToastAction>
+                                ),
+                              });
+                            }
+                          }}><Receipt className="w-3.5 h-3.5 mr-2" /> Invoice</DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -691,8 +911,9 @@ export default function AdminBookings() {
       {/* Footer */}
       {!loading && filtered.length > 0 && (
         <p className="text-[10px] text-muted-foreground text-center">
-          Showing {filtered.length} of {bookings.length} booking{bookings.length !== 1 ? "s" : ""}
-          {filtered.length > 0 && ` · ${format(filtered.reduce((s, b) => s + (b.total_price || 0), 0))} total`}
+          Showing {filtered.length} of {combinedRows.length} item{combinedRows.length !== 1 ? "s" : ""}
+          {filtered.length > 0 && ` · ${formatMoney(filtered.reduce((s, b) => s + (b.total_price || 0), 0))} total`}
+          {stats.packageCount > 0 && ` · includes ${stats.packageCount} package`}
         </p>
       )}
 
@@ -702,9 +923,11 @@ export default function AdminBookings() {
         onOpenChange={() => setSelected(null)}
         booking={selected}
         stayInfo={selected?.stay_id ? stays[selected.stay_id] : null}
-        onStatusChange={(status) => { if (selected) updateStatus(selected.id, status); }}
-        onCreateQuotation={() => { if (selected) createQuotation(selected); }}
-        onCreateInvoice={async () => {
+        packageLead={selected?._rowType === "package_lead"}
+        tripDisplayName={selected?._rowType === "package_lead" ? selected.trip_display_name : undefined}
+        onStatusChange={(status) => { if (selected) updateStatus(selected, status); }}
+        onCreateQuotation={selected?._rowType === "package_lead" ? undefined : () => { if (selected) createQuotation(selected); }}
+        onCreateInvoice={selected?._rowType === "package_lead" ? undefined : async () => {
           if (selected) {
             const invId = await createInvoice(selected);
             if (invId) {
@@ -753,9 +976,9 @@ function DateRangePicker({ from, to, onFromChange, onToChange }: {
 }) {
   const [open, setOpen] = useState(false);
   const label = from && to
-    ? `${format(from, "dd MMM")} – ${format(to, "dd MMM")}`
+    ? `${formatDate(from, "dd MMM")} – ${formatDate(to, "dd MMM")}`
     : from
-      ? `From ${format(from, "dd MMM")}`
+      ? `From ${formatDate(from, "dd MMM")}`
       : "Date range";
 
   return (

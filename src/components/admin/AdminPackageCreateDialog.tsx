@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,13 +22,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, Save } from "lucide-react";
 import { slugify } from "@/lib/slugify";
 
 interface AdminPackageCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreated: () => void;
+  /** Called after successful create or update */
+  onSaved: () => void;
+  /** When set, dialog loads this trip and saves with UPDATE */
+  editTripId?: string | null;
 }
 
 const defaultImages = ["/assets/stay-1.jpg"];
@@ -36,10 +39,12 @@ const defaultImages = ["/assets/stay-1.jpg"];
 export function AdminPackageCreateDialog({
   open,
   onOpenChange,
-  onCreated,
+  onSaved,
+  editTripId = null,
 }: AdminPackageCreateDialogProps) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [loadingTrip, setLoadingTrip] = useState(false);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
@@ -53,18 +58,9 @@ export function AdminPackageCreateDialog({
   const [status, setStatus] = useState<"active" | "draft" | "archived">("active");
   const [imagesText, setImagesText] = useState("");
 
-  useEffect(() => {
-    if (!open) return;
-    setSlugTouched(false);
-  }, [open]);
+  const isEdit = Boolean(editTripId);
 
-  useEffect(() => {
-    if (!slugTouched && name) {
-      setSlug(slugify(name));
-    }
-  }, [name, slugTouched]);
-
-  const reset = () => {
+  const reset = useCallback(() => {
     setName("");
     setSlug("");
     setSlugTouched(false);
@@ -77,7 +73,63 @@ export function AdminPackageCreateDialog({
     setDiscountLabel("");
     setStatus("active");
     setImagesText("");
-  };
+  }, []);
+
+  useEffect(() => {
+    if (open && !editTripId) {
+      reset();
+      setSlugTouched(false);
+    }
+  }, [open, editTripId, reset]);
+
+  useEffect(() => {
+    if (!open || !editTripId) return;
+    let cancelled = false;
+    (async () => {
+      setLoadingTrip(true);
+      const { data, error } = await (supabase.from("trips") as any)
+        .select("*")
+        .eq("id", editTripId)
+        .single();
+      if (cancelled) return;
+      setLoadingTrip(false);
+      if (error || !data) {
+        toast({
+          title: "Could not load package",
+          description: error?.message || "Not found",
+          variant: "destructive",
+        });
+        onOpenChange(false);
+        return;
+      }
+      setName(data.name ?? "");
+      setSlug(data.slug ?? "");
+      setSlugTouched(true);
+      setDescription(data.description ?? "");
+      setDurationNights(String(data.duration_nights ?? 1));
+      setDurationDays(String(data.duration_days ?? 2));
+      setPickup(data.pickup_drop_location ?? "");
+      setStartingPrice(String(data.starting_price ?? ""));
+      setOriginalPrice(
+        data.original_price != null && Number(data.original_price) !== Number(data.starting_price)
+          ? String(data.original_price)
+          : ""
+      );
+      setDiscountLabel(data.discount_label ?? "");
+      setStatus((data.status as "active" | "draft" | "archived") || "active");
+      const imgs = Array.isArray(data.images) ? data.images : [];
+      setImagesText(imgs.length ? imgs.join("\n") : "");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, editTripId, onOpenChange, toast]);
+
+  useEffect(() => {
+    if (!slugTouched && name && !isEdit) {
+      setSlug(slugify(name));
+    }
+  }, [name, slugTouched, isEdit]);
 
   const parseImages = (): string[] => {
     const raw = imagesText
@@ -119,16 +171,28 @@ export function AdminPackageCreateDialog({
       starting_price: start,
       original_price: orig,
       discount_label: discountLabel.trim() || null,
-      cancellation_policy: [],
       status,
     };
-    if (tenantId != null) {
-      row.tenant_id = tenantId;
-    } else {
-      row.tenant_id = null;
-    }
 
-    const { error } = await (supabase.from("trips") as any).insert(row).select("id").single();
+    let error: { code?: string; message: string } | null = null;
+
+    if (isEdit && editTripId) {
+      const { error: upErr } = await (supabase.from("trips") as any)
+        .update(row)
+        .eq("id", editTripId);
+      error = upErr;
+    } else {
+      const insertRow = {
+        ...row,
+        cancellation_policy: [],
+        ...(tenantId != null ? { tenant_id: tenantId } : { tenant_id: null }),
+      };
+      const { error: insErr } = await (supabase.from("trips") as any)
+        .insert(insertRow)
+        .select("id")
+        .single();
+      error = insErr;
+    }
 
     setSaving(false);
 
@@ -136,12 +200,12 @@ export function AdminPackageCreateDialog({
       if (error.code === "23505") {
         toast({
           title: "Slug already exists",
-          description: "Choose a different package name or edit the slug.",
+          description: "Choose a different URL slug (another package uses it).",
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Could not create package",
+          title: isEdit ? "Could not update package" : "Could not create package",
           description: error.message,
           variant: "destructive",
         });
@@ -149,22 +213,37 @@ export function AdminPackageCreateDialog({
       return;
     }
 
-    toast({ title: "Package created", description: `/${slugFinal} is ready.` });
-    reset();
+    toast({
+      title: isEdit ? "Package updated" : "Package created",
+      description: isEdit ? `Changes saved for /trip/${slugFinal}` : `/${slugFinal} is ready.`,
+    });
+    if (!isEdit) reset();
     onOpenChange(false);
-    onCreated();
+    onSaved();
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create package</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit package" : "Create package"}</DialogTitle>
           <DialogDescription>
-            Adds a row to <code className="text-xs">trips</code>. It will appear on{" "}
-            <code className="text-xs">/trips</code> and <code className="text-xs">/trip/[slug]</code>.
+            {isEdit
+              ? "Update this trip/package. Changing the slug changes the public URL."
+              : (
+                <>
+                  Adds a row to <code className="text-xs">trips</code>. It will appear on{" "}
+                  <code className="text-xs">/trips</code> and <code className="text-xs">/trip/[slug]</code>.
+                </>
+              )}
           </DialogDescription>
         </DialogHeader>
+        {loadingTrip ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <p className="text-sm">Loading package…</p>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="pkg-name">Package name *</Label>
@@ -304,6 +383,11 @@ export function AdminPackageCreateDialog({
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Saving…
                 </>
+              ) : isEdit ? (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save changes
+                </>
               ) : (
                 <>
                   <Plus className="h-4 w-4 mr-2" />
@@ -313,6 +397,7 @@ export function AdminPackageCreateDialog({
             </Button>
           </DialogFooter>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );

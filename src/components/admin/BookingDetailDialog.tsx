@@ -18,6 +18,9 @@ interface BookingDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   booking: any;
   stayInfo?: { name: string; stay_id: string } | null;
+  /** Trip/package enquiry from `leads` (source trip_booking) */
+  packageLead?: boolean;
+  tripDisplayName?: string;
   onStatusChange?: (status: string) => void;
   onCreateQuotation?: () => void;
   onCreateInvoice?: () => void;
@@ -40,7 +43,17 @@ function whatsappUrl(phone: string, guestName: string, bookingId: string, countr
   return `https://wa.me/${num}?text=${text}`;
 }
 
-export function BookingDetailDialog({ open, onOpenChange, booking, stayInfo, onStatusChange, onCreateQuotation, onCreateInvoice }: BookingDetailDialogProps) {
+export function BookingDetailDialog({
+  open,
+  onOpenChange,
+  booking,
+  stayInfo,
+  packageLead,
+  tripDisplayName,
+  onStatusChange,
+  onCreateQuotation,
+  onCreateInvoice,
+}: BookingDetailDialogProps) {
   const { format } = useCurrency();
   const [copiedId, setCopiedId] = useState(false);
 
@@ -65,10 +78,15 @@ export function BookingDetailDialog({ open, onOpenChange, booking, stayInfo, onS
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <DialogTitle className="flex items-center gap-2 text-lg">
-              Booking Details
+              {packageLead ? "Package booking" : "Booking Details"}
             </DialogTitle>
+            {packageLead && (
+              <Badge variant="secondary" className="text-[10px] bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-950/50 dark:text-violet-200">
+                Package Booking
+              </Badge>
+            )}
           </div>
         </DialogHeader>
 
@@ -113,8 +131,14 @@ export function BookingDetailDialog({ open, onOpenChange, booking, stayInfo, onS
             )}
           </div>
 
-          {/* Stay */}
-          {stayInfo && (
+          {/* Stay or package */}
+          {packageLead && tripDisplayName && (
+            <div className="space-y-1">
+              <p className="font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">Package</p>
+              <p className="font-medium">{tripDisplayName}</p>
+            </div>
+          )}
+          {!packageLead && stayInfo && (
             <div className="space-y-1">
               <p className="font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">Stay</p>
               <p className="font-medium">{stayInfo.name}</p>
@@ -167,14 +191,20 @@ export function BookingDetailDialog({ open, onOpenChange, booking, stayInfo, onS
 
           {/* Dates */}
           <div className="space-y-2">
-            <p className="font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">Dates</p>
+            <p className="font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
+              {packageLead ? "Trip dates" : "Dates"}
+            </p>
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-muted/50 rounded-lg p-2.5 text-center">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold">Check-in</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold">
+                  {packageLead ? "Start" : "Check-in"}
+                </p>
                 <p className="text-sm font-bold mt-0.5">{formatDate(booking.checkin)}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-2.5 text-center">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold">Check-out</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold">
+                  {packageLead ? "End" : "Check-out"}
+                </p>
                 <p className="text-sm font-bold mt-0.5">{formatDate(booking.checkout)}</p>
               </div>
             </div>
@@ -247,8 +277,14 @@ export function BookingDetailDialog({ open, onOpenChange, booking, stayInfo, onS
             </div>
           </div>
 
-          {/* Special Requests */}
-          {booking.special_requests && (
+          {/* Special Requests / enquiry message */}
+          {packageLead && booking.package_message && (
+            <div className="space-y-1.5">
+              <p className="font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">Enquiry</p>
+              <p className="text-sm text-foreground bg-muted/50 rounded-lg p-2.5 whitespace-pre-wrap">{booking.package_message}</p>
+            </div>
+          )}
+          {!packageLead && booking.special_requests && (
             <div className="space-y-1.5">
               <p className="font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">Special Requests</p>
               <p className="text-sm text-foreground bg-muted/50 rounded-lg p-2.5">{booking.special_requests}</p>

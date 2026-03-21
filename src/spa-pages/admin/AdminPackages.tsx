@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Loader2, Package, Plus, RefreshCw } from "lucide-react";
+import { ExternalLink, Loader2, Package, Pencil, Plus, RefreshCw } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
 import { AdminPackageCreateDialog } from "@/components/admin/AdminPackageCreateDialog";
 
@@ -30,7 +30,8 @@ export default function AdminPackages() {
   const { format: fmt } = useCurrency();
   const [rows, setRows] = useState<TripRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editTripId, setEditTripId] = useState<string | null>(null);
 
   const fetchTrips = useCallback(async () => {
     setLoading(true);
@@ -65,11 +66,17 @@ export default function AdminPackages() {
             Packages
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Trips &amp; packages shown on your site. Manage records in Supabase or extend this screen with create/edit.
+            Trips &amp; packages shown on your site. Create, edit, or open the public trip page.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditTripId(null);
+              setDialogOpen(true);
+            }}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Create package
           </Button>
@@ -81,9 +88,13 @@ export default function AdminPackages() {
       </div>
 
       <AdminPackageCreateDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onCreated={fetchTrips}
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditTripId(null);
+        }}
+        editTripId={editTripId}
+        onSaved={fetchTrips}
       />
 
       <Card>
@@ -111,7 +122,7 @@ export default function AdminPackages() {
                   <TableHead>Pickup</TableHead>
                   <TableHead className="text-right">From</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="w-[100px]" />
+                  <TableHead className="w-[180px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -128,18 +139,32 @@ export default function AdminPackages() {
                         {r.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" asChild>
-                        <a
-                          href={`/trip/${r.slug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1"
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8"
+                          onClick={() => {
+                            setEditTripId(r.id);
+                            setDialogOpen(true);
+                          }}
                         >
-                          View
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                      </Button>
+                          <Pencil className="h-3.5 w-3.5 mr-1" />
+                          Edit
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
+                          <a
+                            href={`/trip/${r.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1"
+                          >
+                            View
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

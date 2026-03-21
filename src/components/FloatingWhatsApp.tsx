@@ -44,9 +44,10 @@ const FloatingWhatsApp = () => {
 
   if (loading || !waDigits || !waHref) return null;
 
+  /* z-40: stay below Dialog/Sheet/AlertDialog overlays (z-50) and similar popups so they fully cover the FAB */
   return (
     <div
-      className="fixed z-[85] flex flex-col items-end gap-2 pointer-events-none [&>*]:pointer-events-auto
+      className="fixed z-40 flex flex-col items-end gap-2 pointer-events-none [&>*]:pointer-events-auto
         right-4 sm:right-6
         bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))]
         md:bottom-8 md:right-8"

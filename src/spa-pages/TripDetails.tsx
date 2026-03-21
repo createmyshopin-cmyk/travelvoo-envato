@@ -11,6 +11,7 @@ import TripReviews from "@/components/trip/TripReviews";
 import TripCancellationPolicy from "@/components/trip/TripCancellationPolicy";
 import TripCTA from "@/components/trip/TripCTA";
 import TripEnquiryModal from "@/components/trip/TripEnquiryModal";
+import TripBookingModal from "@/components/trip/TripBookingModal";
 import StickyHeader from "@/components/StickyHeader";
 import Footer from "@/components/Footer";
 
@@ -22,6 +23,7 @@ const TripDetails = () => {
     useTripDetail(slug);
 
   const [enquiryOpen, setEnquiryOpen] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(false);
 
   if (loading) {
     return (
@@ -80,7 +82,7 @@ const TripDetails = () => {
         trip={trip}
         dates={dates}
         onGetItinerary={() => setEnquiryOpen(true)}
-        onBookNow={scrollToSidebar}
+        onBookNow={() => setBookingOpen(true)}
       />
 
       <TripGallery images={trip.images} name={trip.name} />
@@ -116,6 +118,13 @@ const TripDetails = () => {
         subheading={trip.ctaSubheading}
         imageUrl={trip.ctaImageUrl}
         onCallback={scrollToSidebar}
+      />
+
+      <TripBookingModal
+        open={bookingOpen}
+        onOpenChange={setBookingOpen}
+        trip={trip}
+        dates={dates}
       />
 
       <TripEnquiryModal
