@@ -1,0 +1,119 @@
+/* Plus Jakarta Sans via next/font (see layout.tsx — variable --font-plus-jakarta) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 20% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 10%;
+
+    --primary: 358 82% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 174 100% 33%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 10% 46%;
+
+    --accent: 220 14% 96%;
+    --accent-foreground: 220 20% 10%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 358 82% 55%;
+
+    --radius: 0.75rem;
+
+    --whatsapp: 142 70% 49%;
+    --whatsapp-foreground: 0 0% 100%;
+
+    --story-gradient-start: 358 82% 55%;
+    --story-gradient-end: 25 95% 53%;
+
+    --star-rating: 45 100% 51%;
+    --savings: 142 71% 45%;
+    --savings-foreground: 0 0% 100%;
+    --badge-orange: 25 95% 53%;
+    --badge-purple: 270 60% 50%;
+    --badge-pink: 330 80% 60%;
+    --badge-red: 0 84% 50%;
+
+    --price-low: 142 71% 45%;
+    --price-mid: 45 100% 51%;
+    --price-high: 358 82% 55%;
+    --price-unavailable: 220 10% 75%;
+
+    --shadow-soft: 0 2px 12px -2px hsl(220 20% 10% / 0.08);
+    --shadow-card: 0 4px 20px -4px hsl(220 20% 10% / 0.1);
+    --shadow-elevated: 0 8px 30px -6px hsl(220 20% 10% / 0.12);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 20% 7%;
+    --foreground: 0 0% 95%;
+    --card: 220 20% 10%;
+    --card-foreground: 0 0% 95%;
+    --popover: 220 20% 10%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 358 82% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 174 100% 33%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 220 14% 15%;
+    --muted-foreground: 220 10% 60%;
+    --accent: 220 14% 15%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 95%;
+    --border: 220 14% 18%;
+    --input: 220 14% 18%;
+    --ring: 358 82% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

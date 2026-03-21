@@ -1,0 +1,19 @@
+# StayFinder
+
+> A resort and stay booking platform. Browse stays, view amenities, reviews, pricing, and book directly.
+
+## Main Pages
+
+- [Home](/): Browse all available stays and resorts by category
+- [Stay Details](/stay/): Individual stay pages with description, amenities, room categories, reviews, pricing, nearby destinations
+
+## Key Information
+
+- This is a resort/hotel booking platform
+- Each stay page contains: name, location, description, amenities, room categories, pricing, reviews, nearby destinations, booking options
+- Stays are organized by category (e.g. Couple Friendly, Family Stay, Luxury Resort)
+- Bookings can be made directly on each stay page
+
+## Optional
+
+- [Wishlist](/wishlist): Save favorite stays
