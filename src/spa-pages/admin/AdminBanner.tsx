@@ -569,8 +569,17 @@ export default function AdminBanner() {
       toast({ title: "Title is required", variant: "destructive" });
       return;
     }
+    const { data: tenantId, error: tidErr } = await supabase.rpc("get_my_tenant_id");
+    if (!editing && (tidErr || !tenantId)) {
+      toast({
+        title: "No tenant",
+        description: tidErr?.message ?? "Could not resolve tenant for this banner.",
+        variant: "destructive",
+      });
+      return;
+    }
     setSaving(true);
-    const payload = {
+    const payload: Record<string, unknown> = {
       title:      form.title.trim(),
       subtitle:   form.subtitle?.trim()   || null,
       cta_text:   form.cta_text?.trim()   || null,
@@ -580,6 +589,9 @@ export default function AdminBanner() {
       is_active:  form.is_active,
       sort_order: form.sort_order,
     };
+    if (!editing) {
+      payload.tenant_id = tenantId;
+    }
     let error: { message: string } | null = null;
     if (editing) {
       ({ error } = await (supabase.from("banners") as any).update(payload).eq("id", editing.id));

@@ -14,6 +14,8 @@ Optional Plannet-only seed (after base exists): `supabase/seed_marketplace_plann
 
 Optional feature/plan wiring: `supabase/seed_marketplace_feature.sql`
 
+**Banners / Theme hero:** `supabase/migrations/20260321140000_banners_tenant_rls.sql` adds `tenant_id` to `public.banners` (if missing), backfills it, and sets RLS so tenant admins can create hero slides from **Theme** and **Banner** admin without `row-level security` errors.
+
 ## Operator guide (SaaS admin)
 
 1. **Catalog** — `/saas-admin/marketplace`: create items (or use **Theme Builder** / **Plugin Builder** tabs for structured manifests), set **Published** when ready.

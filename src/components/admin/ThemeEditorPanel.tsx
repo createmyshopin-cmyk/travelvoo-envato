@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ComponentType,
   type ReactNode,
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +28,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { ALLOWED_LANDING_THEME_VARS, type LandingThemePreset } from "@/lib/marketplace-theme";
+import { presetLabel } from "@/lib/marketplace-manifest";
+import { Badge } from "@/components/ui/badge";
 import {
   ChevronRight, ImageIcon, LayoutTemplate, Link as LinkIcon, Loader2, Monitor, Pencil, Plus, Smartphone, Tablet, Trash2, Upload, X,
 } from "lucide-react";
@@ -36,10 +39,10 @@ import { cn } from "@/lib/utils";
 
 type Device = "mobile" | "tablet" | "desktop";
 
-const DEVICE: Record<Device, { w: number; label: string; icon: typeof Smartphone }> = {
-  mobile: { w: 375, label: "Mobile", icon: Smartphone },
-  tablet: { w: 768, label: "Tablet", icon: Tablet },
-  desktop: { w: 1200, label: "Desktop", icon: Monitor },
+const DEVICE: Record<Device, { w: number; label: string; icon: ComponentType<{ className?: string }>; frame: string }> = {
+  mobile: { w: 375, label: "Mobile", icon: Smartphone, frame: "rounded-[28px] border-[6px]" },
+  tablet: { w: 834, label: "Tablet", icon: Tablet, frame: "rounded-[20px] border-[8px]" },
+  desktop: { w: 1280, label: "Desktop", icon: Monitor, frame: "rounded-xl border-4" },
 };
 
 type HeroBanner = {
@@ -134,6 +137,7 @@ function ThemePreviewCanvas({
   const previewTokens = useMemo(() => buildPreviewTokens(tokenInputs), [tokenInputs]);
   const heroes = useMemo(() => banners.filter((b) => b.is_active), [banners]);
   const [heroIdx, setHeroIdx] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setHeroIdx(0);
@@ -145,8 +149,18 @@ function ThemePreviewCanvas({
     return () => clearInterval(t);
   }, [heroes.length]);
 
+  useEffect(() => {
+    scrollRef.current?.scrollTo(0, 0);
+  }, [device]);
+
   const hero = heroes[heroIdx % Math.max(heroes.length, 1)];
   const dim = DEVICE[device];
+
+  const innerScale = cn(
+    device === "mobile" && "text-[13px] leading-snug",
+    device === "tablet" && "text-sm",
+    device === "desktop" && "text-base"
+  );
 
   return (
     <div className="space-y-3">
@@ -164,19 +178,58 @@ function ThemePreviewCanvas({
             >
               <Ic className="h-3.5 w-3.5 shrink-0" />
               {DEVICE[d].label}
+              <span className="hidden sm:inline text-[10px] opacity-70 font-normal">{DEVICE[d].w}px</span>
             </Button>
           );
         })}
       </div>
 
-      <div className="flex justify-center rounded-xl border bg-muted/40 p-4 md:p-6 overflow-x-auto">
-        <div className="transition-[max-width] duration-300 ease-out shrink-0 w-full" style={{ maxWidth: dim.w }}>
-          <div className="rounded-[20px] border-[6px] border-slate-800 bg-slate-800 shadow-2xl overflow-hidden">
-            <div className="h-2 bg-slate-800 flex justify-center pt-1">
-              <div className="w-16 h-1 rounded-full bg-slate-600" />
-            </div>
-            <div className="max-h-[min(70vh,720px)] overflow-y-auto overflow-x-hidden rounded-b-lg">
-              <LandingThemeScope landingThemeSlug={preset} themeTokens={previewTokens} className="min-h-[420px]">
+      <div className="flex justify-center rounded-xl border bg-gradient-to-b from-muted/60 to-muted/30 p-3 sm:p-6 overflow-x-auto">
+        <div
+          className="transition-[width] duration-300 ease-out shrink-0"
+          style={{ width: "min(100%, " + dim.w + "px)" }}
+        >
+          <div
+            className={cn(
+              "border-slate-800 bg-slate-800 shadow-2xl overflow-hidden mx-auto",
+              dim.frame
+            )}
+            style={{ maxWidth: dim.w }}
+          >
+            {device === "mobile" && (
+              <div className="h-2 bg-slate-800 flex justify-center pt-1">
+                <div className="w-16 h-1 rounded-full bg-slate-600" />
+              </div>
+            )}
+            {device === "tablet" && (
+              <div className="h-2.5 bg-slate-800 flex justify-center items-end pb-0.5">
+                <div className="w-10 h-1 rounded-full bg-slate-600" />
+              </div>
+            )}
+            {device === "desktop" && (
+              <div className="h-8 bg-slate-800 flex items-center px-3 gap-1.5 border-b border-slate-700">
+                <div className="flex gap-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500/90" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500/90" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/90" />
+                </div>
+                <div className="flex-1 h-5 rounded bg-slate-700/80 mx-4" />
+              </div>
+            )}
+            <div
+              ref={scrollRef}
+              className={cn(
+                "max-h-[min(70vh,720px)] overflow-y-auto overflow-x-hidden",
+                device === "mobile" && "rounded-b-[22px]",
+                device === "tablet" && "rounded-b-[12px]",
+                device === "desktop" && "rounded-b-lg"
+              )}
+            >
+              <LandingThemeScope
+                landingThemeSlug={preset}
+                themeTokens={previewTokens}
+                className={cn("min-h-[380px] md:min-h-[420px]", innerScale)}
+              >
                 <div className="px-3 pt-3 pb-8 space-y-4">
                   <div className="h-8 rounded-lg bg-muted flex items-center px-2 gap-2">
                     <div className="h-2 w-16 bg-muted-foreground/25 rounded" />
@@ -213,7 +266,12 @@ function ThemePreviewCanvas({
 
                   <div className="space-y-2 pt-2">
                     <div className="h-2 w-28 bg-muted rounded" />
-                    <div className="grid grid-cols-2 gap-2">
+                    <div
+                      className={cn(
+                        "grid gap-2",
+                        device === "desktop" ? "grid-cols-4" : "grid-cols-2"
+                      )}
+                    >
                       {[1, 2, 3, 4].map((i) => (
                         <div key={i} className="h-24 rounded-xl bg-muted/80 border border-border/50" />
                       ))}
@@ -226,7 +284,7 @@ function ThemePreviewCanvas({
         </div>
       </div>
       <p className="text-[11px] text-center text-muted-foreground">
-        Preview updates live. Save theme above to publish colors to your public site.
+        Each device uses a fixed viewport width so you can see how the active theme scales. Save theme above to publish colors.
       </p>
     </div>
   );
@@ -355,8 +413,13 @@ function useThemeEditorState(): ThemeEditorCtx {
       toast({ title: "Title is required", variant: "destructive" });
       return;
     }
+    const { data: tenantId, error: tidErr } = await supabase.rpc("get_my_tenant_id");
+    if (tidErr || !tenantId) {
+      toast({ title: "No tenant", description: tidErr?.message ?? "Could not resolve tenant for this banner.", variant: "destructive" });
+      return;
+    }
     setSaving(true);
-    const payload = {
+    const payload: Record<string, unknown> = {
       title: form.title.trim(),
       subtitle: form.subtitle?.trim() || null,
       cta_text: form.cta_text?.trim() || null,
@@ -366,6 +429,9 @@ function useThemeEditorState(): ThemeEditorCtx {
       is_active: form.is_active,
       sort_order: form.sort_order,
     };
+    if (!editing) {
+      payload.tenant_id = tenantId;
+    }
     let error: { message: string } | null = null;
     if (editing) {
       ({ error } = await (supabase.from("banners") as any).update(payload).eq("id", editing.id));
@@ -426,16 +492,36 @@ export function ThemeEditorProvider({ children }: { children: ReactNode }) {
 export function ThemePreviewSection({
   preset,
   tokenInputs,
+  themeDirty,
 }: {
   preset: LandingThemePreset;
   tokenInputs: Record<string, string>;
+  /** True when preset/tokens differ from last saved site_settings */
+  themeDirty?: boolean;
 }) {
   const { banners, loading } = useThemeEditor();
   return (
     <Card className="min-w-0">
       <CardHeader>
-        <CardTitle className="text-lg">Live preview</CardTitle>
-        <CardDescription>Mobile, tablet, and desktop. Theme colors update in real time.</CardDescription>
+        <div className="flex flex-wrap items-center gap-2">
+          <CardTitle className="text-lg">Live preview</CardTitle>
+          <Badge variant="secondary" className="font-normal">
+            {presetLabel(preset)}
+          </Badge>
+          {themeDirty ? (
+            <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+              Unsaved changes
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-muted-foreground">
+              Matches saved theme
+            </Badge>
+          )}
+        </div>
+        <CardDescription>
+          Switch Mobile / Tablet / Desktop — each frame uses that viewport width so the active theme layout fits the device.
+          Colors update live as you edit; save to publish.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {loading ? (

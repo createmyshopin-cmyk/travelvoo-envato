@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,8 @@ export default function AdminTheme() {
   const [siteId, setSiteId] = useState<string | null>(null);
   const [preset, setPreset] = useState<LandingThemePreset>("default");
   const [tokenInputs, setTokenInputs] = useState<Record<string, string>>({});
+  const [savedPreset, setSavedPreset] = useState<LandingThemePreset>("default");
+  const [savedTokens, setSavedTokens] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,6 +66,8 @@ export default function AdminTheme() {
         if (normalized[k]) inputs[k] = normalized[k];
       }
       setTokenInputs(inputs);
+      setSavedPreset(isLandingThemePreset(slug) ? slug : "default");
+      setSavedTokens({ ...inputs });
     } else {
       setSiteId(null);
     }
@@ -103,8 +107,19 @@ export default function AdminTheme() {
       return;
     }
     clearSiteSettingsCache();
+    setSavedPreset(preset);
+    setSavedTokens({ ...tokens });
     toast({ title: "Theme saved", description: "Your public landing page will reflect these settings." });
   };
+
+  const themeDirty = useMemo(() => {
+    if (loading) return false;
+    if (preset !== savedPreset) return true;
+    for (const k of ALLOWED_LANDING_THEME_VARS) {
+      if ((tokenInputs[k] ?? "").trim() !== (savedTokens[k] ?? "").trim()) return true;
+    }
+    return false;
+  }, [loading, preset, savedPreset, tokenInputs, savedTokens]);
 
   if (planLoading || loading) {
     return (
@@ -177,7 +192,7 @@ export default function AdminTheme() {
         </CardContent>
       </Card>
 
-      <ThemePreviewSection preset={preset} tokenInputs={tokenInputs} />
+      <ThemePreviewSection preset={preset} tokenInputs={tokenInputs} themeDirty={themeDirty} />
       </div>
 
       <ThemeHeroSection />
