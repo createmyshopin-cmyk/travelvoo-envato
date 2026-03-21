@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare, Users, Zap, Clock } from "lucide-react";
+import { getInboundPreviewFromMeta } from "@/lib/instagram-activity-meta";
 
 type ActivityRow = Database["public"]["Tables"]["instagram_channel_activity"]["Row"];
 
@@ -12,6 +13,8 @@ interface Stats {
   avgLatency: number;
   todayDms: number;
 }
+
+const DM_FEED_CAP = 50;
 
 function startOfLocalDayISO(): string {
   const d = new Date();
@@ -26,11 +29,27 @@ function startOfNextLocalDayISO(): string {
   return d.toISOString();
 }
 
+function sortDmRowsChronological(rows: ActivityRow[]): ActivityRow[] {
+  return [...rows].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+}
+
+function mergeDmFeed(prev: ActivityRow[], incoming: ActivityRow): ActivityRow[] {
+  const map = new Map<string, ActivityRow>();
+  for (const r of prev) map.set(r.id, r);
+  map.set(incoming.id, incoming);
+  return sortDmRowsChronological(Array.from(map.values())).slice(-DM_FEED_CAP);
+}
+
 export default function InstagramBotOverview() {
   const [stats, setStats] = useState<Stats>({ totalDms: 0, leadsCapt: 0, avgLatency: 0, todayDms: 0 });
-  const [activity, setActivity] = useState<ActivityRow[]>([]);
+  const [dmFeed, setDmFeed] = useState<ActivityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [dmFeed.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,7 +62,7 @@ export default function InstagramBotOverview() {
         { count: todayDms, error: e2 },
         { count: leadsCapt, error: e3 },
         { data: latRows, error: e4 },
-        { data: feedRows, error: e5 },
+        { data: dmRows, error: e5 },
       ] = await Promise.all([
         supabase
           .from("instagram_channel_activity")
@@ -74,8 +93,9 @@ export default function InstagramBotOverview() {
           .from("instagram_channel_activity")
           .select("*")
           .eq("tenant_id", tid)
+          .eq("channel", "dm")
           .order("created_at", { ascending: false })
-          .limit(50),
+          .limit(DM_FEED_CAP),
       ]);
 
       if (e1 || e2 || e3 || e4 || e5) {
@@ -94,7 +114,8 @@ export default function InstagramBotOverview() {
         leadsCapt: leadsCapt ?? 0,
         avgLatency,
       });
-      setActivity((feedRows ?? []) as ActivityRow[]);
+      const chronological = sortDmRowsChronological((dmRows ?? []) as ActivityRow[]);
+      setDmFeed(chronological);
     };
 
     const scheduleReload = (tid: string) => {
@@ -126,7 +147,13 @@ export default function InstagramBotOverview() {
             table: "instagram_channel_activity",
             filter: `tenant_id=eq.${tid}`,
           },
-          () => scheduleReload(tid),
+          (payload) => {
+            const row = payload.new as ActivityRow;
+            if (row.channel === "dm") {
+              setDmFeed((prev) => mergeDmFeed(prev, row));
+            }
+            scheduleReload(tid);
+          },
         )
         .subscribe();
 
@@ -170,30 +197,45 @@ export default function InstagramBotOverview() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Live Activity</CardTitle>
+          <CardTitle className="text-base">Live DM preview</CardTitle>
+          <p className="text-xs text-muted-foreground font-normal">
+            Inbound text appears after each message is processed. Updates in real time when new activity is saved.
+          </p>
         </CardHeader>
         <CardContent>
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : activity.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No activity yet. Connect your Instagram account and start receiving DMs.</p>
+          ) : dmFeed.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No DMs yet. Connect your Instagram account and start receiving messages.
+            </p>
           ) : (
-            <div className="space-y-2 max-h-80 overflow-y-auto">
-              {activity.map((a) => (
-                <div key={a.id} className="flex items-center justify-between text-sm border-b pb-2 last:border-0 gap-2">
-                  <div className="min-w-0">
-                    <span className="font-medium capitalize">{a.channel}</span>
-                    <span className="text-muted-foreground mx-2">{a.event_type?.replace(/_/g, " ")}</span>
-                    {a.sender_ig_id && (
-                      <span className="text-muted-foreground text-xs block truncate" title={a.sender_ig_id}>
-                        IG {a.sender_ig_id}
-                      </span>
-                    )}
-                    {a.lead_id && <span className="text-green-600 text-xs font-medium ml-1">LEAD</span>}
+            <div className="flex flex-col gap-3 max-h-[28rem] overflow-y-auto rounded-lg border bg-muted/30 p-3">
+              {dmFeed.map((a) => {
+                const preview = getInboundPreviewFromMeta(a.meta);
+                return (
+                  <div key={a.id} className="flex justify-start">
+                    <div className="max-w-[min(100%,28rem)] rounded-2xl rounded-tl-md bg-background border px-3 py-2 shadow-sm">
+                      {preview ? (
+                        <p className="text-sm whitespace-pre-wrap break-words">{preview}</p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">No message preview stored</p>
+                      )}
+                      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+                        <span className="rounded bg-muted px-1.5 py-0.5 font-medium text-foreground/80">
+                          {a.event_type?.replace(/_/g, " ") ?? "dm"}
+                        </span>
+                        {a.sender_ig_id && <span title={a.sender_ig_id}>IG {a.sender_ig_id}</span>}
+                        {a.lead_id && (
+                          <span className="text-green-600 font-semibold">LEAD</span>
+                        )}
+                        <span className="ml-auto shrink-0">{new Date(a.created_at).toLocaleString()}</span>
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0">{new Date(a.created_at).toLocaleTimeString()}</span>
-                </div>
-              ))}
+                );
+              })}
+              <div ref={chatEndRef} />
             </div>
           )}
         </CardContent>

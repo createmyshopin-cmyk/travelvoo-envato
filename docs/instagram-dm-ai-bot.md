@@ -227,7 +227,7 @@ Add tables (names illustrative; keep consistent with your naming):
 
 - **`tenant_instagram_connections`**: `tenant_id` (PK/FK), `facebook_page_id`, `instagram_business_account_id` (recipient id used in webhooks), encrypted or server-only `page_access_token`, `token_expires_at`, `created_at`, `updated_at`. RLS: tenant read via membership; **writes from webhook use service role only**.
 - **`instagram_webhook_events`** (or similar): `message_mid` (unique) for **idempotency** so Meta retries do not double-reply or duplicate leads.
-- **`instagram_channel_activity`**: append-only — `tenant_id`, **`channel`** (`dm` | `comment` | `story`), `event_type`, timestamps, `latency_ms`, `lead_id` nullable, `meta` jsonb (media_id, comment_id, etc.) — **analytics + Realtime** for all channels.
+- **`instagram_channel_activity`**: append-only — `tenant_id`, **`channel`** (`dm` | `comment` | `story`), `event_type`, timestamps, `latency_ms`, `lead_id` nullable, `meta` jsonb (media_id, comment_id, **`inbound_text`** for DM admin preview, etc.) — **analytics + Realtime** for all channels.
 - **`instagram_automation_config`**: `tenant_id` PK, `settings` jsonb — per-channel automation, **`keyword_rules`** (and optional **`blocked_keywords`**), merged prompts; **schedule** block or FK to schedules table.
 - Optional **`instagram_automation_keyword_rules`** table — if not embedded in jsonb: `tenant_id`, `channel`, `match`, `match_type`, `action`, `template_text`, `url`, `priority`, `enabled`.
 - **`instagram_automation_schedules`** (optional if not embedded): `tenant_id`, `timezone`, `weekly_rules` jsonb, `quiet_hours`, optional `campaigns` (start/end ISO) for **scheduled** automation windows.
@@ -260,7 +260,7 @@ Regenerate types: [`src/integrations/supabase/types.ts`](../src/integrations/sup
 
 - **Discovery**: Tenants install/pay from [`AdminMarketplace`](../src/spa-pages/admin/AdminMarketplace.tsx) like any other paid plugin.
 - **After install — sidebar**: Collapsible **“Instagram Bot”** in [`AdminSidebar.tsx`](../src/components/admin/AdminSidebar.tsx), **only when** entitled:
-  - **Overview** → `/admin/instagram-bot` — live **status + KPI strip** (connection, token, webhook, volume **by channel**); **live activity feed** via Realtime on `instagram_channel_activity` and/or `leads` filtered by `tenant_id`.
+  - **Overview** → `/admin/instagram-bot` — live **status + KPI strip** (connection, token, webhook, volume **by channel**); **Live DM preview** (DM-only chat bubbles) via **Realtime** on `instagram_channel_activity`. For each processed DM, the webhook stores **`meta.inbound_text`** (truncated user message) on the activity row so admins see inbound copy; the row is written **after** handling (reply/suppress/etc.), not at the instant Meta delivers the webhook.
   - **Automations** → `/admin/instagram-bot/automations` — **Keywords** (rules, blocklist, match settings); **DM / Comment / Story**; **Posts & Reels**; **Schedule**; Realtime on updates.
   - **Analytics** → `/admin/instagram-bot/analytics` — funnels and time series **by channel** (DM vs comment vs story); same Realtime pattern on `instagram_channel_activity`.
   - **Connection** (or **Setup**) → `/admin/instagram-bot/setup` — OAuth **Connect / Disconnect**, copy **shared** webhook URL, Meta docs — connection health **live** via Realtime on `tenant_instagram_connections` updates.

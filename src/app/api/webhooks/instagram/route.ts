@@ -338,6 +338,7 @@ async function handleMessaging(sb: any, event: any, creds: any, start: number) {
   }
 
   const sendUrl = `https://graph.facebook.com/${graphVersion}/me/messages`;
+  const inboundPreview = message.text ? String(message.text).slice(0, 500) : "";
   const activityBase = {
     tenant_id: conn.tenant_id,
     channel: "dm",
@@ -348,6 +349,7 @@ async function handleMessaging(sb: any, event: any, creds: any, start: number) {
       flow_id: flowHit.flowId,
       resolution: flowHit.flowId ? "flow" : "keyword_or_ai",
       follower_check_detail: followerDetail,
+      inbound_text: inboundPreview,
     },
   };
 
