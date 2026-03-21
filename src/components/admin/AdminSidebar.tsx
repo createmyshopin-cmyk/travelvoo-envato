@@ -1,4 +1,4 @@
-import { LayoutDashboard, Building2, CalendarCheck, Settings, Tag, Star, LogOut, DoorOpen, FileText, Receipt, User, Globe, BarChart3, CreditCard, ChevronDown, CalendarDays, Clapperboard, BookOpen, ImageIcon, Search, Lock, UserPlus, Store, Palette } from "lucide-react";
+import { LayoutDashboard, Building2, CalendarCheck, Settings, Tag, Star, LogOut, DoorOpen, FileText, Receipt, User, Globe, BarChart3, CreditCard, ChevronDown, CalendarDays, Clapperboard, BookOpen, ImageIcon, Search, Lock, UserPlus, Store, Palette, Package } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -162,6 +162,16 @@ export function AdminSidebar({ onSignOut }: AdminSidebarProps) {
 
               {/* Stays Submenu */}
               <SubMenu label="Stays" icon={Building2} items={staysSubItems} collapsed={collapsed} />
+
+              {/* Packages (trips) */}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/admin/packages")}>
+                  <NavLink to="/admin/packages" end className="hover:bg-muted/50" activeClassName="bg-muted text-primary font-medium">
+                    <Package className="mr-2 h-4 w-4" />
+                    {!collapsed && <span>Package</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
 
               {/* Bookings Submenu */}
               <SubMenu label="Bookings" icon={CalendarCheck} items={bookingsSubItems} collapsed={collapsed} />

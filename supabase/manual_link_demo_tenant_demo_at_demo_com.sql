@@ -77,3 +77,7 @@ BEGIN
 
   RAISE NOTICE 'Created tenant % for demo@demo.com', tid;
 END $$;
+
+-- Optional next steps:
+--   - supabase/seed_demo_tenant_full_options.sql — plan features, settings, 15 hero slides, etc.
+--   - supabase/seed_demo_stays_and_banners.sql — 15 stays + promo/announcement banners

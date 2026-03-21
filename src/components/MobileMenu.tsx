@@ -1,4 +1,4 @@
-import { X, Home, Building, Grid3X3, Phone } from "lucide-react";
+import { X, Home, Building, Grid3X3, Phone, Compass } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 interface MobileMenuProps {
@@ -9,6 +9,7 @@ interface MobileMenuProps {
 const links = [
   { icon: Home, label: "Home", href: "/" },
   { icon: Building, label: "Stays", href: "#stays" },
+  { icon: Compass, label: "Trips", href: "/trips" },
   { icon: Grid3X3, label: "Categories", href: "#categories" },
   { icon: Phone, label: "Contact", href: "#footer" },
 ];

@@ -9,6 +9,7 @@ import { useBranding } from "@/context/BrandingContext";
 const NAV_LINKS = [
   { label: "Home",       href: "/" },
   { label: "Stays",      href: "#stays" },
+  { label: "Trips",      href: "/trips" },
   { label: "Categories", href: "#categories" },
   { label: "Contact",    href: "#footer" },
 ];
