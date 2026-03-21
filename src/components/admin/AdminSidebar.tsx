@@ -52,6 +52,11 @@ const settingsSubItems = [
   { title: "Domain", url: "/admin/account/domain", icon: Globe },
 ];
 
+const marketplaceSubItems = [
+  { title: "Catalog", url: "/admin/marketplace", icon: Store },
+  { title: "Theme", url: "/admin/theme", icon: Palette },
+];
+
 const accountItems = [
   { title: "Profile", url: "/admin/account/profile", icon: User },
   { title: "Subscription", url: "/admin/account/billing", icon: CreditCard },
@@ -155,29 +160,6 @@ export function AdminSidebar({ onSignOut }: AdminSidebarProps) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/marketplace")}>
-                  <NavLink to="/admin/marketplace" end className="hover:bg-muted/50" activeClassName="bg-muted text-primary font-medium">
-                    <Store className={cn("mr-2 h-4 w-4", isLocked("/admin/marketplace") && "text-muted-foreground")} />
-                    {!collapsed && (
-                      <>
-                        <span className={cn("flex-1", isLocked("/admin/marketplace") && "text-muted-foreground")}>Marketplace</span>
-                        {isLocked("/admin/marketplace") && <Lock className="ml-auto h-3 w-3 text-muted-foreground/60" />}
-                      </>
-                    )}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/theme")}>
-                  <NavLink to="/admin/theme" end className="hover:bg-muted/50" activeClassName="bg-muted text-primary font-medium">
-                    <Palette className="mr-2 h-4 w-4" />
-                    {!collapsed && <span>Theme</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
               {/* Stays Submenu */}
               <SubMenu label="Stays" icon={Building2} items={staysSubItems} collapsed={collapsed} />
 
@@ -226,6 +208,7 @@ export function AdminSidebar({ onSignOut }: AdminSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               <SubMenu label="Settings" icon={Settings} items={settingsSubItems} collapsed={collapsed} />
+              <SubMenu label="Marketplace" icon={Store} items={marketplaceSubItems} collapsed={collapsed} />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -19,6 +19,7 @@ import {
   normalizeThemeTokens,
 } from "@/lib/marketplace-theme";
 import { cn } from "@/lib/utils";
+import { hexToHslSpaceString, pickerHexForTokenValue } from "@/lib/theme-token-color";
 import type { Json } from "@/integrations/supabase/types";
 
 const PRESET_OPTIONS: { id: LandingThemePreset; label: string; hint: string }[] = [
@@ -175,12 +176,33 @@ export default function AdminTheme() {
                   <Label htmlFor={key} className="text-xs font-mono text-muted-foreground">
                     {key}
                   </Label>
-                  <Input
-                    id={key}
-                    placeholder="e.g. 199 89% 48%"
-                    value={tokenInputs[key] ?? ""}
-                    onChange={(e) => setTokenInputs((prev) => ({ ...prev, [key]: e.target.value }))}
-                  />
+                  {key === "--radius" ? (
+                    <Input
+                      id={key}
+                      placeholder="e.g. 0.5rem"
+                      value={tokenInputs[key] ?? ""}
+                      onChange={(e) => setTokenInputs((prev) => ({ ...prev, [key]: e.target.value }))}
+                    />
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        id={key}
+                        className="min-w-0 flex-1 font-mono text-sm"
+                        placeholder="e.g. 199 89% 48%"
+                        value={tokenInputs[key] ?? ""}
+                        onChange={(e) => setTokenInputs((prev) => ({ ...prev, [key]: e.target.value }))}
+                      />
+                      <input
+                        type="color"
+                        aria-label={`Pick color for ${key}`}
+                        className="h-9 w-10 shrink-0 cursor-pointer rounded-md border border-input bg-background p-0.5"
+                        value={pickerHexForTokenValue(tokenInputs[key] ?? "")}
+                        onChange={(e) =>
+                          setTokenInputs((prev) => ({ ...prev, [key]: hexToHslSpaceString(e.target.value) }))
+                        }
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

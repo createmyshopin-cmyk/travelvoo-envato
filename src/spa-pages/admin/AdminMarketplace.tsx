@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Lock, Package, Palette, Store } from "lucide-react";
 import { payForMarketplaceItem } from "@/lib/marketplace-checkout";
 import type { Tables } from "@/integrations/supabase/types";
+import { cn } from "@/lib/utils";
 
 type MarketplaceItem = Tables<"marketplace_items">;
 type TenantInstall = Tables<"tenant_marketplace_installs">;
@@ -26,6 +27,66 @@ type Manifest = {
 function parseManifest(raw: unknown): Manifest {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   return raw as Manifest;
+}
+
+/** Fallback gradients when `preview_image_url` is empty (matches theme presets). */
+const PRESET_THUMB_GRADIENT: Record<string, string> = {
+  default: "from-slate-300 via-slate-400 to-slate-600 dark:from-slate-600 dark:via-slate-700 dark:to-slate-900",
+  ocean: "from-cyan-400 via-blue-500 to-indigo-700 dark:from-cyan-800 dark:via-blue-900 dark:to-indigo-950",
+  sunset: "from-amber-300 via-orange-500 to-rose-700 dark:from-amber-800 dark:via-rose-900 dark:to-rose-950",
+  forest: "from-emerald-400 via-green-600 to-emerald-900 dark:from-emerald-800 dark:via-green-900 dark:to-emerald-950",
+  plannet: "from-emerald-700 via-slate-800 to-zinc-950",
+};
+
+function MarketplaceItemThumbnail({
+  item,
+  manifest,
+  isTheme,
+}: {
+  item: MarketplaceItem;
+  manifest: Manifest;
+  isTheme: boolean;
+}) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const url = item.preview_image_url?.trim();
+  const preset = manifest.preset ?? "default";
+  const grad = PRESET_THUMB_GRADIENT[preset] ?? PRESET_THUMB_GRADIENT.default;
+
+  if (url && !imgFailed) {
+    return (
+      <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden bg-muted border-b">
+        <img
+          src={url}
+          alt={item.name}
+          className="h-full w-full object-cover"
+          onError={() => setImgFailed(true)}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
+      </div>
+    );
+  }
+
+  if (isTheme) {
+    return (
+      <div
+        className={cn(
+          "relative aspect-[16/10] w-full shrink-0 overflow-hidden border-b bg-gradient-to-br flex items-center justify-center",
+          grad
+        )}
+      >
+        <Palette className="h-14 w-14 text-white/95 drop-shadow-md" aria-hidden />
+        <span className="absolute bottom-2 left-2 rounded-md bg-black/45 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+          {preset}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden border-b bg-gradient-to-br from-violet-400 via-purple-600 to-slate-800 flex items-center justify-center">
+      <Package className="h-14 w-14 text-white/95 drop-shadow-md" aria-hidden />
+    </div>
+  );
 }
 
 export default function AdminMarketplace() {
@@ -214,7 +275,8 @@ export default function AdminMarketplace() {
             const manifest = parseManifest(item.manifest);
 
             return (
-              <Card key={item.id} className="flex flex-col">
+              <Card key={item.id} className="flex flex-col overflow-hidden pt-0">
+                <MarketplaceItemThumbnail item={item} manifest={manifest} isTheme={isTheme} />
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
