@@ -39,8 +39,8 @@ export async function GET(req: NextRequest) {
 
   const admin = createServiceRoleClient();
   const { data: conn } = await admin
-    .from("tenant_instagram_connections" as any)
-    .select("instagram_business_account_id, page_access_token_encrypted")
+    .from("tenant_instagram_connections")
+    .select("instagram_business_account_id, page_access_token_encrypted, ig_username")
     .eq("tenant_id", tenantId)
     .maybeSingle();
 
@@ -50,24 +50,72 @@ export async function GET(req: NextRequest) {
 
   let pageToken: string;
   try {
-    pageToken = decrypt((conn as any).page_access_token_encrypted, TOKEN_KEY_ENV);
+    pageToken = decrypt(conn.page_access_token_encrypted, TOKEN_KEY_ENV);
   } catch {
     return NextResponse.json({ error: "Token decryption failed" }, { status: 500 });
   }
 
   const creds = await getMetaPlatformCredentials();
   const graphVersion = creds.graphApiVersion || "v25.0";
-  const igId = (conn as any).instagram_business_account_id;
+  const igId = conn.instagram_business_account_id;
 
-  const mediaRes = await fetch(
-    `https://graph.facebook.com/${graphVersion}/${igId}/media?fields=id,caption,media_type,media_product_type,timestamp,permalink,thumbnail_url,media_url&limit=50&access_token=${pageToken}`,
+  const profileUrl = new URL(`https://graph.facebook.com/${graphVersion}/${igId}`);
+  profileUrl.searchParams.set("fields", "id,username,profile_picture_url,name,media_count");
+  profileUrl.searchParams.set("access_token", pageToken);
+
+  const mediaUrl = new URL(`https://graph.facebook.com/${graphVersion}/${igId}/media`);
+  mediaUrl.searchParams.set(
+    "fields",
+    "id,caption,media_type,media_product_type,timestamp,permalink,thumbnail_url,media_url,children{media_type,media_url,thumbnail_url}",
   );
+  mediaUrl.searchParams.set("limit", "50");
+  mediaUrl.searchParams.set("access_token", pageToken);
 
-  if (!mediaRes.ok) {
-    const err = await mediaRes.text();
-    return NextResponse.json({ error: "Graph API error", detail: err }, { status: 502 });
+  const [profileRes, mediaRes] = await Promise.all([fetch(profileUrl, { cache: "no-store" }), fetch(mediaUrl, { cache: "no-store" })]);
+
+  const profileJson = (await profileRes.json().catch(() => ({}))) as {
+    id?: string;
+    username?: string;
+    profile_picture_url?: string;
+    name?: string;
+    media_count?: number;
+    error?: { message?: string };
+  };
+  const mediaJson = (await mediaRes.json().catch(() => ({}))) as { data?: unknown[]; error?: { message?: string } };
+
+  if (mediaJson.error) {
+    return NextResponse.json(
+      {
+        error: "Graph API error",
+        detail: mediaJson.error.message ?? JSON.stringify(mediaJson.error),
+        account: {
+          id: igId,
+          username: profileJson.username ?? conn.ig_username ?? null,
+          profile_picture_url: profileJson.profile_picture_url ?? null,
+          name: profileJson.name ?? null,
+          media_count: profileJson.media_count ?? null,
+        },
+        media: [],
+      },
+      { status: 502 },
+    );
   }
 
-  const mediaData = (await mediaRes.json()) as { data?: any[] };
-  return NextResponse.json({ media: mediaData.data ?? [] });
+  const batchLen = Array.isArray(mediaJson.data) ? mediaJson.data.length : 0;
+  const account = {
+    id: profileJson.id ?? igId,
+    username: profileJson.username ?? conn.ig_username ?? null,
+    profile_picture_url: profileJson.profile_picture_url ?? null,
+    name: profileJson.name ?? null,
+    media_count: profileJson.media_count ?? (batchLen > 0 ? batchLen : null),
+  };
+
+  if (profileJson.error && !account.username) {
+    account.username = conn.ig_username;
+  }
+
+  return NextResponse.json({
+    account,
+    media: mediaJson.data ?? [],
+  });
 }

@@ -8,8 +8,45 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, Save, Image } from "lucide-react";
+import { Plus, Trash2, Save, Image, RefreshCw, Instagram, Film, LayoutGrid } from "lucide-react";
 import { FlowBuilder } from "@/components/admin/instagram-bot/FlowBuilder";
+
+type IgMediaItem = {
+  id: string;
+  caption?: string;
+  media_type?: string;
+  media_product_type?: string;
+  permalink?: string;
+  thumbnail_url?: string;
+  media_url?: string;
+  children?: { data?: Array<{ media_url?: string; thumbnail_url?: string; media_type?: string }> };
+};
+
+type IgAccountInfo = {
+  id?: string;
+  username: string | null;
+  profile_picture_url: string | null;
+  name: string | null;
+  media_count: number | null;
+};
+
+function getMediaThumbnail(m: IgMediaItem): string | undefined {
+  if (m.thumbnail_url) return m.thumbnail_url;
+  if (m.media_type === "IMAGE" && m.media_url) return m.media_url;
+  const first = m.children?.data?.[0];
+  if (first?.thumbnail_url) return first.thumbnail_url;
+  if (first?.media_url) return first.media_url;
+  return m.media_url;
+}
+
+function mediaKindLabel(m: IgMediaItem): string {
+  const p = (m.media_product_type || "").toUpperCase();
+  if (p === "REELS") return "Reel";
+  if (p === "STORY") return "Story";
+  if (m.media_type === "CAROUSEL_ALBUM") return "Carousel";
+  if (m.media_type === "VIDEO") return "Video";
+  return "Post";
+}
 
 interface KeywordRule {
   id?: string;
@@ -30,13 +67,53 @@ export default function InstagramBotAutomations() {
   const [config, setConfig] = useState<any>(null);
   const [rules, setRules] = useState<KeywordRule[]>([]);
   const [mediaTargets, setMediaTargets] = useState<any[]>([]);
-  const [availableMedia, setAvailableMedia] = useState<any[]>([]);
+  const [availableMedia, setAvailableMedia] = useState<IgMediaItem[]>([]);
+  const [igAccount, setIgAccount] = useState<IgAccountInfo | null>(null);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [mediaLoading, setMediaLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  const loadMedia = async () => {
+    setMediaError(null);
+    setMediaLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setMediaError("Sign in required to load Instagram media.");
+        setAvailableMedia([]);
+        setIgAccount(null);
+        return;
+      }
+      const res = await fetch("/api/integrations/instagram/media", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: "no-store",
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        media?: IgMediaItem[];
+        account?: IgAccountInfo;
+        error?: string;
+        detail?: string;
+      };
+      if (!res.ok) {
+        setMediaError(typeof data.detail === "string" ? data.detail : data.error || "Could not load posts and reels.");
+        setAvailableMedia([]);
+        setIgAccount(data.account ?? null);
+        return;
+      }
+      setAvailableMedia(data.media ?? []);
+      setIgAccount(data.account ?? null);
+    } catch {
+      setMediaError("Network error loading Instagram media.");
+      setAvailableMedia([]);
+    } finally {
+      setMediaLoading(false);
+    }
+  };
 
   const fetchData = async () => {
     const { data: tid } = await supabase.rpc("get_my_tenant_id");
@@ -53,19 +130,7 @@ export default function InstagramBotAutomations() {
     setRules((rulesRes.data as any[]) ?? []);
     setMediaTargets((targetsRes.data as any[]) ?? []);
 
-    // Fetch available media from Graph
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        const res = await fetch("/api/integrations/instagram/media", {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setAvailableMedia(data.media ?? []);
-        }
-      }
-    } catch { /* ignore */ }
+    await loadMedia();
 
     setLoading(false);
   };
@@ -113,7 +178,7 @@ export default function InstagramBotAutomations() {
     toast({ title: "Keyword rules saved" });
   };
 
-  const toggleMedia = async (media: any) => {
+  const toggleMedia = async (media: IgMediaItem) => {
     if (!tenantId) return;
     const existing = mediaTargets.find((t) => t.ig_media_id === media.id);
     if (existing) {
@@ -131,6 +196,42 @@ export default function InstagramBotAutomations() {
       const { data } = await supabase.from("instagram_automation_media_targets" as any).insert(row as any).select().maybeSingle();
       if (data) setMediaTargets((t) => [...t, data]);
     }
+  };
+
+  const mediaReels = availableMedia.filter((m) => String(m.media_product_type || "").toUpperCase() === "REELS");
+  const mediaPosts = availableMedia.filter((m) => String(m.media_product_type || "").toUpperCase() !== "REELS");
+
+  const renderMediaCard = (m: IgMediaItem) => {
+    const target = mediaTargets.find((t) => t.ig_media_id === m.id);
+    const isEnabled = target?.enabled ?? false;
+    const thumb = getMediaThumbnail(m);
+    return (
+      <Card key={m.id} className={`overflow-hidden ${isEnabled ? "ring-2 ring-primary" : ""}`}>
+        <div className="aspect-square bg-muted relative">
+          {thumb ? (
+            <img src={thumb} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+            <Image className="h-10 w-10 text-muted-foreground/50" />
+            </div>
+          )}
+          <span className="absolute top-2 left-2 rounded bg-background/90 px-1.5 py-0.5 text-[10px] font-medium uppercase shadow-sm">
+            {mediaKindLabel(m)}
+          </span>
+        </div>
+        <CardContent className="py-3 space-y-2">
+          <p className="text-xs text-muted-foreground line-clamp-2 min-h-[2.5rem]">{m.caption?.trim() || "No caption"}</p>
+          <div className="flex items-center justify-between gap-2">
+            <Switch checked={isEnabled} onCheckedChange={() => toggleMedia(m)} />
+            {m.permalink && (
+              <a href={m.permalink} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline shrink-0">
+                Open on Instagram
+              </a>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   if (loading) {
@@ -248,37 +349,85 @@ export default function InstagramBotAutomations() {
           )}
         </TabsContent>
 
-        <TabsContent value="media" className="mt-4 space-y-4">
-          <p className="text-sm text-muted-foreground">Select which Posts and Reels should have comment automation enabled.</p>
-          {availableMedia.length === 0 ? (
+        <TabsContent value="media" className="mt-4 space-y-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <p className="text-sm text-muted-foreground max-w-xl">
+              Your connected Instagram account&apos;s recent posts and reels from Meta. Toggle comment automation per item (when comment rules apply).
+            </p>
+            <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => loadMedia()} disabled={mediaLoading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${mediaLoading ? "animate-spin" : ""}`} />
+              {mediaLoading ? "Refreshing…" : "Refresh"}
+            </Button>
+          </div>
+
+          {igAccount && (
             <Card>
-              <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                No media found. Connect your Instagram account first, then posts and reels will appear here.
+              <CardContent className="flex flex-wrap items-center gap-4 py-4">
+                {igAccount.profile_picture_url ? (
+                  <img
+                    src={igAccount.profile_picture_url}
+                    alt=""
+                    className="h-16 w-16 rounded-full object-cover border bg-muted"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center border">
+                    <Instagram className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-lg truncate">
+                    {igAccount.name || (igAccount.username ? `@${igAccount.username}` : "Connected Instagram")}
+                  </p>
+                  {igAccount.name && igAccount.username && (
+                    <p className="text-sm text-muted-foreground">@{igAccount.username}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {availableMedia.length} recent item{availableMedia.length === 1 ? "" : "s"} loaded (max 50)
+                  </p>
+                </div>
               </CardContent>
             </Card>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {availableMedia.map((m) => {
-                const target = mediaTargets.find((t) => t.ig_media_id === m.id);
-                const isEnabled = target?.enabled ?? false;
-                return (
-                  <Card key={m.id} className={isEnabled ? "ring-2 ring-primary" : ""}>
-                    <CardContent className="py-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Image className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-xs font-medium">{m.media_product_type || m.media_type || "Post"}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{m.caption || "No caption"}</p>
-                      <div className="flex items-center justify-between">
-                        <Switch checked={isEnabled} onCheckedChange={() => toggleMedia(m)} />
-                        {m.permalink && (
-                          <a href={m.permalink} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline">View</a>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+          )}
+
+          {mediaError && (
+            <Card className="border-destructive/50 bg-destructive/5">
+              <CardContent className="py-4 text-sm text-destructive">{mediaError}</CardContent>
+            </Card>
+          )}
+
+          {!mediaLoading && !mediaError && availableMedia.length === 0 && (
+            <Card>
+              <CardContent className="py-10 text-center text-sm text-muted-foreground space-y-2">
+                <p>No posts or reels returned from Instagram.</p>
+                <p className="text-xs">Connect the account under Setup, ensure the app has Instagram permissions, then use Refresh.</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {mediaReels.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Film className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-base font-semibold">Reels</h3>
+                <span className="text-xs text-muted-foreground">({mediaReels.length})</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {mediaReels.map(renderMediaCard)}
+              </div>
+            </div>
+          )}
+
+          {mediaPosts.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <LayoutGrid className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-base font-semibold">Posts</h3>
+                <span className="text-xs text-muted-foreground">({mediaPosts.length})</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {mediaPosts.map(renderMediaCard)}
+              </div>
             </div>
           )}
         </TabsContent>
