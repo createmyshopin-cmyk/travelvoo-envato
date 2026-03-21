@@ -4,6 +4,7 @@ import { useTenant } from "@/context/TenantContext";
 import { resolveEffectiveTenantId } from "@/lib/resolveEffectiveTenant";
 import type {
   Trip,
+  TripCustomTab,
   TripItineraryDay,
   TripDate,
   TripInclusion,
@@ -11,6 +12,20 @@ import type {
   TripVideo,
   TripReview,
 } from "@/types/trip";
+
+function parseCustomTabs(raw: unknown): TripCustomTab[] {
+  if (!Array.isArray(raw)) return [];
+  const out: TripCustomTab[] = [];
+  for (const x of raw) {
+    if (!x || typeof x !== "object") continue;
+    const o = x as Record<string, unknown>;
+    const label = typeof o.label === "string" ? o.label : "";
+    const body = typeof o.body === "string" ? o.body : "";
+    if (!label.trim() && !body.trim()) continue;
+    out.push({ label, body });
+  }
+  return out;
+}
 
 const fallbackImages = [
   "/assets/stay-1.jpg",
@@ -23,6 +38,11 @@ function mapDbTrip(row: any): Trip {
     row.images?.length > 0
       ? row.images
       : [fallbackImages[Math.floor(Math.random() * fallbackImages.length)]];
+  const legacyPickup = String(row.pickup_drop_location ?? "").trim();
+  const pickup = String(row.pickup_location ?? "").trim() || legacyPickup;
+  const drop = String(row.drop_location ?? "").trim();
+  const pickupMap = String(row.pickup_map_url ?? "").trim();
+  const dropMap = String(row.drop_map_url ?? "").trim();
   return {
     id: row.id,
     slug: row.slug,
@@ -30,7 +50,10 @@ function mapDbTrip(row: any): Trip {
     description: row.description ?? "",
     durationNights: row.duration_nights,
     durationDays: row.duration_days,
-    pickupDropLocation: row.pickup_drop_location ?? "",
+    pickupLocation: pickup,
+    dropLocation: drop,
+    pickupMapUrl: pickupMap || null,
+    dropMapUrl: dropMap || null,
     images,
     startingPrice: Number(row.starting_price),
     originalPrice: Number(row.original_price),
@@ -43,6 +66,11 @@ function mapDbTrip(row: any): Trip {
     ctaImageUrl: row.cta_image_url,
     status: row.status,
     tenantId: row.tenant_id,
+    minAdults: typeof row.min_adults === "number" ? row.min_adults : 1,
+    maxAdults: typeof row.max_adults === "number" ? row.max_adults : 20,
+    maxChildren: typeof row.max_children === "number" ? row.max_children : 10,
+    defaultAdults: typeof row.default_adults === "number" ? row.default_adults : 2,
+    customTabs: parseCustomTabs(row.custom_tabs),
   };
 }
 

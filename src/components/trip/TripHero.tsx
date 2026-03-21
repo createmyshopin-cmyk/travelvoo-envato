@@ -1,7 +1,8 @@
-import { Clock, MapPin, CalendarDays, Download, Ticket } from "lucide-react";
+import { Clock, MapPin, CalendarDays, Download, Ticket, ExternalLink } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import type { Trip, TripDate } from "@/types/trip";
 import { useCurrency } from "@/context/CurrencyContext";
+import { tripHasAnyLocation } from "@/lib/tripLocations";
 
 interface TripHeroProps {
   trip: Trip;
@@ -41,15 +42,56 @@ export default function TripHero({ trip, dates, onGetItinerary, onBookNow }: Tri
                 </div>
               </div>
 
-              {trip.pickupDropLocation && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  <div>
-                    <span className="text-xs uppercase tracking-wide block">Pickup & Drop</span>
-                    <span className="font-semibold text-foreground">
-                      {trip.pickupDropLocation}
-                    </span>
-                  </div>
+              {tripHasAnyLocation(trip) && (
+                <div className="flex flex-wrap items-start gap-x-8 gap-y-3">
+                  {(trip.pickupLocation.trim() || trip.pickupMapUrl) && (
+                    <div className="flex items-start gap-2 min-w-0 max-w-[min(100%,280px)]">
+                      <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <span className="text-xs uppercase tracking-wide block">Pickup</span>
+                        <div className="font-semibold text-foreground flex flex-wrap items-center gap-x-2 gap-y-1">
+                          {trip.pickupLocation.trim() ? (
+                            <span className="break-words">{trip.pickupLocation.trim()}</span>
+                          ) : null}
+                          {trip.pickupMapUrl ? (
+                            <a
+                              href={trip.pickupMapUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline shrink-0"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              Map
+                            </a>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {(trip.dropLocation.trim() || trip.dropMapUrl) && (
+                    <div className="flex items-start gap-2 min-w-0 max-w-[min(100%,280px)]">
+                      <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <span className="text-xs uppercase tracking-wide block">Drop</span>
+                        <div className="font-semibold text-foreground flex flex-wrap items-center gap-x-2 gap-y-1">
+                          {trip.dropLocation.trim() ? (
+                            <span className="break-words">{trip.dropLocation.trim()}</span>
+                          ) : null}
+                          {trip.dropMapUrl ? (
+                            <a
+                              href={trip.dropMapUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline shrink-0"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              Map
+                            </a>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

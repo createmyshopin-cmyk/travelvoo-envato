@@ -2,6 +2,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Clock, MapPin } from "lucide-react";
 import { useTrips } from "@/hooks/useTrips";
 import { useCurrency } from "@/context/CurrencyContext";
+import { tripHasAnyLocation, tripLocationSummary } from "@/lib/tripLocations";
 import StickyHeader from "@/components/StickyHeader";
 import Footer from "@/components/Footer";
 
@@ -65,10 +66,10 @@ const TripsListing = () => {
                         <Clock className="w-3.5 h-3.5" />
                         {trip.durationNights}N / {trip.durationDays}D
                       </span>
-                      {trip.pickupDropLocation && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5" />
-                          {trip.pickupDropLocation}
+                      {tripHasAnyLocation(trip) && (
+                        <span className="flex items-center gap-1 min-w-0">
+                          <MapPin className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{tripLocationSummary(trip) || "Map"}</span>
                         </span>
                       )}
                     </div>

@@ -5,7 +5,14 @@ export interface Trip {
   description: string;
   durationNights: number;
   durationDays: number;
-  pickupDropLocation: string;
+  /** Pickup point label */
+  pickupLocation: string;
+  /** Drop-off label */
+  dropLocation: string;
+  /** Optional map URL (e.g. Google Maps) for pickup */
+  pickupMapUrl: string | null;
+  /** Optional map URL for drop-off */
+  dropMapUrl: string | null;
   images: string[];
   startingPrice: number;
   originalPrice: number;
@@ -16,6 +23,19 @@ export interface Trip {
   ctaImageUrl: string | null;
   status: string;
   tenantId: string | null;
+  /** Booking: adult / child limits */
+  minAdults: number;
+  maxAdults: number;
+  maxChildren: number;
+  defaultAdults: number;
+  /** Extra tabs on the trip page (from trips.custom_tabs). */
+  customTabs: TripCustomTab[];
+}
+
+/** User-defined tab: label + body shown on the public trip page. */
+export interface TripCustomTab {
+  label: string;
+  body: string;
 }
 
 export interface TripItineraryDay {

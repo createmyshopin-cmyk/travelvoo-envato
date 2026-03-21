@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { Minus, Plus, CalendarDays, Users, MessageCircle, CheckCircle2, Copy, Check, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { resolveEffectiveTenantId } from "@/lib/resolveEffectiveTenant";
 import { useTenant } from "@/context/TenantContext";
 import type { Trip, TripDate } from "@/types/trip";
+import { tripHasAnyLocation, tripLocationSummary } from "@/lib/tripLocations";
 
 interface TripBookingModalProps {
   open: boolean;
@@ -43,12 +44,21 @@ const Stepper = ({ value, onChange, min = 0, max = 20, label }: { value: number;
   </div>
 );
 
+function clampInt(n: number, lo: number, hi: number) {
+  return Math.min(hi, Math.max(lo, n));
+}
+
 export default function TripBookingModal({ open, onOpenChange, trip, dates }: TripBookingModalProps) {
   const { format: fmt } = useCurrency();
   const { tenantId: contextTenantId } = useTenant();
 
+  const minAdults = Math.max(1, trip.minAdults ?? 1);
+  const maxAdults = Math.max(minAdults, trip.maxAdults ?? 20);
+  const maxChildren = Math.max(0, trip.maxChildren ?? 10);
+  const defaultAdults = clampInt(trip.defaultAdults ?? 2, minAdults, maxAdults);
+
   const [selectedDateId, setSelectedDateId] = useState<string>("");
-  const [adults, setAdults] = useState(2);
+  const [adults, setAdults] = useState(defaultAdults);
   const [children, setChildren] = useState(0);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -60,6 +70,12 @@ export default function TripBookingModal({ open, onOpenChange, trip, dates }: Tr
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [bookingRef, setBookingRef] = useState("");
   const [copiedRef, setCopiedRef] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setAdults(clampInt(trip.defaultAdults ?? 2, minAdults, maxAdults));
+    setChildren(0);
+  }, [open, trip.id, trip.defaultAdults, trip.minAdults, trip.maxAdults, minAdults, maxAdults]);
 
   const availableDates = useMemo(
     () => dates.filter((d) => d.status === "available" || d.status === "few_left"),
@@ -86,7 +102,9 @@ export default function TripBookingModal({ open, onOpenChange, trip, dates }: Tr
         errs.phone = `At least ${minDigits} digits`;
     }
     if (!selectedDateId) errs.date = "Select a trip date";
-    if (adults < 1) errs.adults = "At least 1 adult";
+    if (adults < minAdults) errs.adults = `At least ${minAdults} adult(s)`;
+    if (adults > maxAdults) errs.adults = `Maximum ${maxAdults} adult(s)`;
+    if (children > maxChildren) errs.children = `Maximum ${maxChildren} children`;
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -103,10 +121,14 @@ export default function TripBookingModal({ open, onOpenChange, trip, dates }: Tr
       ? `${format(parseISO(selectedDate.startDate), "dd MMM yyyy")} – ${format(parseISO(selectedDate.endDate), "dd MMM yyyy")}`
       : "";
 
+    const locSummary = tripLocationSummary(trip);
     const message = [
       `Trip Booking Enquiry ${ref}`,
       `Package: ${trip.name}`,
       `Dates: ${dateLabel}`,
+      locSummary ? `Pickup/Drop: ${locSummary}` : "",
+      trip.pickupMapUrl ? `Pickup map: ${trip.pickupMapUrl}` : "",
+      trip.dropMapUrl ? `Drop map: ${trip.dropMapUrl}` : "",
       `Adults: ${adults}, Children: ${children}`,
       `Quoted: ${fmt(totalPrice)}`,
       specialRequests.trim() ? `Requests: ${specialRequests.trim()}` : "",
@@ -125,6 +147,10 @@ export default function TripBookingModal({ open, onOpenChange, trip, dates }: Tr
       adults,
       children,
       booking_ref: ref,
+      pickup_location: trip.pickupLocation.trim() || null,
+      drop_location: trip.dropLocation.trim() || null,
+      pickup_map_url: trip.pickupMapUrl,
+      drop_map_url: trip.dropMapUrl,
     };
 
     const { error } = await supabase.from("leads").insert({
@@ -152,6 +178,9 @@ export default function TripBookingModal({ open, onOpenChange, trip, dates }: Tr
       `🎒 *Trip Booking Enquiry ${ref}*`,
       `📦 *Package:* ${trip.name}`,
       `📅 *Dates:* ${dateLabel}`,
+      locSummary ? `📍 *Pickup/Drop:* ${locSummary}` : "",
+      trip.pickupMapUrl ? `🗺️ *Pickup map:* ${trip.pickupMapUrl}` : "",
+      trip.dropMapUrl ? `🗺️ *Drop map:* ${trip.dropMapUrl}` : "",
       `👥 *Adults:* ${adults}  |  👶 *Children:* ${children}`,
       `💰 *Total:* ${fmt(totalPrice)}`,
       `👤 *Name:* ${name.trim()}`,
@@ -169,7 +198,7 @@ export default function TripBookingModal({ open, onOpenChange, trip, dates }: Tr
   const resetAndClose = () => {
     setShowConfirmation(false);
     setSelectedDateId("");
-    setAdults(2);
+    setAdults(defaultAdults);
     setChildren(0);
     setName("");
     setEmail("");
@@ -228,6 +257,38 @@ export default function TripBookingModal({ open, onOpenChange, trip, dates }: Tr
                 <DialogDescription>
                   Select a date batch and fill your details. We'll confirm via WhatsApp.
                 </DialogDescription>
+                {tripHasAnyLocation(trip) && (
+                  <p className="text-xs text-muted-foreground mt-2 space-y-1">
+                    {tripLocationSummary(trip) ? (
+                      <span className="block">
+                        <span className="font-medium text-foreground/80">Pickup / drop:</span>{" "}
+                        {tripLocationSummary(trip)}
+                      </span>
+                    ) : null}
+                    <span className="flex flex-wrap gap-x-3 gap-y-1">
+                      {trip.pickupMapUrl ? (
+                        <a
+                          href={trip.pickupMapUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary underline-offset-2 hover:underline"
+                        >
+                          Pickup map
+                        </a>
+                      ) : null}
+                      {trip.dropMapUrl ? (
+                        <a
+                          href={trip.dropMapUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary underline-offset-2 hover:underline"
+                        >
+                          Drop map
+                        </a>
+                      ) : null}
+                    </span>
+                  </p>
+                )}
               </DialogHeader>
 
               <div className="space-y-5 mt-4">
@@ -263,11 +324,27 @@ export default function TripBookingModal({ open, onOpenChange, trip, dates }: Tr
                   <Label className="flex items-center gap-1.5">
                     <Users className="w-4 h-4" /> Travellers
                   </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Adults {minAdults}–{maxAdults} · Children up to {maxChildren}
+                  </p>
                   <div className="flex flex-wrap gap-4">
-                    <Stepper label="Adults" value={adults} onChange={setAdults} min={1} max={20} />
-                    <Stepper label="Children" value={children} onChange={setChildren} min={0} max={10} />
+                    <Stepper
+                      label="Adults"
+                      value={adults}
+                      onChange={setAdults}
+                      min={minAdults}
+                      max={maxAdults}
+                    />
+                    <Stepper
+                      label="Children"
+                      value={children}
+                      onChange={setChildren}
+                      min={0}
+                      max={maxChildren}
+                    />
                   </div>
                   {errors.adults && <p className="text-xs text-destructive">{errors.adults}</p>}
+                  {errors.children && <p className="text-xs text-destructive">{errors.children}</p>}
                 </div>
 
                 {/* Contact */}

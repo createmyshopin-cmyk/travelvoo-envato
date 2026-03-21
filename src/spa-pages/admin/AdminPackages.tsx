@@ -24,6 +24,17 @@ interface TripRow {
   status: string;
   starting_price: number;
   pickup_drop_location: string | null;
+  pickup_location: string | null;
+  drop_location: string | null;
+}
+
+function pickupDropCell(r: TripRow): string {
+  const p = (r.pickup_location ?? "").trim();
+  const d = (r.drop_location ?? "").trim();
+  if (p && d) return `${p} → ${d}`;
+  if (p || d) return p || d;
+  const legacy = (r.pickup_drop_location ?? "").trim();
+  return legacy || "—";
 }
 
 export default function AdminPackages() {
@@ -38,7 +49,7 @@ export default function AdminPackages() {
     const { data: tenantId } = await supabase.rpc("get_my_tenant_id");
 
     let q = (supabase.from("trips") as any)
-      .select("id, slug, name, status, starting_price, pickup_drop_location")
+      .select("id, slug, name, status, starting_price, pickup_drop_location, pickup_location, drop_location")
       .order("created_at", { ascending: false });
 
     if (tenantId != null) {
@@ -119,7 +130,7 @@ export default function AdminPackages() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Slug</TableHead>
-                  <TableHead>Pickup</TableHead>
+                  <TableHead>Pickup / drop</TableHead>
                   <TableHead className="text-right">From</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[180px] text-right">Actions</TableHead>
@@ -130,8 +141,8 @@ export default function AdminPackages() {
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.name}</TableCell>
                     <TableCell className="font-mono text-xs">{r.slug}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {r.pickup_drop_location || "—"}
+                    <TableCell className="text-muted-foreground text-sm max-w-[220px] truncate" title={pickupDropCell(r)}>
+                      {pickupDropCell(r)}
                     </TableCell>
                     <TableCell className="text-right">{fmt(Number(r.starting_price))}</TableCell>
                     <TableCell>

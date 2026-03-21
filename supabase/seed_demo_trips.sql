@@ -1,5 +1,5 @@
 -- Demo trip: Coorg Backpacking Trip (mirrors the TripperTrails reference)
--- Run after 20260321150000_trips_packages.sql migration
+-- Run after migrations: 20260321150000_trips_packages + 20260322140000_trips_pickup_drop_maps
 
 DO $$
 DECLARE
@@ -9,7 +9,9 @@ BEGIN
 -- Insert the trip (tenant_id = NULL for platform demo)
 INSERT INTO public.trips (
   slug, name, description, duration_nights, duration_days,
-  pickup_drop_location, images,
+  pickup_drop_location,
+  pickup_location, drop_location, pickup_map_url, drop_map_url,
+  images,
   starting_price, original_price, discount_label,
   cancellation_policy,
   cta_heading, cta_subheading, cta_image_url,
@@ -19,7 +21,11 @@ INSERT INTO public.trips (
   'Coorg Backpacking Trip: Scenic Adventure',
   'Experience the stunning beauty of Coorg with our backpacking trip. Hike through lush coffee estates, explore magnificent waterfalls, visit ancient monasteries, and create memories that last a lifetime.',
   1, 2,
+  'Bangalore → Coorg',
   'Bangalore',
+  'Coorg',
+  'https://www.google.com/maps/search/?api=1&query=Majestic%20Bus%20Stand%20Bengaluru',
+  NULL,
   ARRAY[
     '/assets/stay-1.jpg',
     '/assets/stay-2.jpg',

@@ -97,6 +97,7 @@ const TripDetails = () => {
               dates={dates}
               inclusions={inclusions}
               otherInfo={otherInfo}
+              customTabs={trip.customTabs}
             />
           </div>
 
