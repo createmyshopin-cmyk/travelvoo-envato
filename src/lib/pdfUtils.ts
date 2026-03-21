@@ -1,9 +1,61 @@
 import jsPDF from "jspdf";
 import { format } from "date-fns";
-import { formatMoneyAmount, getStoredCurrencyCode } from "@/lib/currency";
+import { getStoredCurrencyCode, type PlatformCurrencyCode } from "@/lib/currency";
 
-function fmtMoney(n: number) {
-  return formatMoneyAmount(n, getStoredCurrencyCode());
+/**
+ * jsPDF built-in fonts only support WinAnsi — Unicode currency symbols (₹, €) render as wrong glyphs
+ * and break kerning. Use ASCII-only labels for PDF output.
+ */
+function formatMoneyForPdf(amount: number): string {
+  const code: PlatformCurrencyCode = typeof window !== "undefined" ? getStoredCurrencyCode() : "INR";
+  const sign = amount < 0 ? "-" : "";
+  const val = Math.abs(Math.round(amount));
+  const locale = code === "INR" ? "en-IN" : code === "EUR" ? "de-DE" : code === "GBP" ? "en-GB" : "en-US";
+  const num = val.toLocaleString(locale, { maximumFractionDigits: 0, useGrouping: true });
+  switch (code) {
+    case "INR":
+      return `${sign}Rs. ${num}`;
+    case "USD":
+      return `${sign}$${num}`;
+    case "EUR":
+      return `${sign}EUR ${num}`;
+    case "GBP":
+      return `${sign}GBP ${num}`;
+    default:
+      return `${sign}${num}`;
+  }
+}
+
+/** Prefer sums from rooms/addons JSON so PDF matches line items when DB totals are stale. */
+function resolveTotalsForPdf(data: {
+  rooms?: unknown;
+  addons?: unknown;
+  room_total?: number;
+  addons_total?: number;
+  discount?: number;
+  total_price?: number;
+}) {
+  const rooms = (data.rooms || []) as { price?: number; qty?: number; count?: number }[];
+  const addons = (data.addons || []) as { price?: number }[];
+  const roomQty = (r: { qty?: number; count?: number }) => Number(r.qty) || Number(r.count) || 1;
+  const roomSum = rooms.reduce((s, r) => s + (Number(r.price) || 0) * roomQty(r), 0);
+  const addonSum = addons.reduce((s, a) => s + (Number(a.price) || 0), 0);
+  const discount = Number(data.discount) || 0;
+  const hasLines = rooms.length > 0 || addons.length > 0;
+  if (hasLines) {
+    return {
+      room_total: roomSum,
+      addons_total: addonSum,
+      discount,
+      total_price: Math.max(0, roomSum + addonSum - discount),
+    };
+  }
+  return {
+    room_total: Number(data.room_total) || 0,
+    addons_total: Number(data.addons_total) || 0,
+    discount,
+    total_price: Number(data.total_price) || 0,
+  };
 }
 
 function addHeader(doc: jsPDF, title: string, docId: string) {
@@ -31,10 +83,11 @@ function addField(doc: jsPDF, label: string, value: string, x: number, y: number
   doc.text(label, x, y);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(value || "—", x, y + 5);
+  doc.text(value || "-", x, y + 5);
 }
 
 function addPriceSummary(doc: jsPDF, data: any, startY: number) {
+  const t = resolveTotalsForPdf(data);
   let y = startY;
   doc.setDrawColor(200);
   doc.line(20, y, 190, y);
@@ -45,13 +98,14 @@ function addPriceSummary(doc: jsPDF, data: any, startY: number) {
   doc.text("Price Summary", 20, y);
   y += 10;
 
-  const rows = [
-    ["Room Total", fmtMoney(data.room_total || 0)],
-    ["Add-ons", fmtMoney(data.addons_total || 0)],
-    ["Discount", formatMoneyAmount(-(data.discount || 0), getStoredCurrencyCode())],
+  const rows: [string, string][] = [
+    ["Room Total", formatMoneyForPdf(t.room_total)],
+    ["Add-ons", formatMoneyForPdf(t.addons_total)],
+    ["Discount", formatMoneyForPdf(-t.discount)],
   ];
 
   doc.setFontSize(10);
+  doc.setCharSpace(0);
   rows.forEach(([label, val]) => {
     doc.setFont("helvetica", "normal");
     doc.text(label, 20, y);
@@ -66,7 +120,7 @@ function addPriceSummary(doc: jsPDF, data: any, startY: number) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
   doc.text("Total", 20, y);
-  doc.text(fmtMoney(data.total_price || 0), 190, y, { align: "right" });
+  doc.text(formatMoneyForPdf(t.total_price), 190, y, { align: "right" });
 
   return y + 15;
 }
@@ -82,8 +136,8 @@ export function generateQuotationPdf(q: any, stayName: string) {
   addField(doc, "Stay", stayName, 20, y);
   addField(doc, "Status", q.status?.toUpperCase(), 110, y);
   y += 16;
-  addField(doc, "Check-in", q.checkin ? format(new Date(q.checkin), "dd MMM yyyy") : "—", 20, y);
-  addField(doc, "Check-out", q.checkout ? format(new Date(q.checkout), "dd MMM yyyy") : "—", 110, y);
+  addField(doc, "Check-in", q.checkin ? format(new Date(q.checkin), "dd MMM yyyy") : "-", 20, y);
+  addField(doc, "Check-out", q.checkout ? format(new Date(q.checkout), "dd MMM yyyy") : "-", 110, y);
   y += 16;
 
   // Rooms
@@ -96,7 +150,9 @@ export function generateQuotationPdf(q: any, stayName: string) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     rooms.forEach((r: any) => {
-      doc.text(`• ${r.name || "Room"} × ${r.qty || 1} — ${fmtMoney(r.price || 0)}`, 24, y);
+      const qn = Number(r.qty) || Number(r.count) || 1;
+      const line = (Number(r.price) || 0) * qn;
+      doc.text(`- ${r.name || "Room"} x ${qn} - ${formatMoneyForPdf(line)}`, 24, y);
       y += 6;
     });
     y += 4;
@@ -112,7 +168,7 @@ export function generateQuotationPdf(q: any, stayName: string) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     addons.forEach((a: any) => {
-      doc.text(`• ${a.name || "Add-on"} — ${fmtMoney(a.price || 0)}`, 24, y);
+      doc.text(`- ${a.name || "Add-on"} - ${formatMoneyForPdf(Number(a.price) || 0)}`, 24, y);
       y += 6;
     });
     y += 4;
@@ -149,8 +205,8 @@ export function generateInvoicePdf(inv: any, stayName: string) {
   addField(doc, "Stay", stayName, 20, y);
   addField(doc, "Payment Status", inv.payment_status?.toUpperCase()?.replace("_", " "), 110, y);
   y += 16;
-  addField(doc, "Check-in", inv.checkin ? format(new Date(inv.checkin), "dd MMM yyyy") : "—", 20, y);
-  addField(doc, "Check-out", inv.checkout ? format(new Date(inv.checkout), "dd MMM yyyy") : "—", 110, y);
+  addField(doc, "Check-in", inv.checkin ? format(new Date(inv.checkin), "dd MMM yyyy") : "-", 20, y);
+  addField(doc, "Check-out", inv.checkout ? format(new Date(inv.checkout), "dd MMM yyyy") : "-", 110, y);
   y += 16;
   addField(doc, "Date", format(new Date(inv.created_at), "dd MMM yyyy"), 20, y);
   if (inv.coupon_code) addField(doc, "Coupon", inv.coupon_code, 110, y);
@@ -165,7 +221,9 @@ export function generateInvoicePdf(inv: any, stayName: string) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     rooms.forEach((r: any) => {
-      doc.text(`• ${r.name || "Room"} × ${r.qty || 1} — ${fmtMoney(r.price || 0)}`, 24, y);
+      const qn = Number(r.qty) || Number(r.count) || 1;
+      const line = (Number(r.price) || 0) * qn;
+      doc.text(`- ${r.name || "Room"} x ${qn} - ${formatMoneyForPdf(line)}`, 24, y);
       y += 6;
     });
     y += 4;
@@ -180,7 +238,7 @@ export function generateInvoicePdf(inv: any, stayName: string) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     addons.forEach((a: any) => {
-      doc.text(`• ${a.name || "Add-on"} — ${fmtMoney(a.price || 0)}`, 24, y);
+      doc.text(`- ${a.name || "Add-on"} - ${formatMoneyForPdf(Number(a.price) || 0)}`, 24, y);
       y += 6;
     });
     y += 4;

@@ -1,6 +1,7 @@
 "use client";
 
 import MaintenancePage from "@/components/MaintenancePage";
+import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 import { LandingThemeProvider } from "@/components/LandingThemeProvider";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 
@@ -16,6 +17,7 @@ export function PublicMaintenanceGate({ children }: { children: React.ReactNode 
   return (
     <LandingThemeProvider landingThemeSlug={settings?.landing_theme_slug} themeTokens={settings?.theme_tokens ?? undefined}>
       {children}
+      <FloatingWhatsApp />
     </LandingThemeProvider>
   );
 }

@@ -252,6 +252,19 @@ export default function AdminCalendar() {
   const getPricingForDate = (dateStr: string) => pricing.find(p => p.date === dateStr);
   const getBookingForDate = (dateStr: string) => bookings.find(b => b.checkin <= dateStr && b.checkout > dateStr);
 
+  /** Calendar cell price: DB row or weekday/weekend default from room base price. */
+  const getEffectivePriceForDate = useCallback(
+    (dateStr: string) => {
+      const entry = pricing.find(p => p.date === dateStr);
+      if (entry) return entry.price;
+      const day = new Date(dateStr + "T12:00:00");
+      const basePrice =
+        rooms.length > 0 ? (selectedRoom !== "all" ? rooms.find((r) => r.id === selectedRoom)?.price : rooms[0]?.price) ?? 0 : 0;
+      return basePrice ? getDefaultPrice(day, basePrice) : 0;
+    },
+    [pricing, rooms, selectedRoom]
+  );
+
   const cooldownDates = useMemo(() => {
     const dates = new Set<string>();
     for (const b of bookings) {
@@ -302,7 +315,7 @@ export default function AdminCalendar() {
     const occupancy = monthDays.length > 0 ? Math.round((bookedDays / monthDays.length) * 100) : 0;
 
     return { pricedDays, blockedDays, bookedDays, avgPrice, occupancy, totalDays: monthDays.length };
-  }, [currentDate, pricing, bookings]);
+  }, [currentDate, pricing, bookings, rooms, selectedRoom]);
 
   // ── Navigation ────────────────────────────────────────────────────────
 
@@ -351,6 +364,32 @@ export default function AdminCalendar() {
     }
   };
 
+  // When bulk dialog opens, sync toggle + fields from DB (blocked state, cooldown, etc.)
+  const selectedDatesKey = useMemo(() => Array.from(selectedDates).sort().join(","), [selectedDates]);
+
+  useEffect(() => {
+    if (!bulkDialogOpen || selectedDates.size === 0) return;
+    const sorted = Array.from(selectedDates).sort();
+    const first = sorted[0];
+    const e = pricing.find((p) => p.date === first);
+    const blockedFlags = sorted.map((ds) => !!pricing.find((p) => p.date === ds)?.is_blocked);
+    const allBlocked = blockedFlags.length > 0 && blockedFlags.every(Boolean);
+    setBulkBlocked(allBlocked);
+    setBulkPrice("");
+    setBulkAvailability(e && e.available != null ? String(e.available) : "");
+    setBulkMinNights(e?.min_nights != null ? String(e.min_nights) : "1");
+    setBulkCooldownMinutes(e?.cooldown_minutes != null && e.cooldown_minutes !== undefined ? String(e.cooldown_minutes) : "");
+  }, [bulkDialogOpen, selectedDatesKey, pricing]);
+
+  const bulkCurrentPriceLabel = useMemo(() => {
+    if (!bulkDialogOpen || !selectedDatesKey) return "";
+    const sorted = selectedDatesKey.split(",").filter(Boolean);
+    const prices = sorted.map((ds) => getEffectivePriceForDate(ds));
+    const uniq = [...new Set(prices)];
+    if (uniq.length === 1) return formatMoney(uniq[0]);
+    return `${sorted.length} dates - ${uniq.map((p) => formatMoney(p)).join(", ")}`;
+  }, [bulkDialogOpen, selectedDatesKey, getEffectivePriceForDate, formatMoney]);
+
   // ── Bulk Save ─────────────────────────────────────────────────────────
 
   const saveBulkPricing = async () => {
@@ -362,18 +401,39 @@ export default function AdminCalendar() {
 
     const dates = Array.from(selectedDates);
     const roomId = selectedRoom === "all" ? null : selectedRoom;
+    const defaultAvail =
+      selectedRoom !== "all"
+        ? rooms.find((r) => r.id === selectedRoom)?.available ?? 1
+        : rooms.reduce((s, r) => s + (r.available || 0), 0) || rooms[0]?.available || 1;
 
     for (const dateStr of dates) {
       const existing = getPricingForDate(dateStr);
-      const updates: any = { stay_id: selectedStay, date: dateStr, room_category_id: roomId };
+      const effective = getEffectivePriceForDate(dateStr);
+      const updates: any = {};
       if (bulkPrice) updates.price = parseInt(bulkPrice, 10);
-      if (bulkAvailability) updates.available = parseInt(bulkAvailability, 10);
+      if (bulkAvailability !== "") updates.available = parseInt(bulkAvailability, 10);
       if (bulkMinNights) updates.min_nights = parseInt(bulkMinNights, 10);
       updates.is_blocked = bulkBlocked;
       updates.cooldown_minutes = bulkCooldownMinutes !== "" ? parseInt(bulkCooldownMinutes, 10) : null;
 
-      if (existing) await supabase.from("calendar_pricing").update(updates).eq("id", existing.id);
-      else { updates.original_price = updates.price || 0; if (tenantId) updates.tenant_id = tenantId; await supabase.from("calendar_pricing").insert(updates); }
+      if (existing) {
+        await supabase.from("calendar_pricing").update(updates).eq("id", existing.id);
+      } else {
+        const price = bulkPrice ? parseInt(bulkPrice, 10) : effective;
+        const insertRow: any = {
+          stay_id: selectedStay,
+          date: dateStr,
+          room_category_id: roomId,
+          price,
+          original_price: price,
+          min_nights: bulkMinNights ? parseInt(bulkMinNights, 10) || 1 : 1,
+          available: bulkAvailability !== "" ? parseInt(bulkAvailability, 10) : defaultAvail,
+          is_blocked: bulkBlocked,
+          cooldown_minutes: bulkCooldownMinutes !== "" ? parseInt(bulkCooldownMinutes, 10) : null,
+        };
+        if (tenantId) insertRow.tenant_id = tenantId;
+        await supabase.from("calendar_pricing").insert(insertRow);
+      }
     }
 
     toast({ title: "Pricing updated", description: `Updated ${dates.length} date${dates.length > 1 ? "s" : ""}.` });
@@ -797,7 +857,12 @@ export default function AdminCalendar() {
           <div className="space-y-3">
             <div>
               <Label className="text-xs">Price ({symbol})</Label>
-              <Input type="number" min={100} max={100000} value={bulkPrice} onChange={e => setBulkPrice(e.target.value)} placeholder="Keep current" className="h-9" />
+              {bulkCurrentPriceLabel && (
+                <p className="text-[10px] text-muted-foreground mb-1">
+                  Current: <span className="font-medium text-foreground">{bulkCurrentPriceLabel}</span>
+                </p>
+              )}
+              <Input type="number" min={100} max={100000} value={bulkPrice} onChange={e => setBulkPrice(e.target.value)} placeholder="Leave blank to keep current" className="h-9" />
               {bulkPrice && validatePrice(bulkPrice) === null && (
                 <p className="text-[10px] text-destructive mt-0.5">Must be {formatMoney(100)} – {formatMoney(100000)}</p>
               )}
