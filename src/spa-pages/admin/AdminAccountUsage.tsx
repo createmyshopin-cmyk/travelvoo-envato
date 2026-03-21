@@ -15,7 +15,7 @@ const AdminAccountUsage = () => {
     const { data: tenantId } = await supabase.rpc("get_my_tenant_id");
     const { data: t } = tenantId ? await supabase.from("tenants").select("*").eq("id", tenantId).single() : { data: null };
     if (t) {
-      const { data: u } = await supabase.from("tenant_usage").select("*").eq("tenant_id", t.id).single();
+      const { data: u } = await supabase.from("tenant_usage").select("*").eq("tenant_id", t.id).maybeSingle();
       setUsage(u);
       if (t.plan_id) {
         const { data: p } = await supabase.from("plans").select("*").eq("id", t.plan_id).single();

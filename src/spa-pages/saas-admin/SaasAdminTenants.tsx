@@ -237,7 +237,7 @@ const SaasAdminTenants = () => {
   const upgradePlan = async (tenantId: string, planId: string) => {
     await supabase.from("tenants").update({ plan_id: planId }).eq("id", tenantId);
     // Update subscription too
-    const { data: sub } = await supabase.from("subscriptions").select("id").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(1).single();
+    const { data: sub } = await supabase.from("subscriptions").select("id").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (sub) {
       await supabase.from("subscriptions").update({ plan_id: planId, status: "active" }).eq("id", sub.id);
     }
@@ -256,7 +256,7 @@ const SaasAdminTenants = () => {
   const extendTrial = async (tenantId: string) => {
     const newRenewal = new Date();
     newRenewal.setDate(newRenewal.getDate() + 3);
-    const { data: sub } = await supabase.from("subscriptions").select("id").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(1).single();
+    const { data: sub } = await supabase.from("subscriptions").select("id").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (sub) {
       await supabase.from("subscriptions").update({
         status: "trial",

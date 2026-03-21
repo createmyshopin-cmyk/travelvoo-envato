@@ -35,7 +35,7 @@ export function useSubscriptionGuard(): SubscriptionStatus {
   const check = async () => {
     const { data: tenantIdFromRpc } = await supabase.rpc("get_my_tenant_id");
     if (!tenantIdFromRpc) { setState((s) => ({ ...s, loading: false })); return; }
-    const { data: tenant } = await supabase.from("tenants").select("*").eq("id", tenantIdFromRpc).single();
+    const { data: tenant } = await supabase.from("tenants").select("*").eq("id", tenantIdFromRpc).maybeSingle();
     if (!tenant) { setState((s) => ({ ...s, loading: false })); return; }
 
     setTenantId(tenant.id);
@@ -46,17 +46,17 @@ export function useSubscriptionGuard(): SubscriptionStatus {
       .eq("tenant_id", tenant.id)
       .order("created_at", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     const { data: plan } = tenant.plan_id
-      ? await supabase.from("plans").select("*").eq("id", tenant.plan_id).single()
+      ? await supabase.from("plans").select("*").eq("id", tenant.plan_id).maybeSingle()
       : { data: null };
 
     const { data: usage } = await supabase
       .from("tenant_usage")
       .select("*")
       .eq("tenant_id", tenant.id)
-      .single();
+      .maybeSingle();
 
     let daysRemaining: number | null = null;
     if (sub?.renewal_date) {

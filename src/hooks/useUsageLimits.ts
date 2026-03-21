@@ -39,14 +39,14 @@ export function useUsageLimits(): UsageLimits {
   const fetch = useCallback(async () => {
     const { data: myTenantId } = await supabase.rpc("get_my_tenant_id");
     if (!myTenantId) { setLoading(false); return; }
-    const { data: tenant } = await supabase.from("tenants").select("id, plan_id").eq("id", myTenantId).single();
+    const { data: tenant } = await supabase.from("tenants").select("id, plan_id").eq("id", myTenantId).maybeSingle();
     if (!tenant) { setLoading(false); return; }
     setTenantId(tenant.id);
 
     const [{ data: u }, { data: plan }] = await Promise.all([
-      supabase.from("tenant_usage").select("*").eq("tenant_id", tenant.id).single(),
+      supabase.from("tenant_usage").select("*").eq("tenant_id", tenant.id).maybeSingle(),
       tenant.plan_id
-        ? supabase.from("plans").select("max_stays, max_rooms, max_bookings_per_month, max_ai_search").eq("id", tenant.plan_id).single()
+        ? supabase.from("plans").select("max_stays, max_rooms, max_bookings_per_month, max_ai_search").eq("id", tenant.plan_id).maybeSingle()
         : Promise.resolve({ data: null }),
     ]);
 
