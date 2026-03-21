@@ -85,9 +85,75 @@ export function FlowBuilder({ tenantId }: { tenantId: string }) {
     [setNodes],
   );
 
+  const deleteNode = useCallback(
+    (nodeId: string) => {
+      setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+      setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    },
+    [setNodes, setEdges],
+  );
+
+  const duplicateNode = useCallback(
+    (nodeId: string) => {
+      const newId = crypto.randomUUID();
+      setNodes((nds) => {
+        const n = nds.find((x) => x.id === nodeId);
+        if (!n) return nds;
+        const strip = (d: Record<string, unknown> | undefined) => {
+          if (!d) return {};
+          const { updateNode: _u, deleteNode: _d, duplicateNode: _dup, _heatCount: _h, ...rest } = d;
+          return rest;
+        };
+        const copy: Node = {
+          ...n,
+          id: newId,
+          position: { x: (n.position?.x ?? 0) + 56, y: (n.position?.y ?? 0) + 56 },
+          data: strip(n.data as Record<string, unknown>) as Record<string, unknown>,
+        };
+        return [...nds, copy];
+      });
+      setEdges((eds) => {
+        const extra: Edge[] = [];
+        for (const e of eds) {
+          if (e.source === nodeId && e.target === nodeId) {
+            extra.push({
+              ...e,
+              id: `e-${newId}-${newId}-${crypto.randomUUID().slice(0, 8)}`,
+              source: newId,
+              target: newId,
+            });
+          } else if (e.source === nodeId) {
+            extra.push({
+              ...e,
+              id: `e-${newId}-${e.target}-${crypto.randomUUID().slice(0, 8)}`,
+              source: newId,
+            });
+          } else if (e.target === nodeId) {
+            extra.push({
+              ...e,
+              id: `e-${e.source}-${newId}-${crypto.randomUUID().slice(0, 8)}`,
+              target: newId,
+            });
+          }
+        }
+        return [...eds, ...extra];
+      });
+    },
+    [setNodes, setEdges],
+  );
+
   const nodesForCanvas = useMemo(
-    () => nodes.map((n) => ({ ...n, data: { ...n.data, updateNode } })),
-    [nodes, updateNode],
+    () =>
+      nodes.map((n) => ({
+        ...n,
+        data: {
+          ...n.data,
+          updateNode,
+          deleteNode,
+          duplicateNode,
+        },
+      })),
+    [nodes, updateNode, deleteNode, duplicateNode],
   );
 
   const loadFlows = useCallback(async () => {

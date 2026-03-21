@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { NodeChrome } from "./NodeChrome";
 
 export type ConditionNodeData = {
   conditionType?: string;
@@ -18,6 +19,8 @@ export type ConditionNodeData = {
   window_end?: string;
   window_days?: string;
   updateNode?: (id: string, patch: Record<string, unknown>) => void;
+  deleteNode?: (id: string) => void;
+  duplicateNode?: (id: string) => void;
 };
 
 export function ConditionNode({ id, data }: NodeProps) {
@@ -26,13 +29,19 @@ export function ConditionNode({ id, data }: NodeProps) {
   const heat = typeof d._heatCount === "number" && d._heatCount > 0 ? d._heatCount : null;
 
   return (
-    <div className="relative rounded-lg border border-amber-500/40 bg-card px-3 py-2 shadow-md min-w-[220px] max-w-[280px]">
-      {heat != null ? (
-        <div className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white shadow">
-          {heat}
-        </div>
-      ) : null}
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">Condition</div>
+    <NodeChrome
+      onDuplicate={d.duplicateNode ? () => d.duplicateNode!(id) : undefined}
+      onDelete={d.deleteNode ? () => d.deleteNode!(id) : undefined}
+    >
+      <div
+        className={`relative rounded-lg border border-amber-500/40 bg-card px-3 py-2 shadow-md min-w-[220px] max-w-[280px] ${d.duplicateNode || d.deleteNode ? "pt-6" : "pt-2"}`}
+      >
+        {heat != null ? (
+          <div className="absolute -left-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white shadow z-[5]">
+            {heat}
+          </div>
+        ) : null}
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">Condition</div>
       <Label className="text-[10px] text-muted-foreground">Type</Label>
       <Select value={conditionType} onValueChange={(v) => d.updateNode?.(id, { conditionType: v })}>
         <SelectTrigger className="mt-1 h-7 text-xs">
@@ -139,21 +148,22 @@ export function ConditionNode({ id, data }: NodeProps) {
         </div>
       )}
 
-      <Handle type="target" position={Position.Left} className="!size-2 !bg-amber-500" />
-      <Handle
-        id="yes"
-        type="source"
-        position={Position.Right}
-        className="!size-2 !bg-green-500"
-        style={{ top: "35%" }}
-      />
-      <Handle
-        id="no"
-        type="source"
-        position={Position.Right}
-        className="!size-2 !bg-red-400"
-        style={{ top: "70%" }}
-      />
-    </div>
+        <Handle type="target" position={Position.Left} className="!size-2 !bg-amber-500" />
+        <Handle
+          id="yes"
+          type="source"
+          position={Position.Right}
+          className="!size-2 !bg-green-500"
+          style={{ top: "35%" }}
+        />
+        <Handle
+          id="no"
+          type="source"
+          position={Position.Right}
+          className="!size-2 !bg-red-400"
+          style={{ top: "70%" }}
+        />
+      </div>
+    </NodeChrome>
   );
 }
