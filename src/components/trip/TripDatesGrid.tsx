@@ -7,43 +7,83 @@ interface TripDatesGridProps {
   dates: TripDate[];
 }
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-  available: { label: "Available", color: "bg-green-100 text-green-700" },
-  few_left: { label: "Few Left", color: "bg-orange-100 text-orange-700" },
-  sold_out: { label: "Sold Out", color: "bg-red-100 text-red-700" },
+const statusConfig: Record<
+  TripDate["status"],
+  { label: string; badge: string }
+> = {
+  available: {
+    label: "Available",
+    badge:
+      "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200/80 dark:bg-emerald-950/50 dark:text-emerald-200 dark:ring-emerald-800/60",
+  },
+  few_left: {
+    label: "Few left",
+    badge:
+      "bg-amber-50 text-amber-900 ring-1 ring-amber-200/80 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-800/50",
+  },
+  sold_out: {
+    label: "Sold out",
+    badge:
+      "bg-rose-50 text-rose-800 ring-1 ring-rose-200/80 dark:bg-rose-950/40 dark:text-rose-200 dark:ring-rose-800/50",
+  },
 };
 
 export default function TripDatesGrid({ dates }: TripDatesGridProps) {
   const { format: fmt } = useCurrency();
 
   if (dates.length === 0) {
-    return <p className="text-muted-foreground text-sm">No upcoming dates available.</p>;
+    return <p className="text-sm text-muted-foreground">No upcoming dates available.</p>;
   }
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold text-foreground mb-6">Dates</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="w-full">
+      <h2 className="mb-5 text-xl font-bold tracking-tight text-foreground sm:text-2xl">Dates</h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {dates.map((d) => {
           const cfg = statusConfig[d.status] ?? statusConfig.available;
+          const soldOut = d.status === "sold_out";
           return (
             <div
               key={d.id}
               className={cn(
-                "border rounded-xl p-4 transition-shadow hover:shadow-md",
-                d.status === "sold_out" && "opacity-60"
+                "flex min-h-[168px] flex-col rounded-xl border border-border/90 bg-card p-4 shadow-sm transition-shadow hover:shadow-md",
+                soldOut && "opacity-65"
               )}
             >
-              <span className={cn("inline-block px-2.5 py-0.5 rounded-md text-xs font-semibold mb-3", cfg.color)}>
+              <span
+                className={cn(
+                  "inline-flex w-fit shrink-0 items-center rounded-full px-3 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+                  cfg.badge
+                )}
+              >
                 {cfg.label}
               </span>
-              <p className="font-semibold text-foreground text-sm">
-                {format(parseISO(d.startDate), "EEE MMM dd yyyy")} -{" "}
+
+              <p
+                className={cn(
+                  "my-4 flex flex-1 items-center justify-center px-1 text-center text-sm font-bold leading-snug text-foreground sm:text-[15px]",
+                  soldOut && "line-through decoration-2 decoration-muted-foreground/50"
+                )}
+              >
+                {format(parseISO(d.startDate), "EEE MMM dd yyyy")}
+                <span className="mx-1.5 font-normal text-muted-foreground">–</span>
                 {format(parseISO(d.endDate), "EEE MMM dd yyyy")}
               </p>
-              <div className="mt-3 border rounded-lg px-3 py-2 inline-block">
-                <span className="text-xs text-muted-foreground block">Starting Price:</span>
-                <span className="text-sm font-bold text-primary">{fmt(d.price)} /-</span>
+
+              <div
+                className={cn(
+                  "mt-auto w-full rounded-lg border-2 border-violet-200 bg-violet-50/40 px-3 py-2.5 text-center dark:border-violet-500/35 dark:bg-violet-950/25",
+                  soldOut && "border-border bg-muted/30 dark:bg-muted/20"
+                )}
+              >
+                <span
+                  className={cn(
+                    "text-sm font-semibold text-violet-700 dark:text-violet-300",
+                    soldOut && "text-muted-foreground line-through"
+                  )}
+                >
+                  Starting Price: {fmt(d.price)} /-
+                </span>
               </div>
             </div>
           );
