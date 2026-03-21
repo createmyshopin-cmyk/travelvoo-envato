@@ -448,7 +448,10 @@ const SaasAdminSettings = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Meta App ID</Label>
-              <Input value={meta.metaAppId} onChange={(e) => setMeta((m) => ({ ...m, metaAppId: e.target.value }))} className="mt-1 font-mono text-xs" placeholder="123456789012345" />
+              <p className="text-xs text-muted-foreground mt-0.5 mb-1">
+                Use the <strong>Facebook App ID</strong> (App Dashboard → Settings → Basic, or the ID in the app header). Do not use the separate &quot;Instagram app ID&quot; from the Instagram product card — OAuth will fail.
+              </p>
+              <Input value={meta.metaAppId} onChange={(e) => setMeta((m) => ({ ...m, metaAppId: e.target.value }))} className="mt-1 font-mono text-xs" placeholder="Facebook App ID (not Instagram app ID)" />
             </div>
             <div>
               <Label>App Secret {meta.hasSecret && <span className="text-xs text-green-600 ml-1">(saved)</span>}</Label>
