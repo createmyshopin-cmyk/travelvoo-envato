@@ -10,6 +10,7 @@ import { checkSenderFollowsBusinessAccount } from "@/lib/instagram-follower";
 import { followerFollowsToPlanValue } from "@/lib/instagram-follower-check";
 import { sendInstagramMessagesWithHostFallback } from "@/lib/instagram-graph-host";
 import { buildRecipientConnectionOrClause, extractInboundDmBody } from "@/lib/instagram-webhook-inbound";
+import { parseMetaWebhookJson } from "@/lib/meta-webhook-json";
 
 const TOKEN_KEY_ENV = "INSTAGRAM_TOKEN_ENCRYPTION_KEY";
 
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
 
   let payload: any;
   try {
-    payload = JSON.parse(rawBody);
+    payload = parseMetaWebhookJson(rawBody) as any;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -252,8 +253,8 @@ async function handleMessaging(
   start: number,
   ctx?: { entryId?: string },
 ) {
-  const senderId = event.sender?.id;
-  const recipientId = event.recipient?.id;
+  const senderId = event.sender?.id != null ? String(event.sender.id) : "";
+  const recipientId = event.recipient?.id != null ? String(event.recipient.id) : "";
   const message = event.message;
 
   if (!senderId || !recipientId) {

@@ -295,6 +295,7 @@ Regenerate types: [`src/integrations/supabase/types.ts`](../src/integrations/sup
 - Confirm the Instagram **Instagram Business Account id** (or Page id) Meta sends as **recipient** matches the row stored at OAuth time.
 - **Graph Send API host**: **Instagram Login** (OAuth on instagram.com) stores an Instagram user token — outbound replies use **`graph.instagram.com/{version}/me/messages`**; **Facebook Login + Page** uses **`graph.facebook.com`**. The handler picks the host from `tenant_instagram_connections` and retries once on token/host mismatch (same idea as the media API).
 - **Inbound shape**: Meta can send **text**, **attachments only** (image/sticker/reel — no `message.text`), or events under **`entry.standby`** (handover). The webhook now treats attachment-only DMs and merges **`messaging` + `standby`** so those still create activity rows when eligible.
+- **ID precision**: Graph / Instagram IDs are often **17+ digits**. If Meta sends them as JSON **numbers**, plain `JSON.parse` rounds them (JavaScript `Number` limit) and **tenant lookup fails** (`no tenant_instagram_connections for recipient id`). The webhook parses the raw body with [`parseMetaWebhookJson`](../src/lib/meta-webhook-json.ts) so `sender.id` / `recipient.id` / `entry.id` stay exact strings.
 
 ## Risk / scope notes
 
