@@ -29,7 +29,7 @@ const themeTokensSchema = z
   });
 
 export const themeManifestSchema = z.object({
-  preset: z.enum(["default", "ocean", "sunset", "forest"]),
+  preset: z.enum(["default", "ocean", "sunset", "forest", "plannet"]),
   layout: landingLayoutSchema.optional(),
   tokens: themeTokensSchema,
 });
@@ -113,6 +113,7 @@ export function presetLabel(p: LandingThemePreset): string {
     ocean: "Ocean",
     sunset: "Sunset",
     forest: "Forest",
+    plannet: "Plannet",
   };
   return map[p];
 }

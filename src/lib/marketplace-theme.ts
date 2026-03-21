@@ -15,13 +15,14 @@ export const ALLOWED_LANDING_THEME_VARS = [
   "--radius",
 ] as const;
 
-export type LandingThemePreset = "default" | "ocean" | "sunset" | "forest";
+export type LandingThemePreset = "default" | "ocean" | "sunset" | "forest" | "plannet";
 
 export const LANDING_THEME_PRESET_CLASS: Record<LandingThemePreset, string> = {
   default: "",
   ocean: "landing-theme-ocean",
   sunset: "landing-theme-sunset",
   forest: "landing-theme-forest",
+  plannet: "landing-theme-plannet",
 };
 
 /** Optional preset tweaks (merged under allowlist). */
@@ -38,10 +39,24 @@ const PRESET_TOKEN_HINTS: Partial<Record<LandingThemePreset, Record<string, stri
     "--primary": "142 71% 35%",
     "--secondary": "160 84% 28%",
   },
+  /** Resort-style green, black, and white (palette inspired by luxury nature properties). */
+  plannet: {
+    "--background": "40 20% 98%",
+    "--foreground": "160 22% 9%",
+    "--primary": "152 42% 28%",
+    "--primary-foreground": "0 0% 99%",
+    "--secondary": "160 24% 14%",
+    "--secondary-foreground": "0 0% 98%",
+    "--muted": "150 18% 93%",
+    "--muted-foreground": "150 10% 38%",
+    "--accent": "142 32% 88%",
+    "--accent-foreground": "152 38% 18%",
+    "--radius": "0.5rem",
+  },
 };
 
 export function isLandingThemePreset(s: string | null | undefined): s is LandingThemePreset {
-  return s === "default" || s === "ocean" || s === "sunset" || s === "forest";
+  return s === "default" || s === "ocean" || s === "sunset" || s === "forest" || s === "plannet";
 }
 
 export function normalizeThemeTokens(raw: Json | null | undefined): Record<string, string> {

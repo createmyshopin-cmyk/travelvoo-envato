@@ -1,4 +1,4 @@
-import { LayoutDashboard, Building2, CalendarCheck, Settings, Tag, Star, LogOut, DoorOpen, FileText, Receipt, User, Globe, BarChart3, CreditCard, ChevronDown, CalendarDays, Clapperboard, BookOpen, ImageIcon, Search, Lock, UserPlus, Store } from "lucide-react";
+import { LayoutDashboard, Building2, CalendarCheck, Settings, Tag, Star, LogOut, DoorOpen, FileText, Receipt, User, Globe, BarChart3, CreditCard, ChevronDown, CalendarDays, Clapperboard, BookOpen, ImageIcon, Search, Lock, UserPlus, Store, Palette } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -165,6 +165,15 @@ export function AdminSidebar({ onSignOut }: AdminSidebarProps) {
                         {isLocked("/admin/marketplace") && <Lock className="ml-auto h-3 w-3 text-muted-foreground/60" />}
                       </>
                     )}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/admin/theme")}>
+                  <NavLink to="/admin/theme" end className="hover:bg-muted/50" activeClassName="bg-muted text-primary font-medium">
+                    <Palette className="mr-2 h-4 w-4" />
+                    {!collapsed && <span>Theme</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>

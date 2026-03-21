@@ -4,7 +4,7 @@
 
 Defined in `src/lib/marketplace-theme.ts`:
 
-- `default`, `ocean`, `sunset`, `forest`
+- `default`, `ocean`, `sunset`, `forest`, `plannet` (resort green / monochrome)
 
 Each preset maps to a CSS class on the landing shell (`LANDING_THEME_PRESET_CLASS`) plus optional preset token hints merged with DB `theme_tokens`.
 

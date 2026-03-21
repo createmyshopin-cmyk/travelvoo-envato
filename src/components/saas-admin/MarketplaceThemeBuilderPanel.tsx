@@ -182,7 +182,7 @@ export function MarketplaceThemeBuilderPanel({ existingSlugs, onSaved }: Props) 
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(["default", "ocean", "sunset", "forest"] as const).map((p) => (
+                  {(["default", "ocean", "sunset", "forest", "plannet"] as const).map((p) => (
                     <SelectItem key={p} value={p}>
                       {presetLabel(p)}
                     </SelectItem>
