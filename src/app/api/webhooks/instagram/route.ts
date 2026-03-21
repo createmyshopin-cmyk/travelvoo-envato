@@ -8,6 +8,8 @@ import { decrypt } from "@/lib/encryption";
 import { evaluateFlowDefinition, type FlowDefinition, type FlowVisit } from "@/lib/flow-engine";
 import { checkSenderFollowsBusinessAccount } from "@/lib/instagram-follower";
 import { followerFollowsToPlanValue } from "@/lib/instagram-follower-check";
+import { sendInstagramMessagesWithHostFallback } from "@/lib/instagram-graph-host";
+import { buildRecipientConnectionOrClause, extractInboundDmBody } from "@/lib/instagram-webhook-inbound";
 
 const TOKEN_KEY_ENV = "INSTAGRAM_TOKEN_ENCRYPTION_KEY";
 
@@ -220,14 +222,19 @@ async function loadKeywordRulesAction(
 }
 
 async function processWebhook(payload: any, creds: any, start: number) {
+  const obj = payload?.object;
+  if (obj && obj !== "page" && obj !== "instagram") {
+    console.warn("[instagram-webhook] Unexpected payload.object (still processing entry.messaging)", obj);
+  }
+
   const sb = createServiceRoleClient();
   const entries = payload?.entry ?? [];
 
   for (const entry of entries) {
-    // DM / messaging events
-    const messagingEvents = entry.messaging ?? [];
+    // DM: primary thread + standby (handover — non-primary app receives standby only)
+    const messagingEvents = [...(entry.messaging ?? []), ...(entry.standby ?? [])];
     for (const event of messagingEvents) {
-      await handleMessaging(sb, event, creds, start);
+      await handleMessaging(sb, event, creds, start, { entryId: entry.id });
     }
 
     // Comment / changes events (Phase 2 — stub)
@@ -238,26 +245,40 @@ async function processWebhook(payload: any, creds: any, start: number) {
   }
 }
 
-async function handleMessaging(sb: any, event: any, creds: any, start: number) {
+async function handleMessaging(
+  sb: any,
+  event: any,
+  creds: any,
+  start: number,
+  ctx?: { entryId?: string },
+) {
   const senderId = event.sender?.id;
   const recipientId = event.recipient?.id;
   const message = event.message;
 
-  if (!senderId || !recipientId || !message?.text) {
-    console.warn("[instagram-webhook] DM skipped: missing sender, recipient, or text");
-    return;
-  }
-  const mid = message.mid;
-  if (!mid) {
-    console.warn("[instagram-webhook] DM skipped: no message mid");
+  if (!senderId || !recipientId) {
+    console.warn("[instagram-webhook] DM skipped: missing sender or recipient");
     return;
   }
 
-  // Resolve tenant by recipient IG business account id or page id
+  if (!message) {
+    return;
+  }
+
+  const inbound = extractInboundDmBody(message);
+  if (!inbound) {
+    if (!message.is_echo) {
+      console.warn("[instagram-webhook] DM skipped: no text/attachments or mid (unsupported message shape)");
+    }
+    return;
+  }
+  const { text: inboundText, mid } = inbound;
+
+  // Resolve tenant by recipient IG business account id or page id (optional entry.id fallback)
   const { data: conn } = await sb
     .from("tenant_instagram_connections")
     .select("tenant_id, page_access_token_encrypted, facebook_page_id, instagram_business_account_id")
-    .or(`instagram_business_account_id.eq.${recipientId},facebook_page_id.eq.${recipientId}`)
+    .or(buildRecipientConnectionOrClause(recipientId, ctx?.entryId))
     .maybeSingle();
 
   if (!conn) {
@@ -326,7 +347,7 @@ async function handleMessaging(sb: any, event: any, creds: any, start: number) {
     sb,
     conn.tenant_id,
     "dm",
-    message.text,
+    inboundText,
     senderId,
     conn,
     graphVersion,
@@ -345,7 +366,7 @@ async function handleMessaging(sb: any, event: any, creds: any, start: number) {
   let url = flowHit.action?.url ?? "";
 
   if (!flowHit.action) {
-    const kr = await loadKeywordRulesAction(sb, conn.tenant_id, "dm", message.text);
+    const kr = await loadKeywordRulesAction(sb, conn.tenant_id, "dm", inboundText);
     if (kr) {
       action = kr.action;
       templateText = kr.template_text;
@@ -361,8 +382,7 @@ async function handleMessaging(sb: any, event: any, creds: any, start: number) {
     return;
   }
 
-  const sendUrl = `https://graph.facebook.com/${graphVersion}/me/messages`;
-  const inboundPreview = message.text ? String(message.text).slice(0, 500) : "";
+  const inboundPreview = inboundText.slice(0, 500);
   const activityBase = {
     tenant_id: conn.tenant_id,
     channel: "dm",
@@ -418,15 +438,11 @@ async function handleMessaging(sb: any, event: any, creds: any, start: number) {
       }
     }
 
-    const sendRes = await fetch(sendUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        recipient: { id: senderId },
-        message: { text: bodyText },
-        messaging_type: "RESPONSE",
-        access_token: pageToken,
-      }),
+    const sendRes = await sendInstagramMessagesWithHostFallback(conn, graphVersion, {
+      recipient: { id: senderId },
+      message: { text: bodyText },
+      messaging_type: "RESPONSE",
+      access_token: pageToken,
     });
     if (!sendRes.ok) {
       console.error("[instagram-webhook] Send failed:", sendRes.status, await sendRes.text());
@@ -446,17 +462,13 @@ async function handleMessaging(sb: any, event: any, creds: any, start: number) {
   const systemPrompt = aiSettings?.system_prompt || "You are a helpful travel assistant.";
   const model = aiSettings?.ai_model || process.env.INSTAGRAM_DM_MODEL || "gpt-4o-mini";
 
-  const aiResult = await generateDmReply(message.text, systemPrompt, { model });
+  const aiResult = await generateDmReply(inboundText, systemPrompt, { model });
 
-  const sendRes = await fetch(sendUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      recipient: { id: senderId },
-      message: { text: aiResult.reply },
-      messaging_type: "RESPONSE",
-      access_token: pageToken,
-    }),
+  const sendRes = await sendInstagramMessagesWithHostFallback(conn, graphVersion, {
+    recipient: { id: senderId },
+    message: { text: aiResult.reply },
+    messaging_type: "RESPONSE",
+    access_token: pageToken,
   });
 
   if (!sendRes.ok) {
@@ -475,7 +487,7 @@ async function handleMessaging(sb: any, event: any, creds: any, start: number) {
         full_name: aiResult.extractedFields.full_name || null,
         phone: aiResult.extractedFields.phone || null,
         email: aiResult.extractedFields.email || null,
-        message: aiResult.extractedFields.message || message.text,
+        message: aiResult.extractedFields.message || inboundText,
         meta: { sender_ig_id: senderId, mid },
       })
       .select("id")

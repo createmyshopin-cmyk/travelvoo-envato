@@ -15,6 +15,44 @@ export function resolveInstagramGraphHost(conn: {
     : "https://graph.facebook.com";
 }
 
+/** Send API: Instagram Login tokens must call `graph.instagram.com`; Page tokens use `graph.facebook.com`. */
+export function resolveInstagramSendMessagesUrl(
+  conn: { facebook_page_id: string; instagram_business_account_id: string },
+  graphVersion: string,
+): string {
+  const host = resolveInstagramGraphHost(conn);
+  return `${host}/${graphVersion}/me/messages`;
+}
+
+/** POST Send API with one retry on the alternate host if the token does not match the first host. */
+export async function sendInstagramMessagesWithHostFallback(
+  conn: { facebook_page_id: string; instagram_business_account_id: string },
+  graphVersion: string,
+  payload: Record<string, unknown>,
+): Promise<Response> {
+  const primary = resolveInstagramSendMessagesUrl(conn, graphVersion);
+  let res = await fetch(primary, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) return res;
+  const errText = await res.text();
+  if (!isLikelyWrongGraphHostTokenError(errText)) {
+    return new Response(errText, { status: res.status, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  }
+  const alternateHost =
+    resolveInstagramGraphHost(conn) === "https://graph.instagram.com"
+      ? "https://graph.facebook.com"
+      : "https://graph.instagram.com";
+  const altUrl = `${alternateHost}/${graphVersion}/me/messages`;
+  return fetch(altUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
 export function isLikelyWrongGraphHostTokenError(message: string | undefined): boolean {
   if (!message) return false;
   const m = message.toLowerCase();

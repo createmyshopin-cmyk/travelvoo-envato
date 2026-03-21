@@ -293,6 +293,8 @@ Regenerate types: [`src/integrations/supabase/types.ts`](../src/integrations/sup
 - Meta must **POST** to your **deployed** webhook URL (HTTPS). Local `npm run dev` does not receive Meta traffic unless you use a tunnel and register that URL in the Meta app.
 - The preview only shows rows **after** the webhook finishes handling the DM (it reads `instagram_channel_activity`). If nothing is inserted, check **host logs** (e.g. Vercel) for warnings prefixed with **`[instagram-webhook]`**: no matching `tenant_instagram_connections` for `recipient.id`, **entitlement** (plugin not installed / expired), **duplicate** `message_mid`, **automation master** disabled, or **DM channel** disabled in `instagram_automation_config.settings`.
 - Confirm the Instagram **Instagram Business Account id** (or Page id) Meta sends as **recipient** matches the row stored at OAuth time.
+- **Graph Send API host**: **Instagram Login** (OAuth on instagram.com) stores an Instagram user token — outbound replies use **`graph.instagram.com/{version}/me/messages`**; **Facebook Login + Page** uses **`graph.facebook.com`**. The handler picks the host from `tenant_instagram_connections` and retries once on token/host mismatch (same idea as the media API).
+- **Inbound shape**: Meta can send **text**, **attachments only** (image/sticker/reel — no `message.text`), or events under **`entry.standby`** (handover). The webhook now treats attachment-only DMs and merges **`messaging` + `standby`** so those still create activity rows when eligible.
 
 ## Risk / scope notes
 
