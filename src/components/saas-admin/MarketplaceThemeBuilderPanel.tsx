@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { useMarketplaceAiStatus } from "@/hooks/useMarketplaceAiStatus";
 import { ALLOWED_LANDING_THEME_VARS } from "@/lib/marketplace-theme";
 import { presetLabel, safeValidateThemeManifest, type ThemeManifest } from "@/lib/marketplace-manifest";
 import { Sparkles } from "lucide-react";
@@ -20,6 +21,7 @@ type Props = {
 };
 
 export function MarketplaceThemeBuilderPanel({ existingSlugs, onSaved }: Props) {
+  const { enabled: aiEnabled, loading: aiStatusLoading } = useMarketplaceAiStatus();
   const [slug, setSlug] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -48,6 +50,7 @@ export function MarketplaceThemeBuilderPanel({ existingSlugs, onSaved }: Props) 
   };
 
   const suggestAi = async () => {
+    if (!aiEnabled) return;
     setAiBusy(true);
     try {
       const { data: session } = await supabase.auth.getSession();
@@ -61,12 +64,23 @@ export function MarketplaceThemeBuilderPanel({ existingSlugs, onSaved }: Props) 
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ brief: description || name || "modern travel landing", type: "theme" }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as { error?: string; code?: string; manifest?: ThemeManifest };
       if (!res.ok) {
-        toast({ title: "AI unavailable", description: data.error || res.statusText, variant: "destructive" });
+        const isConfig = data.code === "AI_DISABLED" || res.status === 503;
+        toast({
+          title: isConfig ? "AI assist not configured" : "AI request failed",
+          description: isConfig
+            ? "Set OPENAI_API_KEY in .env.local (restart dev server) or your hosting env. See docs/OPENAI_SETUP.md."
+            : data.error || res.statusText,
+          variant: isConfig ? "default" : "destructive",
+        });
         return;
       }
-      const m = data.manifest as ThemeManifest;
+      const m = data.manifest;
+      if (!m) {
+        toast({ title: "AI response incomplete", variant: "destructive" });
+        return;
+      }
       if (m.preset) setPreset(m.preset);
       if (m.layout) setLayout(m.layout);
       if (m.tokens && typeof m.tokens === "object") {
@@ -254,14 +268,33 @@ export function MarketplaceThemeBuilderPanel({ existingSlugs, onSaved }: Props) 
             <Label htmlFor="theme-pub">Published</Label>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" onClick={suggestAi} disabled={aiBusy}>
-              <Sparkles className="h-4 w-4 mr-1" />
-              {aiBusy ? "Suggesting…" : "AI suggest"}
-            </Button>
-            <Button type="button" onClick={save} disabled={saving}>
-              {saving ? "Saving…" : "Save to catalog"}
-            </Button>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={suggestAi}
+                disabled={aiBusy || aiStatusLoading || !aiEnabled}
+                title={
+                  !aiStatusLoading && !aiEnabled
+                    ? "Set OPENAI_API_KEY on the server (docs/OPENAI_SETUP.md)"
+                    : undefined
+                }
+              >
+                <Sparkles className="h-4 w-4 mr-1" />
+                {aiStatusLoading ? "…" : aiBusy ? "Suggesting…" : "AI suggest"}
+              </Button>
+              <Button type="button" onClick={save} disabled={saving}>
+                {saving ? "Saving…" : "Save to catalog"}
+              </Button>
+            </div>
+            {!aiStatusLoading && !aiEnabled && (
+              <p className="text-xs text-muted-foreground max-w-md">
+                AI assist is disabled until <code className="rounded bg-muted px-1 py-0.5 text-[10px]">OPENAI_API_KEY</code> is set
+                in <code className="rounded bg-muted px-1 py-0.5 text-[10px]">.env.local</code> (restart <code className="text-[10px]">next dev</code>) or your
+                host env. See <span className="font-medium">docs/OPENAI_SETUP.md</span>.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

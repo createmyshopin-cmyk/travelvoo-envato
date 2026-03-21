@@ -14,6 +14,10 @@ Copy from `.env.local.example`:
 
 Send `Authorization: Bearer <Supabase access token>` for a user with `super_admin` role.
 
+## Status (UI)
+
+`GET /api/saas-admin/marketplace/ai-status` with the same `Authorization` header returns `{ "enabled": true | false }` depending on whether `OPENAI_API_KEY` is set on the server. The Theme/Plugin Builder uses this to disable **AI suggest** and show setup hints instead of a red error toast.
+
 ## Request body
 
 ```json
