@@ -77,7 +77,7 @@ export async function POST(req: Request) {
       ? `You output ONLY valid JSON for a landing theme manifest with keys: preset (one of: default, ocean, sunset, forest, plannet), tokens (object with only CSS variable keys from this allowlist: --primary, --primary-foreground, --secondary, --secondary-foreground, --background, --foreground, --muted, --muted-foreground, --accent, --accent-foreground, --radius — values are HSL components like "199 89% 48%" without hsl() wrapper), layout (default or heroImmersive). No markdown.`
       : `You output ONLY valid JSON for a plugin manifest with keys: plugin_key (one of: ${REGISTERED_PLUGIN_KEYS.join(
           ", "
-        )}), settings (object matching the plugin — whatsapp_widget: phone string E.164, optional label; extra_footer_links: links array of {title, href}; demo_widget: optional title string), optional doc_url (https URL).${pluginHint} No markdown.`;
+        )}), settings (object matching the plugin — whatsapp_widget: phone string E.164, optional label; extra_footer_links: links array of {title, href}; demo_widget: optional title string; instagram_dm_leads: optional default_model string e.g. "gpt-4o-mini"), optional doc_url (https URL).${pluginHint} No markdown.`;
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",

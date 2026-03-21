@@ -9,6 +9,7 @@ export const REGISTERED_PLUGIN_KEYS = [
   "whatsapp_widget",
   "extra_footer_links",
   "demo_widget",
+  "instagram_dm_leads",
 ] as const;
 
 export type RegisteredPluginKey = (typeof REGISTERED_PLUGIN_KEYS)[number];
@@ -54,6 +55,10 @@ const demoWidgetSettings = z.object({
   title: z.string().max(120).optional(),
 });
 
+const instagramDmLeadsSettings = z.object({
+  default_model: z.string().max(60).optional(),
+});
+
 export const pluginManifestSchema = z.discriminatedUnion("plugin_key", [
   z.object({
     plugin_key: z.literal("whatsapp_widget"),
@@ -68,6 +73,11 @@ export const pluginManifestSchema = z.discriminatedUnion("plugin_key", [
   z.object({
     plugin_key: z.literal("demo_widget"),
     settings: demoWidgetSettings.optional(),
+    doc_url: z.union([z.string().url().max(2000), z.literal("")]).optional(),
+  }),
+  z.object({
+    plugin_key: z.literal("instagram_dm_leads"),
+    settings: instagramDmLeadsSettings.optional(),
     doc_url: z.union([z.string().url().max(2000), z.literal("")]).optional(),
   }),
 ]);
@@ -102,6 +112,8 @@ export function defaultPluginSettings(key: RegisteredPluginKey): Record<string, 
       return { links: [] };
     case "demo_widget":
       return { title: "Demo" };
+    case "instagram_dm_leads":
+      return { default_model: "gpt-4o-mini" };
     default:
       return {};
   }

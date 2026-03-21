@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, DoorOpen, CalendarCheck, IndianRupee, Store, Lock } from "lucide-react";
+import { Building2, DoorOpen, CalendarCheck, IndianRupee, Store, Lock, Instagram } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -26,6 +26,8 @@ export default function AdminDashboard() {
   const marketplaceEnabled = !!(plan?.feature_flags as Record<string, boolean> | undefined)?.marketplace;
   const [stats, setStats] = useState<Stats>({ totalStays: 0, totalRooms: 0, totalBookings: 0, estimatedRevenue: 0 });
   const [mpInstallCount, setMpInstallCount] = useState<number | null>(null);
+  const [igDmCount, setIgDmCount] = useState<number | null>(null);
+  const [igConnected, setIgConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
   const [roomData, setRoomData] = useState<any[]>([]);
@@ -104,6 +106,21 @@ export default function AdminDashboard() {
           .eq("tenant_id", tenantId)
           .eq("status", "installed");
         setMpInstallCount(count ?? 0);
+
+        // Instagram Bot stats
+        const { data: igConn } = await supabase
+          .from("tenant_instagram_connections" as any)
+          .select("id")
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+        setIgConnected(!!igConn);
+
+        const { count: dmCount } = await supabase
+          .from("instagram_channel_activity" as any)
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .eq("channel", "dm");
+        setIgDmCount(dmCount ?? 0);
       } else {
         setMpInstallCount(null);
       }
@@ -171,6 +188,32 @@ export default function AdminDashboard() {
               <span className="font-semibold text-foreground">{mpInstallCount}</span> installed item
               {mpInstallCount === 1 ? "" : "s"}
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {igDmCount !== null && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Instagram className="h-4 w-4 text-pink-500" />
+              Instagram Bot
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={() => router.push("/admin/instagram-bot")}>
+              Open
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <div>
+                <span className="font-semibold text-foreground">{igDmCount}</span>
+                <span className="text-sm text-muted-foreground ml-1">DMs processed</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className={`h-2.5 w-2.5 rounded-full ${igConnected ? "bg-green-500" : "bg-muted-foreground"}`} />
+                <span className="text-xs text-muted-foreground">{igConnected ? "Connected" : "Not connected"}</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

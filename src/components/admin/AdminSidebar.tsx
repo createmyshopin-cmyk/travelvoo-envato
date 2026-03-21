@@ -1,4 +1,4 @@
-import { LayoutDashboard, Building2, CalendarCheck, Settings, Tag, Star, LogOut, DoorOpen, FileText, Receipt, User, Globe, BarChart3, CreditCard, ChevronDown, CalendarDays, Clapperboard, BookOpen, ImageIcon, Search, Lock, UserPlus, Store, Palette, Package } from "lucide-react";
+import { LayoutDashboard, Building2, CalendarCheck, Settings, Tag, Star, LogOut, DoorOpen, FileText, Receipt, User, Globe, BarChart3, CreditCard, ChevronDown, CalendarDays, Clapperboard, BookOpen, ImageIcon, Search, Lock, UserPlus, Store, Palette, Package, Instagram } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -55,6 +55,13 @@ const settingsSubItems = [
 const marketplaceSubItems = [
   { title: "Catalog", url: "/admin/marketplace", icon: Store },
   { title: "Theme", url: "/admin/theme", icon: Palette },
+];
+
+const instagramBotSubItems = [
+  { title: "Overview", url: "/admin/instagram-bot", icon: BarChart3 },
+  { title: "Automations", url: "/admin/instagram-bot/automations", icon: Settings },
+  { title: "Analytics", url: "/admin/instagram-bot/analytics", icon: BarChart3 },
+  { title: "Setup", url: "/admin/instagram-bot/setup", icon: Instagram },
 ];
 
 const accountItems = [
@@ -219,6 +226,7 @@ export function AdminSidebar({ onSignOut }: AdminSidebarProps) {
             <SidebarMenu>
               <SubMenu label="Settings" icon={Settings} items={settingsSubItems} collapsed={collapsed} />
               <SubMenu label="Marketplace" icon={Store} items={marketplaceSubItems} collapsed={collapsed} />
+              <SubMenu label="Instagram Bot" icon={Instagram} items={instagramBotSubItems} collapsed={collapsed} />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

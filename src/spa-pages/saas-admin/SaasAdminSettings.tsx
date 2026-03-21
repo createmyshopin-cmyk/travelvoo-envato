@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { dispatchPlatformCurrencyChange, useCurrency } from "@/context/CurrencyContext";
-import { Settings, Shield, Globe, Mail, CreditCard, Clock, Save, Building2, Server, Copy, CheckCheck } from "lucide-react";
+import { Settings, Shield, Globe, Mail, CreditCard, Clock, Save, Building2, Server, Copy, CheckCheck, Instagram } from "lucide-react";
 
 /** Keys in `saas_platform_settings` for the General + Trial + Security cards (single source of truth in DB). */
 const GENERAL_SETTING_KEYS = [
@@ -101,6 +101,8 @@ const SaasAdminSettings = () => {
   });
   const [plans, setPlans] = useState<any[]>([]);
   const [entriSaving, setEntriSaving] = useState(false);
+  const [metaSaving, setMetaSaving] = useState(false);
+  const [meta, setMeta] = useState({ metaAppId: "", metaAppSecret: "", webhookVerifyToken: "", graphApiVersion: "v21.0", oauthRedirectUri: "", hasSecret: false });
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -156,6 +158,17 @@ const SaasAdminSettings = () => {
         );
       } catch { /* ignore */ }
     }
+    // Fetch Meta platform credentials
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        const mRes = await fetch("/api/saas-admin/meta-credentials", { headers: { Authorization: `Bearer ${session.access_token}` } });
+        if (mRes.ok) {
+          const mc = await mRes.json();
+          setMeta((m) => ({ ...m, metaAppId: mc.meta_app_id || "", webhookVerifyToken: mc.webhook_verify_token || "", graphApiVersion: mc.graph_api_version || "v21.0", oauthRedirectUri: mc.oauth_redirect_uri || "", hasSecret: !!mc.has_secret }));
+        }
+      }
+    } catch { /* ignore */ }
     setLoading(false);
   };
 
@@ -215,6 +228,32 @@ const SaasAdminSettings = () => {
       toast({ title: "Error saving settings", description: err.message, variant: "destructive" });
     }
     setEntriSaving(false);
+  };
+
+  const saveMetaCredentials = async () => {
+    setMetaSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Not authenticated");
+      const payload: Record<string, string> = {
+        meta_app_id: meta.metaAppId,
+        webhook_verify_token: meta.webhookVerifyToken,
+        graph_api_version: meta.graphApiVersion,
+        oauth_redirect_uri: meta.oauthRedirectUri,
+      };
+      if (meta.metaAppSecret) payload.app_secret = meta.metaAppSecret;
+      const res = await fetch("/api/saas-admin/meta-credentials", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Failed"); }
+      setMeta((m) => ({ ...m, metaAppSecret: "", hasSecret: !!meta.metaAppSecret || m.hasSecret }));
+      toast({ title: "Meta credentials saved" });
+    } catch (err: any) {
+      toast({ title: "Error saving Meta credentials", description: err.message, variant: "destructive" });
+    }
+    setMetaSaving(false);
   };
 
   const update = <K extends keyof typeof settings>(key: K, value: (typeof settings)[K]) =>
@@ -393,6 +432,50 @@ const SaasAdminSettings = () => {
             <span className={`text-xs font-medium px-2 py-1 rounded ${settings.smtpConfigured ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
               {settings.smtpConfigured ? "Connected" : "Not Configured"}
             </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Meta / Instagram API */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Instagram className="h-5 w-5 text-pink-500" /> Meta / Instagram API</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Platform-level Facebook app credentials for Instagram DM automation. Only super admins can view or edit.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label>Meta App ID</Label>
+              <Input value={meta.metaAppId} onChange={(e) => setMeta((m) => ({ ...m, metaAppId: e.target.value }))} className="mt-1 font-mono text-xs" placeholder="123456789012345" />
+            </div>
+            <div>
+              <Label>App Secret {meta.hasSecret && <span className="text-xs text-green-600 ml-1">(saved)</span>}</Label>
+              <Input type="password" value={meta.metaAppSecret} onChange={(e) => setMeta((m) => ({ ...m, metaAppSecret: e.target.value }))} className="mt-1 font-mono text-xs" placeholder={meta.hasSecret ? "Leave blank to keep current" : "Enter Meta App Secret"} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label>Webhook Verify Token</Label>
+              <Input value={meta.webhookVerifyToken} onChange={(e) => setMeta((m) => ({ ...m, webhookVerifyToken: e.target.value }))} className="mt-1 font-mono text-xs" placeholder="my_verify_token_123" />
+            </div>
+            <div>
+              <Label>Graph API Version</Label>
+              <Input value={meta.graphApiVersion} onChange={(e) => setMeta((m) => ({ ...m, graphApiVersion: e.target.value }))} className="mt-1 font-mono text-xs" placeholder="v21.0" />
+            </div>
+          </div>
+          <div>
+            <Label>OAuth Redirect URI</Label>
+            <Input value={meta.oauthRedirectUri} onChange={(e) => setMeta((m) => ({ ...m, oauthRedirectUri: e.target.value }))} className="mt-1 font-mono text-xs" placeholder="https://yourdomain.com/api/integrations/instagram/callback" />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className={`text-xs font-medium px-2 py-1 rounded ${meta.metaAppId && meta.hasSecret ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
+              {meta.metaAppId && meta.hasSecret ? "Configured" : "Not Configured"}
+            </span>
+            <Button size="sm" onClick={saveMetaCredentials} disabled={metaSaving}>
+              <Save className="w-3 h-3 mr-1" />{metaSaving ? "Saving..." : "Save Meta Credentials"}
+            </Button>
           </div>
         </CardContent>
       </Card>

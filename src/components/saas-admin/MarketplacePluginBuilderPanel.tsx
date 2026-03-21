@@ -40,6 +40,7 @@ export function MarketplacePluginBuilderPanel({ existingSlugs, onSaved }: Props)
   const [waLabel, setWaLabel] = useState("Chat on WhatsApp");
   const [footerLinks, setFooterLinks] = useState<{ title: string; href: string }[]>([{ title: "", href: "" }]);
   const [demoTitle, setDemoTitle] = useState("");
+  const [igModel, setIgModel] = useState("gpt-4o-mini");
 
   const [aiBusy, setAiBusy] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -60,6 +61,13 @@ export function MarketplacePluginBuilderPanel({ existingSlugs, onSaved }: Props)
       return {
         plugin_key: "extra_footer_links" as const,
         settings: { links },
+        ...(doc_url ? { doc_url } : {}),
+      };
+    }
+    if (pluginKey === "instagram_dm_leads") {
+      return {
+        plugin_key: "instagram_dm_leads" as const,
+        settings: igModel.trim() ? { default_model: igModel.trim() } : {},
         ...(doc_url ? { doc_url } : {}),
       };
     }
@@ -128,6 +136,7 @@ export function MarketplacePluginBuilderPanel({ existingSlugs, onSaved }: Props)
         );
       }
       if (m.plugin_key === "demo_widget" && s.title) setDemoTitle(String(s.title));
+      if (m.plugin_key === "instagram_dm_leads" && s.default_model) setIgModel(String(s.default_model));
       toast({ title: "Manifest filled", description: "Review and save." });
     } finally {
       setAiBusy(false);
@@ -289,6 +298,14 @@ export function MarketplacePluginBuilderPanel({ existingSlugs, onSaved }: Props)
           <div>
             <Label>Widget title</Label>
             <Input className="mt-1" value={demoTitle} onChange={(e) => setDemoTitle(e.target.value)} placeholder="Optional" />
+          </div>
+        )}
+
+        {pluginKey === "instagram_dm_leads" && (
+          <div>
+            <Label>Default AI Model</Label>
+            <Input className="mt-1" value={igModel} onChange={(e) => setIgModel(e.target.value)} placeholder="gpt-4o-mini" />
+            <p className="text-xs text-muted-foreground mt-1">OpenAI model for DM replies. Tenants configure automation via their dashboard after install.</p>
           </div>
         )}
 
