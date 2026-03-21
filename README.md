@@ -67,3 +67,9 @@ vercel link --scope create-my-shop-s-projects --project stayfinder-2026
 ```
 
 This creates a local **`.vercel/`** folder (gitignored) so `vercel env pull`, `vercel deploy`, etc. target the right project.
+
+### Framework preset (Next.js, not Vite)
+
+This repo is **Next.js** (`next` in `package.json`). The root **`vercel.json`** sets `"framework": "nextjs"` so deployments use the Next builder.
+
+If the dashboard still shows **Vite**: **Project → Settings → General** → **Framework Preset** → choose **Next.js** → Save. Clear any **Output Directory** override left over from Vite (e.g. `dist`); Next.js on Vercel does not use that.
