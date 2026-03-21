@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Instagram, Facebook, MessageCircle } from "lucide-react";
 import { useBranding } from "@/context/BrandingContext";
 
@@ -49,11 +50,21 @@ const Footer = () => {
         <div>
           <h4 className="text-sm font-bold text-foreground mb-3">Quick Links</h4>
           <div className="flex flex-col gap-2">
-            {["Home", "Stays", "Categories", "Contact"].map((link) => (
-              <a key={link} href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors w-fit">
-                {link}
-              </a>
-            ))}
+            <Link href="/" className="text-sm text-muted-foreground hover:text-primary transition-colors w-fit">
+              Home
+            </Link>
+            <Link href="/stays" className="text-sm text-muted-foreground hover:text-primary transition-colors w-fit">
+              Stays
+            </Link>
+            <Link href="/trips" className="text-sm text-muted-foreground hover:text-primary transition-colors w-fit">
+              Trips
+            </Link>
+            <Link href="/privacy-policy" className="text-sm text-muted-foreground hover:text-primary transition-colors w-fit">
+              Privacy Policy
+            </Link>
+            <a href="#footer" className="text-sm text-muted-foreground hover:text-primary transition-colors w-fit">
+              Contact
+            </a>
           </div>
         </div>
 
