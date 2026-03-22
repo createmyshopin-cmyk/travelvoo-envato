@@ -42,6 +42,7 @@ export function isLocalOrPreviewHostname(hostname: string): boolean {
   const h = hostname.toLowerCase();
   return (
     h === "localhost" ||
+    h === "127.0.0.1" ||
     h.includes("lovable.app") ||
     h.includes("lovableproject.com") ||
     h.includes("vercel.app")

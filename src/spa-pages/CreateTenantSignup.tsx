@@ -279,7 +279,7 @@ const CreateTenantSignup = () => {
           <CardDescription>Start your free trial in minutes</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form data-testid="create-account-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label>Company Name *</Label>
               <div className="relative mt-1">
@@ -388,7 +388,7 @@ const CreateTenantSignup = () => {
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading || googleLoading}>
+            <Button type="submit" data-testid="create-account-submit" className="w-full" disabled={loading || googleLoading}>
               {loading ? "Creating…" : "Create Account"}
             </Button>
             <div className="relative my-4">

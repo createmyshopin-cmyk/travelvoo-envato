@@ -16,6 +16,7 @@ beforeEach(() => {
 describe("isLocalOrPreviewHostname", () => {
   it("matches localhost and Vercel preview hosts", () => {
     expect(isLocalOrPreviewHostname("localhost")).toBe(true);
+    expect(isLocalOrPreviewHostname("127.0.0.1")).toBe(true);
     expect(isLocalOrPreviewHostname("app.vercel.app")).toBe(true);
     expect(isLocalOrPreviewHostname("travelvoo.in")).toBe(false);
   });
