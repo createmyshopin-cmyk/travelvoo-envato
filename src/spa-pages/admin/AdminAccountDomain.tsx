@@ -283,6 +283,11 @@ const AdminAccountDomain = () => {
   };
 
   const removeDomain = async () => {
+    // Attempt to remove domain from Vercel (non-blocking — failure is silent)
+    if (deleteConfirm.domain) {
+      supabase.functions.invoke("remove-domain-from-vercel", { body: { domain: deleteConfirm.domain } });
+    }
+
     await supabase.from("tenant_domains").delete().eq("id", deleteConfirm.id);
     setDeleteConfirm({ open: false, id: "", domain: "" });
     toast({ title: "Domain removed" });
