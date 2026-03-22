@@ -26,24 +26,24 @@ describe("platformBaseDomainFromEnv", () => {
 });
 
 describe("redirectTenantAdminDashboard", () => {
-  let hrefAssigned: string;
-  let replaceMock: ReturnType<typeof vi.fn>;
+  let locationReplaceMock: ReturnType<typeof vi.fn>;
+  let routerReplaceMock: ReturnType<typeof vi.fn>;
 
-  beforeEach(() => {
-    hrefAssigned = "";
-    replaceMock = vi.fn();
-    delete process.env.NEXT_PUBLIC_PLATFORM_BASE_DOMAIN;
+  function stubWindow(hostname: string, protocol: "https:" | "http:" = "https:") {
+    locationReplaceMock = vi.fn();
     vi.stubGlobal("window", {
       location: {
-        hostname: "www.travelvoo.in",
-        set href(v: string) {
-          hrefAssigned = v;
-        },
-        get href() {
-          return hrefAssigned;
-        },
+        hostname,
+        protocol,
+        replace: locationReplaceMock,
       },
     });
+  }
+
+  beforeEach(() => {
+    routerReplaceMock = vi.fn();
+    delete process.env.NEXT_PUBLIC_PLATFORM_BASE_DOMAIN;
+    stubWindow("www.travelvoo.in");
   });
 
   afterEach(() => {
@@ -58,54 +58,34 @@ describe("redirectTenantAdminDashboard", () => {
       rpc: vi.fn(),
     } as unknown as SupabaseClient;
 
-    await redirectTenantAdminDashboard(supabase, "user-1", { replace: replaceMock }, { knownSubdomain: "myresort" });
+    await redirectTenantAdminDashboard(supabase, "user-1", { replace: routerReplaceMock }, { knownSubdomain: "myresort" });
 
-    expect(hrefAssigned).toBe("https://myresort.travelvoo.in/admin/dashboard");
-    expect(replaceMock).not.toHaveBeenCalled();
+    expect(locationReplaceMock).toHaveBeenCalledWith("https://myresort.travelvoo.in/admin/dashboard");
+    expect(routerReplaceMock).not.toHaveBeenCalled();
   });
 
   it("on www: uses NEXT_PUBLIC_PLATFORM_BASE_DOMAIN apex for URL", async () => {
     process.env.NEXT_PUBLIC_PLATFORM_BASE_DOMAIN = "example.com";
     const supabase = {} as SupabaseClient;
 
-    await redirectTenantAdminDashboard(supabase, "user-1", { replace: replaceMock }, { knownSubdomain: "demo" });
+    await redirectTenantAdminDashboard(supabase, "user-1", { replace: routerReplaceMock }, { knownSubdomain: "demo" });
 
-    expect(hrefAssigned).toBe("https://demo.example.com/admin/dashboard");
-    expect(replaceMock).not.toHaveBeenCalled();
+    expect(locationReplaceMock).toHaveBeenCalledWith("https://demo.example.com/admin/dashboard");
+    expect(routerReplaceMock).not.toHaveBeenCalled();
   });
 
   it("on apex travelvoo.in: known subdomain redirects", async () => {
-    vi.stubGlobal("window", {
-      location: {
-        hostname: "travelvoo.in",
-        set href(v: string) {
-          hrefAssigned = v;
-        },
-        get href() {
-          return hrefAssigned;
-        },
-      },
-    });
+    stubWindow("travelvoo.in");
     const supabase = {} as SupabaseClient;
-    await redirectTenantAdminDashboard(supabase, "u1", { replace: replaceMock }, { knownSubdomain: "acme" });
-    expect(hrefAssigned).toBe("https://acme.travelvoo.in/admin/dashboard");
+    await redirectTenantAdminDashboard(supabase, "u1", { replace: routerReplaceMock }, { knownSubdomain: "acme" });
+    expect(locationReplaceMock).toHaveBeenCalledWith("https://acme.travelvoo.in/admin/dashboard");
   });
 
   it("on tenant host: does not cross-navigate; uses router only", async () => {
-    vi.stubGlobal("window", {
-      location: {
-        hostname: "wa.travelvoo.in",
-        set href(v: string) {
-          hrefAssigned = v;
-        },
-        get href() {
-          return hrefAssigned;
-        },
-      },
-    });
+    stubWindow("wa.travelvoo.in");
     const supabase = {} as SupabaseClient;
-    await redirectTenantAdminDashboard(supabase, "u1", { replace: replaceMock }, { knownSubdomain: "wa" });
-    expect(hrefAssigned).toBe("");
-    expect(replaceMock).toHaveBeenCalledWith("/admin/dashboard");
+    await redirectTenantAdminDashboard(supabase, "u1", { replace: routerReplaceMock }, { knownSubdomain: "wa" });
+    expect(locationReplaceMock).not.toHaveBeenCalled();
+    expect(routerReplaceMock).toHaveBeenCalledWith("/admin/dashboard");
   });
 });

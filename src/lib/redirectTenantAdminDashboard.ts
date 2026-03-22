@@ -10,6 +10,19 @@ function normalizeSubdomain(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/^-+|-+$/g, "");
 }
 
+/** Full URL to tenant admin on this protocol (http dev / https prod). */
+function tenantAdminAbsoluteUrl(slug: string, apexDomain: string): string {
+  const proto = typeof window !== "undefined" && window.location.protocol === "http:" ? "http:" : "https:";
+  return `${proto}//${slug}.${apexDomain}/admin/dashboard`;
+}
+
+function navigateHard(url: string): void {
+  // Defer past React commit + toast updates so the browser reliably performs cross-subdomain navigation.
+  queueMicrotask(() => {
+    window.location.replace(url);
+  });
+}
+
 /** Apex for tenant subdomains (no leading dot, no www). */
 export function platformBaseDomainFromEnv(): string {
   const raw = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_PLATFORM_BASE_DOMAIN?.trim().toLowerCase() ?? "" : "";
@@ -40,7 +53,7 @@ export async function redirectTenantAdminDashboard(
   const slugImmediate = normalizeSubdomain(options?.knownSubdomain ?? "");
   if (slugImmediate.length >= 2 && typeof window !== "undefined") {
     const base = platformBaseDomainFromEnv();
-    window.location.href = `https://${slugImmediate}.${base}/admin/dashboard`;
+    navigateHard(tenantAdminAbsoluteUrl(slugImmediate, base));
     return;
   }
 
@@ -88,7 +101,7 @@ export async function redirectTenantAdminDashboard(
   }
 
   if (slug && baseDomain) {
-    window.location.href = `https://${slug}.${baseDomain}/admin/dashboard`;
+    navigateHard(tenantAdminAbsoluteUrl(slug, baseDomain));
     return;
   }
 
