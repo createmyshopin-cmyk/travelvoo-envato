@@ -75,8 +75,13 @@ export default function CategoriesBuilder() {
 
   const addCategory = async () => {
     if (!newLabel.trim()) return;
+    const { data: tid } = await supabase.rpc("get_my_tenant_id");
+    if (!tid) {
+      toast({ title: "Error", description: "Not authenticated or no tenant found", variant: "destructive" });
+      return;
+    }
     const maxOrder = categories.length > 0 ? Math.max(...categories.map((c) => c.sort_order)) + 1 : 0;
-    const { error } = await supabase.from("stay_categories" as any).insert({ label: newLabel.trim(), icon: newIcon, sort_order: maxOrder } as any);
+    const { error } = await supabase.from("stay_categories" as any).insert({ tenant_id: tid, label: newLabel.trim(), icon: newIcon, sort_order: maxOrder } as any);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {

@@ -23,7 +23,6 @@ import {
   ChevronDown, ChevronUp, XCircle, Share2,
   BookOpen,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -118,7 +117,6 @@ export default function AdminStays() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [bookingCounts, setBookingCounts] = useState<BookingCount>({});
   const { toast } = useToast();
-  const router = useRouter();
 
   const [categoryCount, setCategoryCount] = useState(0);
 
@@ -680,7 +678,9 @@ export default function AdminStays() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-44">
-                                <DropdownMenuItem onClick={() => router.push(`/stay/${stay.id}`)}>
+                                <DropdownMenuItem
+                                  onClick={() => window.open(`/stay/${stay.id}`, "_blank", "noopener,noreferrer")}
+                                >
                                   <ExternalLink className="w-3.5 h-3.5 mr-2" /> View Page
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => copyLink(stay.stay_id, stay.id)}>
@@ -804,7 +804,9 @@ export default function AdminStays() {
                                   <BookOpen className="w-3.5 h-3.5 mr-2" /> Publish
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem onClick={() => router.push(`/stay/${stay.id}`)}>
+                              <DropdownMenuItem
+                                onClick={() => window.open(`/stay/${stay.id}`, "_blank", "noopener,noreferrer")}
+                              >
                                 <ExternalLink className="w-3.5 h-3.5 mr-2" /> View
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => shareStay(stay)}>

@@ -14,8 +14,7 @@ async function query(table) {
 }
 
 async function main() {
-  await query("instagram_webhook_events");
-  await query("instagram_channel_activity");
+  await query("saas_meta_platform_config");
 }
 
 main().catch(console.error);
