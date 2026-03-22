@@ -1496,7 +1496,7 @@ export type Database = {
           id: string
           read: boolean
           ref_id: string | null
-          tenant_id: string
+          tenant_id: string | null
           title: string
           type: string
         }
@@ -1506,7 +1506,7 @@ export type Database = {
           id?: string
           read?: boolean
           ref_id?: string | null
-          tenant_id: string
+          tenant_id?: string | null
           title: string
           type?: string
         }
@@ -1516,7 +1516,7 @@ export type Database = {
           id?: string
           read?: boolean
           ref_id?: string | null
-          tenant_id?: string
+          tenant_id?: string | null
           title?: string
           type?: string
         }
