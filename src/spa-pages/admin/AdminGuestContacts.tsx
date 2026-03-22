@@ -21,7 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useTenant } from "@/context/TenantContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import {
   User,
@@ -159,17 +158,27 @@ export default function AdminGuestContacts() {
   const [sortKey, setSortKey] = useState<SortKey>("totalBookings");
   const [sortAsc, setSortAsc] = useState(false);
   const [discountGuest, setDiscountGuest] = useState<GuestContact | null>(null);
+  const [adminTenantId, setAdminTenantId] = useState<string | null>(null);
   const { toast } = useToast();
-  const { tenantId } = useTenant();
 
   const fetchData = useCallback(async () => {
+    const { data: tid } = await supabase.rpc("get_my_tenant_id");
+    setAdminTenantId(tid ?? null);
+    if (!tid) {
+      setBookings([]);
+      setStays({});
+      setLoading(false);
+      return;
+    }
+
     const [{ data: bk }, { data: st }] = await Promise.all([
       supabase
         .from("bookings")
         .select("*")
+        .eq("tenant_id", tid)
         .in("status", ["confirmed", "pending"])
         .order("created_at", { ascending: false }),
-      supabase.from("stays").select("id, name, stay_id"),
+      supabase.from("stays").select("id, name, stay_id").eq("tenant_id", tid),
     ]);
     if (bk) setBookings(bk);
     if (st) {
@@ -545,7 +554,7 @@ export default function AdminGuestContacts() {
           setDiscountGuest(null);
           toast({ title: "Coupon created", description: "Copied to clipboard. You can share via WhatsApp." });
         }}
-        tenantId={tenantId}
+        tenantId={adminTenantId}
         toast={toast}
       />
     </div>
