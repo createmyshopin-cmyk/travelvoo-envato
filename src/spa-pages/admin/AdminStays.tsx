@@ -26,6 +26,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/context/CurrencyContext";
+import { stayPublicPath, stayPublicAbsoluteUrl } from "@/lib/stayPublicUrl";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -314,7 +315,7 @@ export default function AdminStays() {
 
     // Also fetch room category images
     const { data: rooms } = await supabase
-      .from("stay_room_categories")
+      .from("room_categories")
       .select("images")
       .eq("stay_id", deleteId);
     (rooms || []).forEach((r: any) => allImages.push(...(r.images || [])));
@@ -338,7 +339,7 @@ export default function AdminStays() {
 
     // Also fetch room category images for all selected stays
     const { data: rooms } = await supabase
-      .from("stay_room_categories")
+      .from("room_categories")
       .select("images")
       .in("stay_id", ids);
     (rooms || []).forEach((r: any) => allImages.push(...(r.images || [])));
@@ -374,17 +375,17 @@ export default function AdminStays() {
     else { toast({ title: "Stay duplicated", description: `${stay.name} (Copy) created as hidden.` }); fetchStays(); }
   };
 
-  const copyLink = (staySlug: string) => {
-    const url = `${window.location.origin}/stay/${encodeURIComponent(staySlug)}`;
+  const copyLink = (stay: any) => {
+    const url = stayPublicAbsoluteUrl(window.location.origin, { id: stay.id, stayId: stay.stay_id, name: stay.name, location: stay.location });
     navigator.clipboard.writeText(url).then(() => {
-      setCopiedId(staySlug);
+      setCopiedId(stay.stay_id);
       toast({ title: "Link copied!" });
       setTimeout(() => setCopiedId(null), 2000);
     });
   };
 
   const shareStay = (stay: any) => {
-    const url = `${window.location.origin}/stay/${encodeURIComponent(stay.stay_id)}`;
+    const url = stayPublicAbsoluteUrl(window.location.origin, { id: stay.id, stayId: stay.stay_id, name: stay.name, location: stay.location });
     const text = `Check out ${stay.name}${stay.location ? ` in ${stay.location}` : ""} — starting at ${format(stay.price ?? 0)}/night!\n${url}`;
     if (navigator.share) navigator.share({ text, url });
     else { navigator.clipboard.writeText(text); toast({ title: "Copied to clipboard" }); }
@@ -679,11 +680,11 @@ export default function AdminStays() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-44">
                                 <DropdownMenuItem
-                                  onClick={() => window.open(`/stay/${encodeURIComponent(stay.stay_id)}`, "_blank", "noopener,noreferrer")}
+                                  onClick={() => window.open(stayPublicPath({ id: stay.id, stayId: stay.stay_id, name: stay.name, location: stay.location }), "_blank", "noopener,noreferrer")}
                                 >
                                   <ExternalLink className="w-3.5 h-3.5 mr-2" /> View Page
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => copyLink(stay.stay_id)}>
+                                <DropdownMenuItem onClick={() => copyLink(stay)}>
                                   {copiedId === stay.stay_id
                                     ? <><Check className="w-3.5 h-3.5 mr-2 text-green-500" /> Copied!</>
                                     : <><Copy className="w-3.5 h-3.5 mr-2" /> Copy Link</>}
@@ -805,7 +806,7 @@ export default function AdminStays() {
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuItem
-                                onClick={() => window.open(`/stay/${encodeURIComponent(stay.stay_id)}`, "_blank", "noopener,noreferrer")}
+                                onClick={() => window.open(stayPublicPath({ id: stay.id, stayId: stay.stay_id, name: stay.name, location: stay.location }), "_blank", "noopener,noreferrer")}
                               >
                                 <ExternalLink className="w-3.5 h-3.5 mr-2" /> View
                               </DropdownMenuItem>

@@ -220,7 +220,12 @@ export function useStayDetail(stayId: string | undefined) {
           const { data } = await supabase.from("stays").select("*").eq("id", key).maybeSingle();
           stayData = data;
         } else {
-          let q = supabase.from("stays").select("*").eq("stay_id", key);
+          let dbKey = key;
+          const match = key.match(/^(\d+)(?:-|$)/);
+          if (match && !key.toLowerCase().startsWith("stay-")) {
+            dbKey = `Stay-${match[1]}`;
+          }
+          let q = supabase.from("stays").select("*").eq("stay_id", dbKey);
           if (tenantId) {
             q = q.eq("tenant_id", tenantId);
           } else {
