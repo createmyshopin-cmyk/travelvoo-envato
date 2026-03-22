@@ -205,13 +205,27 @@ export default function AdminBookings() {
   const router = useRouter();
 
   const fetchBookings = useCallback(async () => {
+    const { data: tenantId } = await supabase.rpc("get_my_tenant_id");
+    if (!tenantId) {
+      setBookings([]);
+      setPackageLeadRows([]);
+      setStays({});
+      setLoading(false);
+      return;
+    }
+
     const [{ data: bk }, { data: st }, { data: pkgLeads }] = await Promise.all([
-      supabase.from("bookings").select("*").order("created_at", { ascending: false }),
-      supabase.from("stays").select("id, name, stay_id"),
+      supabase
+        .from("bookings")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false }),
+      supabase.from("stays").select("id, name, stay_id").eq("tenant_id", tenantId),
       supabase
         .from("leads")
         .select("*")
         .eq("source", PACKAGE_BOOKING_LEAD_SOURCE)
+        .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false }),
     ]);
     if (bk) setBookings(bk);
