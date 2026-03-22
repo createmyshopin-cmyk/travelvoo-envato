@@ -104,30 +104,59 @@ export async function fetchSiteSettingsForCurrentHost(): Promise<SiteSettings | 
 /**
  * Fetches site_settings for the current tenant (resolved from hostname).
  * Module-level cache: one fetch per full page load; call `clearSiteSettingsCache` after admin saves.
+ * Also subscribes to Supabase Realtime so maintenance_mode (and other settings) update live
+ * on public pages without requiring a hard reload.
  */
 export function useSiteSettings(): UseSiteSettingsReturn {
   const [settings, setSettings] = useState<SiteSettings | null>(cachedSettings);
   const [loading, setLoading] = useState(!cachedSettings);
 
+  const doFetch = () => {
+    const p = fetchSiteSettingsForCurrentHost().then((data) => {
+      cachedSettings = data;
+      fetchPromise = null;
+      return data;
+    });
+    fetchPromise = p;
+    p.then((data) => {
+      setSettings(data);
+      setLoading(false);
+    });
+  };
+
   useEffect(() => {
     if (cachedSettings) {
       setSettings(cachedSettings);
       setLoading(false);
-      return;
+    } else {
+      if (!fetchPromise) {
+        doFetch();
+      } else {
+        fetchPromise.then((data) => {
+          setSettings(data);
+          setLoading(false);
+        });
+      }
     }
 
-    if (!fetchPromise) {
-      fetchPromise = fetchSiteSettingsForCurrentHost().then((data) => {
-        cachedSettings = data;
-        fetchPromise = null;
-        return cachedSettings;
-      });
-    }
+    // Realtime: whenever site_settings row changes (e.g. admin toggles maintenance mode),
+    // bust the cache and re-fetch so the public page updates instantly — no hard reload needed.
+    const channel = supabase
+      .channel("site_settings_public_watch")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "site_settings" },
+        () => {
+          clearSiteSettingsCache();
+          doFetch();
+        }
+      )
+      .subscribe();
 
-    fetchPromise.then((data) => {
-      setSettings(data);
-      setLoading(false);
-    });
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { settings, loading };
