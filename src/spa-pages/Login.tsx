@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { isTenantLoginMarketingRedirectHost } from "@/lib/resolveTenantFromHost";
 import { Lock, Loader2 } from "lucide-react";
 
 /**
@@ -35,8 +36,8 @@ export default function Login() {
     }
     toast({ title: "Welcome back!", description: "Redirecting to dashboard..." });
     const hostname = window.location.hostname;
-    const isPlatformDomain = hostname === "localhost" || hostname.includes("vercel.app") || hostname.includes("lovable.app") || hostname.split(".").length < 3;
-    if (isPlatformDomain) {
+    // Marketing / main domain (e.g. travelvoo.in): optional redirect to tenant subdomain admin
+    if (isTenantLoginMarketingRedirectHost(hostname)) {
       const { data: tenant } = await supabase.from("tenants").select("id").eq("user_id", userId).maybeSingle();
       if (tenant) {
         const { data: domain } = await supabase.from("tenant_domains").select("subdomain").eq("tenant_id", tenant.id).not("subdomain", "is", null).limit(1).maybeSingle();

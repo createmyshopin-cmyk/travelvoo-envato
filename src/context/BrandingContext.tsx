@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "./TenantContext";
 import { useDocumentHead } from "@/hooks/useDocumentHead";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { fetchSiteSettingsForCurrentHost } from "@/hooks/useSiteSettings";
 
 interface BrandingSeo {
   title: string;
@@ -102,20 +103,11 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
           .eq("id", tenantId)
           .maybeSingle();
         tenantData = data;
-      } else {
-        const { data } = await supabase
-          .from("tenants")
-          .select("tenant_name, logo_url, favicon_url, primary_color, secondary_color, footer_text, seo_title, seo_description, seo_keywords, og_image_url")
-          .limit(1)
-          .maybeSingle();
-        tenantData = data;
       }
+      // Marketing / platform host: never load another tenant's logo/colors via `.limit(1)`.
 
-      const { data: siteData } = await supabase
-        .from("site_settings")
-        .select("meta_title, meta_description, meta_keywords, og_image_url, og_title, og_description, contact_email, contact_phone, social_instagram, social_facebook, social_youtube")
-        .limit(1)
-        .maybeSingle();
+      const siteRow = await fetchSiteSettingsForCurrentHost();
+      const siteData = siteRow as Record<string, string> | null;
 
       const siteSeo = siteData as Record<string, string> | null;
       const siteName = tenantData?.tenant_name || siteSeo?.meta_title || "StayFinder";

@@ -88,4 +88,3 @@ flowchart TB
 - Tenant listing / platform: `src/spa-pages/saas-admin/SaasAdminTenants.tsx`
 - Tenant-scoped admin queries: `get_my_tenant_id` usage under `src/spa-pages/admin/` and `src/components/admin/`
 - Domain RLS notes: `src/spa-pages/admin/AdminAccountDomain.tsx`
-- Manual SQL to link a demo user to a tenant: `supabase/manual_link_demo_tenant_demo_at_demo_com.sql`

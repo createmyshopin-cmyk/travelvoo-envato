@@ -48,6 +48,22 @@ export function isLocalOrPreviewHostname(hostname: string): boolean {
   );
 }
 
+/**
+ * Sync helper for `/login` post-login redirect (no DB).
+ * True on marketing hosts: localhost/preview, 2-label apex (e.g. travelvoo.in), or
+ * NEXT_PUBLIC_PLATFORM_BASE_DOMAIN / www.<that> — same idea as tenant resolution.
+ */
+export function isTenantLoginMarketingRedirectHost(hostname: string): boolean {
+  if (isLocalOrPreviewHostname(hostname)) return true;
+  const h = hostname.toLowerCase();
+  const parts = h.split(".");
+  if (parts.length <= 2) return true;
+  for (const base of envPlatformBaseDomains()) {
+    if (h === base || h === `www.${base}`) return true;
+  }
+  return false;
+}
+
 /** True when host is the marketing / SaaS landing apex (e.g. travelvoo.in, www.travelvoo.in). */
 export function isMarketingHostname(hostname: string, platformHosts: Set<string>): boolean {
   const h = hostname.toLowerCase();

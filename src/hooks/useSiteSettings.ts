@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveTenantFromHostname } from "@/hooks/useAdminAuth";
+import { isLocalOrPreviewHostname } from "@/lib/resolveTenantFromHost";
 
 interface SiteSettings {
   id: string;
@@ -57,9 +58,47 @@ if (typeof window !== "undefined") {
 }
 
 /**
- * Fetches site_settings for the current tenant (resolved from subdomain).
- * Falls back to the first row when running on localhost / root domain.
- * Module-level cache so the DB is hit only once per page load.
+ * Loads exactly one site_settings row for the current host:
+ * - Tenant subdomain/custom domain → `tenant_id` = resolved tenant (never another tenant).
+ * - Marketing / platform apex → `tenant_id IS NULL` only (no mixing with tenant rows).
+ * - Localhost / preview hosts → optional: logged-in user's tenant for dev, else platform row.
+ */
+export async function fetchSiteSettingsForCurrentHost(): Promise<SiteSettings | null> {
+  const tenantId = await resolveTenantFromHostname();
+  let query = supabase.from("site_settings").select("*");
+
+  if (tenantId) {
+    query = query.eq("tenant_id", tenantId);
+  } else {
+    const host = typeof window !== "undefined" ? window.location.hostname : "";
+    if (isLocalOrPreviewHostname(host)) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        const { data: tenant } = await supabase
+          .from("tenants")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        if (tenant?.id) {
+          query = query.eq("tenant_id", tenant.id);
+        } else {
+          query = query.is("tenant_id", null);
+        }
+      } else {
+        query = query.is("tenant_id", null);
+      }
+    } else {
+      query = query.is("tenant_id", null);
+    }
+  }
+
+  const { data } = await query.limit(1).maybeSingle();
+  return data as SiteSettings | null;
+}
+
+/**
+ * Fetches site_settings for the current tenant (resolved from hostname).
+ * Module-level cache: one fetch per full page load; call `clearSiteSettingsCache` after admin saves.
  */
 export function useSiteSettings(): UseSiteSettingsReturn {
   const [settings, setSettings] = useState<SiteSettings | null>(cachedSettings);
@@ -73,28 +112,8 @@ export function useSiteSettings(): UseSiteSettingsReturn {
     }
 
     if (!fetchPromise) {
-      fetchPromise = resolveTenantFromHostname().then(async (tenantId) => {
-        let query = supabase.from("site_settings").select("*");
-
-        if (tenantId) {
-          query = query.eq("tenant_id", tenantId);
-        } else {
-          // No subdomain — resolve by the currently logged-in user's tenant
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user?.id) {
-            const { data: tenant } = await supabase
-              .from("tenants")
-              .select("id")
-              .eq("user_id", session.user.id)
-              .maybeSingle();
-            if (tenant?.id) {
-              query = query.eq("tenant_id", tenant.id);
-            }
-          }
-        }
-
-        const { data } = await query.limit(1).maybeSingle();
-        cachedSettings = data as SiteSettings | null;
+      fetchPromise = fetchSiteSettingsForCurrentHost().then((data) => {
+        cachedSettings = data;
         fetchPromise = null;
         return cachedSettings;
       });

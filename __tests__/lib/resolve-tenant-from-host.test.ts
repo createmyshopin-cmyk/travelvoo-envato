@@ -5,6 +5,7 @@ import {
   resolveTenantFromHostnameDb,
   isLocalOrPreviewHostname,
   isMarketingHostname,
+  isTenantLoginMarketingRedirectHost,
 } from "@/lib/resolveTenantFromHost";
 
 beforeEach(() => {
@@ -26,6 +27,19 @@ describe("isMarketingHostname", () => {
     expect(isMarketingHostname("travelvoo.in", platform)).toBe(true);
     expect(isMarketingHostname("www.travelvoo.in", platform)).toBe(true);
     expect(isMarketingHostname("demo.travelvoo.in", platform)).toBe(false);
+  });
+});
+
+describe("isTenantLoginMarketingRedirectHost", () => {
+  it("treats 2-label apex as marketing", () => {
+    expect(isTenantLoginMarketingRedirectHost("travelvoo.in")).toBe(true);
+  });
+  it("treats tenant subdomain as non-marketing", () => {
+    expect(isTenantLoginMarketingRedirectHost("demo.travelvoo.in")).toBe(false);
+  });
+  it("matches www apex when env lists platform base domain", () => {
+    process.env.NEXT_PUBLIC_PLATFORM_BASE_DOMAIN = "travelvoo.in";
+    expect(isTenantLoginMarketingRedirectHost("www.travelvoo.in")).toBe(true);
   });
 });
 
