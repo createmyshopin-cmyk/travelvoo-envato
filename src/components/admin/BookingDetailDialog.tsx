@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Users, Baby, PawPrint, UserCheck, UsersRound, Copy, Check,
   MessageCircle, Phone, FileText, Receipt, CalendarDays,
-  Clock, CheckCircle2, X as XIcon, Tag,
+  Clock, CheckCircle2, X as XIcon, Tag, Loader2,
 } from "lucide-react";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,10 @@ interface BookingDetailDialogProps {
   onStatusChange?: (status: string) => void;
   onCreateQuotation?: () => void;
   onCreateInvoice?: () => void;
+  /** Disables Quotation while insert is in flight */
+  quotationLoading?: boolean;
+  /** When set, a quotation already exists for this booking */
+  existingQuotationId?: string | null;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive"; icon: typeof Clock; color: string }> = {
@@ -53,6 +57,8 @@ export function BookingDetailDialog({
   onStatusChange,
   onCreateQuotation,
   onCreateInvoice,
+  quotationLoading,
+  existingQuotationId,
 }: BookingDetailDialogProps) {
   const { format } = useCurrency();
   const [copiedId, setCopiedId] = useState(false);
@@ -295,8 +301,27 @@ export function BookingDetailDialog({
           {(onCreateQuotation || onCreateInvoice) && (
             <div className="grid grid-cols-2 gap-2 pt-1">
               {onCreateQuotation && (
-                <Button variant="outline" size="sm" onClick={onCreateQuotation} className="gap-1.5">
-                  <FileText className="w-3.5 h-3.5" /> Quotation
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!!existingQuotationId || !!quotationLoading}
+                  onClick={() => {
+                    if (existingQuotationId || quotationLoading) return;
+                    onCreateQuotation();
+                  }}
+                  className="gap-1.5"
+                  title={
+                    existingQuotationId
+                      ? `Quotation ${existingQuotationId} already created for this booking`
+                      : undefined
+                  }
+                >
+                  {quotationLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <FileText className="w-3.5 h-3.5" />
+                  )}
+                  {existingQuotationId ? "Quotation exists" : "Quotation"}
                 </Button>
               )}
               {onCreateInvoice && (

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -198,6 +198,11 @@ export default function AdminBookings() {
   const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
   const [bulkStatus, setBulkStatus] = useState<string>("confirmed");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  /** booking.id → quote_id when a quotation was created from that booking */
+  const [quotationByBookingId, setQuotationByBookingId] = useState<Record<string, string>>({});
+  const [quotationBusyBookingId, setQuotationBusyBookingId] = useState<string | null>(null);
+  /** Sync guard: React state updates async; blocks double activation before re-render */
+  const quotationInFlightRef = useRef(false);
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const { toast } = useToast();
@@ -229,6 +234,18 @@ export default function AdminBookings() {
         .order("created_at", { ascending: false }),
     ]);
     if (bk) setBookings(bk);
+    let quoteMap: Record<string, string> = {};
+    if (bk && bk.length > 0) {
+      const ids = (bk as { id: string }[]).map((b) => b.id).filter(Boolean);
+      const { data: qRows } = await supabase
+        .from("quotations")
+        .select("booking_id, quote_id")
+        .in("booking_id", ids);
+      (qRows || []).forEach((q: { booking_id: string | null; quote_id: string }) => {
+        if (q.booking_id && q.quote_id) quoteMap[q.booking_id] = q.quote_id;
+      });
+    }
+    setQuotationByBookingId(quoteMap);
     if (st) {
       const map: StayMap = {};
       st.forEach((s: any) => { map[s.id] = { name: s.name, stay_id: s.stay_id }; });
@@ -459,33 +476,90 @@ export default function AdminBookings() {
   };
 
   const createQuotation = async (booking: any) => {
-    const quoteId = `Q-${Date.now().toString(36).toUpperCase()}`;
-    const rooms = Array.isArray(booking.rooms) ? booking.rooms : [];
-    const addons = Array.isArray(booking.addons) ? booking.addons : [];
-    const roomTotal = rooms.reduce((s: number, r: any) => s + (r.price || 0) * (r.count || 1), 0);
-    const addonsTotal = addons.reduce((s: number, a: any) => s + (a.price || 0), 0);
+    if (!booking?.id) return;
+    if (quotationInFlightRef.current) return;
+    const existingId = quotationByBookingId[booking.id];
+    if (existingId) {
+      toast({
+        title: "Quotation already exists",
+        description: `${existingId} for this booking`,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (quotationBusyBookingId) return;
 
-    const { error } = await supabase.from("quotations").insert({
-      quote_id: quoteId,
-      guest_name: booking.guest_name,
-      phone: booking.phone,
-      email: booking.email,
-      stay_id: booking.stay_id,
-      tenant_id: booking.tenant_id,
-      checkin: booking.checkin,
-      checkout: booking.checkout,
-      rooms: booking.rooms,
-      addons: booking.addons,
-      room_total: roomTotal,
-      addons_total: addonsTotal,
-      total_price: booking.total_price,
-      coupon_code: booking.coupon_code,
-      special_requests: booking.special_requests,
-      status: "draft",
-    });
+    quotationInFlightRef.current = true;
+    setQuotationBusyBookingId(booking.id);
+    try {
+      const { data: existingRow } = await supabase
+        .from("quotations")
+        .select("quote_id")
+        .eq("booking_id", booking.id)
+        .maybeSingle();
+      if (existingRow?.quote_id) {
+        setQuotationByBookingId((m) => ({ ...m, [booking.id]: existingRow.quote_id }));
+        toast({
+          title: "Quotation already exists",
+          description: `${existingRow.quote_id} for this booking`,
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (error) toast({ title: "Error creating quotation", description: error.message, variant: "destructive" });
-    else toast({ title: "Quotation created", description: `${quoteId} for ${booking.guest_name}` });
+      const quoteId = `Q-${Date.now().toString(36).toUpperCase()}`;
+      const rooms = Array.isArray(booking.rooms) ? booking.rooms : [];
+      const addons = Array.isArray(booking.addons) ? booking.addons : [];
+      const roomTotal = rooms.reduce((s: number, r: any) => s + (r.price || 0) * (r.count || 1), 0);
+      const addonsTotal = addons.reduce((s: number, a: any) => s + (a.price || 0), 0);
+
+      const { error } = await supabase.from("quotations").insert({
+        quote_id: quoteId,
+        booking_id: booking.id,
+        guest_name: booking.guest_name,
+        phone: booking.phone,
+        email: booking.email,
+        stay_id: booking.stay_id,
+        tenant_id: booking.tenant_id,
+        checkin: booking.checkin,
+        checkout: booking.checkout,
+        rooms: booking.rooms,
+        addons: booking.addons,
+        room_total: roomTotal,
+        addons_total: addonsTotal,
+        total_price: booking.total_price,
+        coupon_code: booking.coupon_code,
+        special_requests: booking.special_requests,
+        status: "draft",
+      });
+
+      if (error) {
+        if (error.code === "23505") {
+          toast({
+            title: "Quotation already exists",
+            description: "This booking already has a quotation.",
+            variant: "destructive",
+          });
+          const { data: again } = await supabase
+            .from("quotations")
+            .select("quote_id")
+            .eq("booking_id", booking.id)
+            .maybeSingle();
+          if (again?.quote_id) {
+            setQuotationByBookingId((m) => ({ ...m, [booking.id]: again.quote_id }));
+          }
+        } else {
+          toast({ title: "Error creating quotation", description: error.message, variant: "destructive" });
+        }
+        return;
+      }
+
+      setQuotationByBookingId((m) => ({ ...m, [booking.id]: quoteId }));
+      toast({ title: "Quotation created", description: `${quoteId} for ${booking.guest_name}` });
+    } finally {
+      quotationInFlightRef.current = false;
+      setQuotationBusyBookingId(null);
+    }
   };
 
   const createInvoice = async (booking: any): Promise<string | null> => {
@@ -914,7 +988,18 @@ export default function AdminBookings() {
                       {!isPackage && (
                         <>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => createQuotation(b)}><FileText className="w-3.5 h-3.5 mr-2" /> Quotation</DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={!!quotationByBookingId[b.id] || quotationBusyBookingId === b.id}
+                            onSelect={(e) => {
+                              if (quotationByBookingId[b.id] || quotationBusyBookingId || quotationInFlightRef.current) {
+                                e.preventDefault();
+                                return;
+                              }
+                              void createQuotation(b);
+                            }}
+                          >
+                            <FileText className="w-3.5 h-3.5 mr-2" /> Quotation
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={async () => {
                             const invId = await createInvoice(b);
                             if (invId) {
@@ -958,6 +1043,8 @@ export default function AdminBookings() {
         packageLead={selected?._rowType === "package_lead"}
         tripDisplayName={selected?._rowType === "package_lead" ? selected.trip_display_name : undefined}
         onStatusChange={(status) => { if (selected) updateStatus(selected, status); }}
+        quotationLoading={!!selected && quotationBusyBookingId === selected.id}
+        existingQuotationId={selected?.id ? quotationByBookingId[selected.id] ?? null : null}
         onCreateQuotation={selected?._rowType === "package_lead" ? undefined : () => { if (selected) createQuotation(selected); }}
         onCreateInvoice={selected?._rowType === "package_lead" ? undefined : async () => {
           if (selected) {

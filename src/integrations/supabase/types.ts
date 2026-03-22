@@ -1720,6 +1720,7 @@ export type Database = {
         Row: {
           addons: Json
           addons_total: number
+          booking_id: string | null
           checkin: string | null
           checkout: string | null
           coupon_code: string | null
@@ -1743,6 +1744,7 @@ export type Database = {
         Insert: {
           addons?: Json
           addons_total?: number
+          booking_id?: string | null
           checkin?: string | null
           checkout?: string | null
           coupon_code?: string | null
@@ -1766,6 +1768,7 @@ export type Database = {
         Update: {
           addons?: Json
           addons_total?: number
+          booking_id?: string | null
           checkin?: string | null
           checkout?: string | null
           coupon_code?: string | null
@@ -1787,6 +1790,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "quotations_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quotations_stay_id_fkey"
             columns: ["stay_id"]
