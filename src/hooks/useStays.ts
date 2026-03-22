@@ -179,7 +179,7 @@ export function useStays(category?: string) {
 }
 
 export function useStayDetail(stayId: string | undefined) {
-  const { tenantId } = useTenant();
+  const { tenantId, loading: tenantLoading } = useTenant();
   const [stay, setStay] = useState<Stay | null>(null);
   const [roomCategories, setRoomCategories] = useState<RoomCategory[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -188,46 +188,67 @@ export function useStayDetail(stayId: string | undefined) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!stayId) return;
+    if (!stayId) {
+      setStay(null);
+      setRoomCategories([]);
+      setReviews([]);
+      setReels([]);
+      setNearbyDestinations([]);
+      setLoading(false);
+      return;
+    }
+
+    // Wait until hostname → tenant is resolved; otherwise tenantId is null and we
+    // wrongly treat the page as "platform" and reject tenant stays (or spin forever).
+    if (tenantLoading) {
+      return;
+    }
 
     const fetchAll = async () => {
       setLoading(true);
+      setStay(null);
+      setRoomCategories([]);
+      setReviews([]);
+      setReels([]);
+      setNearbyDestinations([]);
 
-      const { data: stayData } = await supabase
-        .from("stays")
-        .select("*")
-        .eq("id", stayId)
-        .single();
+      try {
+        const { data: stayData } = await supabase
+          .from("stays")
+          .select("*")
+          .eq("id", stayId)
+          .maybeSingle();
 
-      if (stayData) {
-        const platformId = await getPlatformTenantId();
-        const allowed =
-          tenantId != null
-            ? stayData.tenant_id === tenantId
-            : platformId != null && stayData.tenant_id === platformId;
+        if (stayData) {
+          const platformId = await getPlatformTenantId();
+          const allowed =
+            tenantId != null
+              ? stayData.tenant_id === tenantId
+              : platformId != null && stayData.tenant_id === platformId;
 
-        if (!allowed) {
-          setStay(null);
-        } else {
-          setStay(mapDbStay(stayData));
-          const [roomsRes, reviewsRes, reelsRes, nearbyRes] = await Promise.all([
-            supabase.from("room_categories").select("*").eq("stay_id", stayData.id),
-            supabase.from("reviews").select("*").eq("stay_id", stayData.id).eq("status", "approved").order("created_at", { ascending: false }),
-            supabase.from("stay_reels").select("*").eq("stay_id", stayData.id).order("sort_order"),
-            supabase.from("nearby_destinations").select("*").eq("stay_id", stayData.id).order("sort_order"),
-          ]);
-          if (roomsRes.data) setRoomCategories(roomsRes.data.map(mapDbRoom));
-          if (reviewsRes.data) setReviews(reviewsRes.data.map(mapDbReview));
-          if (reelsRes.data) setReels(reelsRes.data.map(r => ({ title: r.title, thumbnail: r.thumbnail, url: r.url, platform: r.platform as Reel["platform"] })));
-          if (nearbyRes.data) setNearbyDestinations(nearbyRes.data.map(n => ({ name: n.name, image: n.image, distance: n.distance })));
+          if (!allowed) {
+            setStay(null);
+          } else {
+            setStay(mapDbStay(stayData));
+            const [roomsRes, reviewsRes, reelsRes, nearbyRes] = await Promise.all([
+              supabase.from("room_categories").select("*").eq("stay_id", stayData.id),
+              supabase.from("reviews").select("*").eq("stay_id", stayData.id).eq("status", "approved").order("created_at", { ascending: false }),
+              supabase.from("stay_reels").select("*").eq("stay_id", stayData.id).order("sort_order"),
+              supabase.from("nearby_destinations").select("*").eq("stay_id", stayData.id).order("sort_order"),
+            ]);
+            if (roomsRes.data) setRoomCategories(roomsRes.data.map(mapDbRoom));
+            if (reviewsRes.data) setReviews(reviewsRes.data.map(mapDbReview));
+            if (reelsRes.data) setReels(reelsRes.data.map(r => ({ title: r.title, thumbnail: r.thumbnail, url: r.url, platform: r.platform as Reel["platform"] })));
+            if (nearbyRes.data) setNearbyDestinations(nearbyRes.data.map(n => ({ name: n.name, image: n.image, distance: n.distance })));
+          }
         }
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
-    fetchAll();
-  }, [stayId, tenantId]);
+    void fetchAll();
+  }, [stayId, tenantId, tenantLoading]);
 
   return { stay, roomCategories, reviews, reels, nearbyDestinations, loading };
 }
