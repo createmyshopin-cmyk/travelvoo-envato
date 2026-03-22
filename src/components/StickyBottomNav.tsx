@@ -145,7 +145,8 @@ const StickyBottomNav = () => {
     setQuery("");
     setResults([]);
     setHasSearched(false);
-    router.push(`/stay/${stay.stay_id}`);
+    // Use primary key id so /stay/[id] matches useStayDetail (same as SearchBar). stay_id is the public slug.
+    router.push(`/stay/${stay.id}`);
   };
 
   const handleNavClick = (tab: string) => {

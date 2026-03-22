@@ -178,6 +178,12 @@ export function useStays(category?: string) {
   return { stays: staysWithCalendarPrices, loading, refetch: fetchStays };
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function looksLikeUuid(s: string): boolean {
+  return UUID_RE.test(s.trim());
+}
+
 export function useStayDetail(stayId: string | undefined) {
   const { tenantId, loading: tenantLoading } = useTenant();
   const [stay, setStay] = useState<Stay | null>(null);
@@ -213,11 +219,13 @@ export function useStayDetail(stayId: string | undefined) {
       setNearbyDestinations([]);
 
       try {
-        const { data: stayData } = await supabase
-          .from("stays")
-          .select("*")
-          .eq("id", stayId)
-          .maybeSingle();
+        const key = decodeURIComponent(stayId.trim());
+        const { data: byId } = await supabase.from("stays").select("*").eq("id", key).maybeSingle();
+        const stayData =
+          byId ??
+          (!looksLikeUuid(key)
+            ? (await supabase.from("stays").select("*").eq("stay_id", key).maybeSingle()).data ?? null
+            : null);
 
         if (stayData) {
           const platformId = await getPlatformTenantId();
