@@ -6,6 +6,7 @@ import { useTenant } from "@/context/TenantContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getPlatformTenantId } from "@/lib/platformTenant";
 import type { Stay } from "@/types/stay";
 
 const fallbackImages = ["/assets/stay-1.jpg", "/assets/stay-2.jpg", "/assets/stay-3.jpg", "/assets/stay-4.jpg"];
@@ -22,33 +23,37 @@ const Wishlist = () => {
       setWishedStays([]);
       return;
     }
-    let query = supabase.from("stays").select("*").in("id", wishlist);
-    if (tenantId) query = query.eq("tenant_id", tenantId);
-    else query = query.is("tenant_id", null);
-    query
-      .then(({ data }) => {
-        if (data) {
-          setWishedStays(
-            data.map((row: any) => ({
-              id: row.id,
-              stayId: row.stay_id,
-              name: row.name,
-              location: row.location,
-              price: row.price,
-              originalPrice: row.original_price,
-              image: row.images?.[0] || fallbackImages[0],
-              images: row.images?.length > 0 ? row.images : [fallbackImages[0]],
-              category: row.category,
-              rating: Number(row.rating),
-              reviews: row.reviews_count,
-              description: row.description,
-              amenities: row.amenities || [],
-              status: row.status,
-              tenantId: row.tenant_id,
-            }))
-          );
-        }
-      });
+    let cancelled = false;
+    (async () => {
+      let query = supabase.from("stays").select("*").in("id", wishlist);
+      const filter = tenantId ?? (await getPlatformTenantId());
+      if (filter) query = query.eq("tenant_id", filter);
+      else query = query.is("tenant_id", null);
+      const { data } = await query;
+      if (cancelled || !data) return;
+      setWishedStays(
+        data.map((row: any) => ({
+          id: row.id,
+          stayId: row.stay_id,
+          name: row.name,
+          location: row.location,
+          price: row.price,
+          originalPrice: row.original_price,
+          image: row.images?.[0] || fallbackImages[0],
+          images: row.images?.length > 0 ? row.images : [fallbackImages[0]],
+          category: row.category,
+          rating: Number(row.rating),
+          reviews: row.reviews_count,
+          description: row.description,
+          amenities: row.amenities || [],
+          status: row.status,
+          tenantId: row.tenant_id,
+        }))
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [wishlist, tenantId]);
 
   return (

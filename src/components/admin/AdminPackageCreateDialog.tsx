@@ -664,6 +664,8 @@ export function AdminPackageCreateDialog({
 
     setSaving(true);
     const { data: tenantId } = await supabase.rpc("get_my_tenant_id");
+    const { data: platformRpc } = await supabase.rpc("get_platform_tenant_id");
+    const resolvedTenantId = tenantId ?? platformRpc;
 
     const row: Record<string, unknown> = {
       slug: slugFinal,
@@ -700,7 +702,7 @@ export function AdminPackageCreateDialog({
       const insertRow = {
         ...row,
         cancellation_policy: [],
-        ...(tenantId != null ? { tenant_id: tenantId } : { tenant_id: null }),
+        ...(resolvedTenantId != null ? { tenant_id: resolvedTenantId } : { tenant_id: null }),
       };
       const { data: inserted, error: insErr } = await (supabase.from("trips") as any)
         .insert(insertRow)

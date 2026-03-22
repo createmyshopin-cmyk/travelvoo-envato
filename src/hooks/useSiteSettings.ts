@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveTenantFromHostname } from "@/hooks/useAdminAuth";
 import { isLocalOrPreviewHostname } from "@/lib/resolveTenantFromHost";
+import { clearPlatformTenantIdCache, getPlatformTenantId } from "@/lib/platformTenant";
 
 interface SiteSettings {
   id: string;
@@ -54,13 +55,14 @@ if (typeof window !== "undefined") {
   supabase.auth.onAuthStateChange(() => {
     cachedSettings = null;
     fetchPromise = null;
+    clearPlatformTenantIdCache();
   });
 }
 
 /**
  * Loads exactly one site_settings row for the current host:
  * - Tenant subdomain/custom domain → `tenant_id` = resolved tenant (never another tenant).
- * - Marketing / platform apex → `tenant_id IS NULL` only (no mixing with tenant rows).
+ * - Marketing / platform apex → `tenant_id` = platform tenant (get_platform_tenant_id), not NULL.
  * - Localhost / preview hosts → optional: logged-in user's tenant for dev, else platform row.
  */
 export async function fetchSiteSettingsForCurrentHost(): Promise<SiteSettings | null> {
@@ -82,13 +84,16 @@ export async function fetchSiteSettingsForCurrentHost(): Promise<SiteSettings | 
         if (tenant?.id) {
           query = query.eq("tenant_id", tenant.id);
         } else {
-          query = query.is("tenant_id", null);
+          const pid = await getPlatformTenantId();
+          query = pid ? query.eq("tenant_id", pid) : query.is("tenant_id", null);
         }
       } else {
-        query = query.is("tenant_id", null);
+        const pid = await getPlatformTenantId();
+        query = pid ? query.eq("tenant_id", pid) : query.is("tenant_id", null);
       }
     } else {
-      query = query.is("tenant_id", null);
+      const pid = await getPlatformTenantId();
+      query = pid ? query.eq("tenant_id", pid) : query.is("tenant_id", null);
     }
   }
 

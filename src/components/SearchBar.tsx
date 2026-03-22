@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/context/TenantContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
+import { getPlatformTenantId } from "@/lib/platformTenant";
 
 const placeholders = [
   "romantic stay with pool...",
@@ -47,7 +48,8 @@ async function searchStaysDB(q: string, tenantId: string | null): Promise<Search
     )
     .order("rating", { ascending: false })
     .limit(10);
-  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const filter = tenantId ?? (await getPlatformTenantId());
+  if (filter) query = query.eq("tenant_id", filter);
   else query = query.is("tenant_id", null);
   const { data } = await query;
   return (data || []) as SearchResult[];

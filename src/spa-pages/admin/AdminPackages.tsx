@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { ExternalLink, Loader2, Package, Pencil, Plus, RefreshCw } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
 import { AdminPackageCreateDialog } from "@/components/admin/AdminPackageCreateDialog";
+import { getPlatformTenantId } from "@/lib/platformTenant";
 
 interface TripRow {
   id: string;
@@ -47,13 +48,15 @@ export default function AdminPackages() {
   const fetchTrips = useCallback(async () => {
     setLoading(true);
     const { data: tenantId } = await supabase.rpc("get_my_tenant_id");
+    const platformId = await getPlatformTenantId();
+    const filterId = tenantId ?? platformId;
 
     let q = (supabase.from("trips") as any)
       .select("id, slug, name, status, starting_price, pickup_drop_location, pickup_location, drop_location")
       .order("created_at", { ascending: false });
 
-    if (tenantId != null) {
-      q = q.eq("tenant_id", tenantId);
+    if (filterId != null) {
+      q = q.eq("tenant_id", filterId);
     } else {
       q = q.is("tenant_id", null);
     }

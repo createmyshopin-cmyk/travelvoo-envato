@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X, Play, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/context/TenantContext";
+import { getPlatformTenantId } from "@/lib/platformTenant";
 
 // --- Types -----------------------------------------------------------
 
@@ -42,7 +43,8 @@ const ResortStories = () => {
         .from("stay_reels")
         .select("id, stay_id, url, platform, title, thumbnail, sort_order, stays(name, images)")
         .order("sort_order");
-      if (tenantId) reelsQuery = reelsQuery.eq("tenant_id", tenantId);
+      const reelFilter = tenantId ?? (await getPlatformTenantId());
+      if (reelFilter) reelsQuery = reelsQuery.eq("tenant_id", reelFilter);
       else reelsQuery = reelsQuery.is("tenant_id", null);
 
       const [{ data: reelsData }, { data: settingsData }] = await Promise.all([

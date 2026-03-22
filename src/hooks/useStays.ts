@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/context/TenantContext";
+import { getPlatformTenantId } from "@/lib/platformTenant";
 import type { Stay, RoomCategory, Review, Reel, NearbyDestination } from "@/types/stay";
 
 // Module-level cache: key = "tenantId|category" so tenant subdomains get fresh empty data
@@ -93,7 +94,8 @@ export function useStays(category?: string) {
     if (tenantId) {
       query = query.eq("tenant_id", tenantId);
     } else {
-      query = query.is("tenant_id", null);
+      const pid = await getPlatformTenantId();
+      query = pid ? query.eq("tenant_id", pid) : query.is("tenant_id", null);
     }
     if (category) {
       query = query.eq("category", category);
@@ -198,11 +200,14 @@ export function useStayDetail(stayId: string | undefined) {
         .single();
 
       if (stayData) {
-        // On tenant subdomain, only show stays belonging to that tenant
-        if (tenantId && stayData.tenant_id !== tenantId) {
+        const platformId = await getPlatformTenantId();
+        const allowed =
+          tenantId != null
+            ? stayData.tenant_id === tenantId
+            : platformId != null && stayData.tenant_id === platformId;
+
+        if (!allowed) {
           setStay(null);
-        } else if (!tenantId && stayData.tenant_id != null) {
-          setStay(null); // Platform site: hide tenant-specific stays
         } else {
           setStay(mapDbStay(stayData));
           const [roomsRes, reviewsRes, reelsRes, nearbyRes] = await Promise.all([

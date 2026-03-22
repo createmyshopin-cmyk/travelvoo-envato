@@ -2643,6 +2643,7 @@ export type Database = {
           status: string
           tenant_name: string
           user_id: string | null
+          is_platform: boolean
         }
         Insert: {
           created_at?: string
@@ -2665,6 +2666,7 @@ export type Database = {
           status?: string
           tenant_name: string
           user_id?: string | null
+          is_platform?: boolean
         }
         Update: {
           created_at?: string
@@ -2687,6 +2689,7 @@ export type Database = {
           status?: string
           tenant_name?: string
           user_id?: string | null
+          is_platform?: boolean
         }
         Relationships: [
           {
@@ -3157,6 +3160,7 @@ export type Database = {
         Returns: Json
       }
       get_my_tenant_id: { Args: never; Returns: string }
+      get_platform_tenant_id: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
