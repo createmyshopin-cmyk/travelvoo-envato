@@ -12,6 +12,7 @@ import { useSubscriptionGuard } from "@/hooks/useSubscriptionGuard";
 import { usePlatformMaintenanceMode } from "@/hooks/usePlatformMaintenanceMode";
 import { useRouter, usePathname } from "next/navigation";
 import { AlertCircle, ShieldOff, ArrowUpCircle, Lock, WrenchIcon } from "lucide-react";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { Button } from "@/components/ui/button";
 
 const FEATURE_ROUTES: Record<string, { key: string; label: string }> = {
@@ -190,6 +191,7 @@ function FeatureLockOverlay() {
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { loading, isAdmin, signOut } = useAdminAuth();
+  const { settings } = useSiteSettings();
   const router = useRouter();
 
   useEffect(() => {
@@ -216,7 +218,9 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col">
           <header className="h-14 flex items-center border-b bg-background px-4">
             <SidebarTrigger className="mr-4" />
-            <h1 className="text-lg font-semibold text-foreground">Stay Admin</h1>
+            <h1 className="text-lg font-semibold text-foreground">
+              {settings?.site_name || "Stay Admin"}
+            </h1>
           </header>
           <main className="relative flex-1 p-4 md:p-6 overflow-auto">
             <PlatformMaintenanceOverlay />
