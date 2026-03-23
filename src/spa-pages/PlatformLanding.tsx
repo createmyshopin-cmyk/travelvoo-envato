@@ -24,14 +24,14 @@ const PlatformLanding = () => {
       <section className="relative pt-32 pb-20 px-6 overflow-hidden">
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <span className="inline-block px-4 py-1.5 rounded-full bg-[#ece7e1] text-[#5c403c] text-xs font-bold tracking-widest uppercase mb-8">
-            Hospitality Automation Platform
+            Build Your Own Booking Platform
           </span>
           <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-[#1d1b17] mb-8 leading-[0.95]">
             Your Properties.<br />
             <span className="text-[#dc2626]">Your Rules.</span> Your Prices.
           </h1>
           <p className="text-lg md:text-xl text-[#5c403c] max-w-2xl mx-auto mb-12 font-medium">
-            The modern operating system for luxury rentals and boutique hotels. Direct bookings, unified management, and seamless guest experiences.
+            TravelVoo helps resorts, homestays, and property owners launch high-converting direct booking websites in minutes. Manage reservations, pricing, and guest communication from one powerful property booking platform — no coding required.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button className="bg-gradient-to-br from-[#b70011] to-[#dc2626] text-white px-8 py-4 rounded-xl text-lg font-bold shadow-lg hover:shadow-red-500/20 transition-all active:scale-95">
@@ -168,7 +168,7 @@ const PlatformLanding = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white p-10 rounded-[32px] shadow-sm relative border-2 border-[#dc2626]/10">
               <Quote className="text-[#ffb4ab] w-16 h-16 absolute top-6 right-8 opacity-40" />
               <p className="text-[#1d1b17] italic text-lg mb-8 relative z-10">"The hospitality OS we've been waiting for. It feels like an editorial experience, not a database. Our guests love the checkout flow."</p>
@@ -182,7 +182,7 @@ const PlatformLanding = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white p-10 rounded-[32px] shadow-sm relative">
               <Quote className="text-[#ffb4ab] w-16 h-16 absolute top-6 right-8 opacity-40" />
               <p className="text-[#1d1b17] italic text-lg mb-8 relative z-10">"We moved away from legacy PMS systems and haven't looked back. TravelVoo is sleek, fast, and remarkably intuitive."</p>
@@ -210,12 +210,12 @@ const PlatformLanding = () => {
           {/* Orbit Circles */}
           <div className="absolute w-[300px] h-[300px] border border-[#e6bdb8]/30 rounded-full"></div>
           <div className="absolute w-[500px] h-[500px] border border-[#e6bdb8]/20 rounded-full"></div>
-          
+
           {/* Central Node */}
           <div className="z-20 w-32 h-32 bg-[#dc2626] rounded-[32px] flex items-center justify-center shadow-2xl shadow-red-600/20">
             <span className="text-white font-bold text-2xl tracking-tighter">TV</span>
           </div>
-          
+
           {/* Floating Icons */}
           <div className="absolute top-[10%] left-[30%] bg-white p-4 rounded-2xl shadow-lg flex items-center justify-center w-16 h-16">
             <MessageSquare className="text-[#25D366] w-8 h-8" />
@@ -268,7 +268,7 @@ const PlatformLanding = () => {
                 Get Started
               </button>
             </div>
-            
+
             {/* Professional */}
             <div className="bg-[#1d1b17] text-[#fef9f1] p-10 rounded-[40px] flex flex-col relative overflow-hidden hover:translate-y-[-8px] transition-transform duration-300">
               <div className="absolute top-0 right-0 px-6 py-2 bg-[#dc2626] text-white text-xs font-bold uppercase rounded-bl-2xl">Popular</div>
@@ -300,7 +300,7 @@ const PlatformLanding = () => {
                 Upgrade Now
               </button>
             </div>
-            
+
             {/* Enterprise */}
             <div className="bg-[#f2ede6] p-10 rounded-[40px] flex flex-col hover:translate-y-[-8px] transition-transform duration-300">
               <h3 className="text-xl font-bold mb-2 text-[#1d1b17]">Enterprise</h3>
