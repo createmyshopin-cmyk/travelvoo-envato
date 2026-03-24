@@ -103,6 +103,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
   const [loading, setLoading] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [initialDataStr, setInitialDataStr] = useState<string>("");
 
   const TAB_ORDER = ["basic", "photos", "rooms", "addons", "reels", "nearby", "reviews", "seo"] as const;
@@ -164,6 +165,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
   useEffect(() => {
     if (!open) {
       setInitialDataStr("");
+      setDataLoaded(false);
       return;
     }
     if (stay) {
@@ -232,20 +234,9 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
     setRoomCategories(fetchedRooms);
     setAddons(fetchedAddons);
 
-    const initialObj = {
-      form: { name: stay.name || "", location: stay.location || "", description: stay.description || "", category: stay.category || "", price: stay.price || 0, original_price: stay.original_price || 0, status: stay.status || "active", max_adults: stay.max_adults ?? 20, max_children: stay.max_children ?? 5, max_pets: stay.max_pets ?? 5 },
-      selectedAmenities: stay.amenities || [],
-      photos: stay.images || [],
-      seo: { seo_title: stay.seo_title || "", seo_description: stay.seo_description || "", seo_keywords: stay.seo_keywords || "", og_image_url: stay.og_image_url || "" },
-      reels: fetchedReels,
-      nearby: fetchedNearby,
-      reviews: fetchedReviews,
-      roomCategories: fetchedRooms,
-      addons: fetchedAddons,
-      deletedRoomIds: [],
-      deletedAddonIds: []
-    };
-    setInitialDataStr(JSON.stringify(initialObj));
+    setTimeout(() => {
+      setDataLoaded(true);
+    }, 50);
   };
 
   const validateBasic = () => {
@@ -484,11 +475,18 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
   const currentSnapshot = JSON.stringify({
     form, selectedAmenities, photos, seo, reels, nearby, reviews, roomCategories, addons, deletedRoomIds, deletedAddonIds
   });
-  const hasChanges = initialDataStr !== "" && currentSnapshot !== initialDataStr;
+
+  useEffect(() => {
+    if (stay && dataLoaded && initialDataStr === "") {
+      setInitialDataStr(currentSnapshot);
+    }
+  }, [stay, dataLoaded, initialDataStr, currentSnapshot]);
+
+  const hasChanges = stay ? (initialDataStr !== "" && currentSnapshot !== initialDataStr) : false;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent onInteractOutside={(e) => e.preventDefault()} className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
         <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle>{stay ? "Edit Stay" : "Add New Stay"}</DialogTitle>
         </DialogHeader>
