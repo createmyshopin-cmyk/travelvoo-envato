@@ -188,7 +188,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
       setDeletedAddonIds([]);
       fetchRelatedData(stay.id);
     } else {
-      setForm({ name: "", location: "", description: "", category: "", price: 0, original_price: 0, status: "active" });
+      setForm({ name: "", location: "", description: "", category: "", price: 0, original_price: 0, status: "active", max_adults: 20, max_children: 5, max_pets: 5 });
       setSelectedAmenities([]);
       setPhotos([]);
       setReels([]);
@@ -351,7 +351,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
       await supabase.from("room_categories").delete().eq("id", id);
     }
     for (const room of roomCategories) {
-      const payload: Record<string, unknown> = {
+      const payload: any = {
         stay_id: stayId,
         name: room.name.trim(),
         max_guests: room.max_guests,
@@ -519,27 +519,27 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Price ({symbol})</label>
-                  <Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
+                  <label className="text-sm font-medium">Offer Price ({symbol})</label>
+                  <Input type="number" value={form.price || ""} placeholder="0" onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Original price ({symbol})</label>
-                  <Input type="number" value={form.original_price} onChange={(e) => setForm({ ...form, original_price: Number(e.target.value) })} />
+                  <label className="text-sm font-medium">Original Price ({symbol})</label>
+                  <Input type="number" value={form.original_price || ""} placeholder="0" onChange={(e) => setForm({ ...form, original_price: Number(e.target.value) })} />
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Guest Limits</label>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Max Adults</label>
+                    <label className="text-xs text-muted-foreground">Minimum Adults</label>
                     <Input type="number" min={1} max={100} value={form.max_adults} onChange={(e) => setForm({ ...form, max_adults: Number(e.target.value) })} />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Max Children</label>
+                    <label className="text-xs text-muted-foreground">Minimum Children</label>
                     <Input type="number" min={0} max={50} value={form.max_children} onChange={(e) => setForm({ ...form, max_children: Number(e.target.value) })} />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Max Pets</label>
+                    <label className="text-xs text-muted-foreground">Minimum Pets</label>
                     <Input type="number" min={0} max={20} value={form.max_pets} onChange={(e) => setForm({ ...form, max_pets: Number(e.target.value) })} />
                   </div>
                 </div>
@@ -586,11 +586,10 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
                         key={name}
                         type="button"
                         onClick={() => setSelectedAmenities(prev => isSelected ? prev.filter(a => a !== name) : [...prev, name])}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                          isSelected
-                            ? "bg-primary/10 text-primary border-primary/40 ring-1 ring-primary/20"
-                            : "bg-muted text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
-                        }`}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${isSelected
+                          ? "bg-primary/10 text-primary border-primary/40 ring-1 ring-primary/20"
+                          : "bg-muted text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
+                          }`}
                       >
                         {isSelected ? <Check className="h-3 w-3" /> : <Icon className="h-3 w-3" />}
                         {name}
@@ -791,7 +790,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium">Price ({symbol}) *</label>
+                      <label className="text-xs font-medium">Offer Price ({symbol}) *</label>
                       <Input
                         type="number"
                         value={roomForm.price || ""}
@@ -802,7 +801,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium">Original price ({symbol})</label>
+                      <label className="text-xs font-medium">Original Price ({symbol})</label>
                       <Input
                         type="number"
                         value={roomForm.original_price || ""}
@@ -843,11 +842,10 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
                           key={a}
                           type="button"
                           onClick={() => toggleRoomAmenity(a)}
-                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-medium transition-colors cursor-pointer ${
-                            roomForm.amenities.includes(a)
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-background text-muted-foreground border-border hover:bg-muted"
-                          }`}
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-medium transition-colors cursor-pointer ${roomForm.amenities.includes(a)
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-muted-foreground border-border hover:bg-muted"
+                            }`}
                         >
                           {roomForm.amenities.includes(a) && <Check className="h-2.5 w-2.5 mr-1" />}
                           {a}
@@ -1253,9 +1251,8 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
               {TAB_ORDER.map((tab, i) => (
                 <div
                   key={tab}
-                  className={`h-1.5 rounded-full transition-all ${
-                    i === tabIdx ? "w-6 bg-primary" : i < tabIdx ? "w-3 bg-primary/40" : "w-3 bg-muted-foreground/20"
-                  }`}
+                  className={`h-1.5 rounded-full transition-all ${i === tabIdx ? "w-6 bg-primary" : i < tabIdx ? "w-3 bg-primary/40" : "w-3 bg-muted-foreground/20"
+                    }`}
                 />
               ))}
             </div>
