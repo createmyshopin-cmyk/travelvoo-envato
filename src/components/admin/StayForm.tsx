@@ -486,26 +486,27 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onInteractOutside={(e) => e.preventDefault()} className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
-        <DialogHeader className="px-6 pt-6 pb-0">
+      <DialogContent onInteractOutside={(e) => e.preventDefault()} className="max-w-2xl w-[95vw] h-[95vh] md:h-[85vh] p-0 flex flex-col overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
           <DialogTitle>{stay ? "Edit Stay" : "Add New Stay"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="px-6 pt-2">
-              <TabsList className="w-full grid grid-cols-8 h-9">
-                <TabsTrigger value="basic" className="text-xs gap-1"><GripVertical className="h-3 w-3 hidden sm:block" />Basic</TabsTrigger>
-                <TabsTrigger value="photos" className="text-xs gap-1"><Image className="h-3 w-3 hidden sm:block" />Photos</TabsTrigger>
-                <TabsTrigger value="rooms" className="text-xs gap-1"><BedDouble className="h-3 w-3 hidden sm:block" />Rooms</TabsTrigger>
-                <TabsTrigger value="addons" className="text-xs gap-1"><Package className="h-3 w-3 hidden sm:block" />Add-ons</TabsTrigger>
-                <TabsTrigger value="reels" className="text-xs gap-1"><Film className="h-3 w-3 hidden sm:block" />Reels</TabsTrigger>
-                <TabsTrigger value="nearby" className="text-xs gap-1"><Navigation className="h-3 w-3 hidden sm:block" />Nearby</TabsTrigger>
-                <TabsTrigger value="reviews" className="text-xs gap-1"><Star className="h-3 w-3 hidden sm:block" />Reviews</TabsTrigger>
-                <TabsTrigger value="seo" className="text-xs gap-1"><Search className="h-3 w-3 hidden sm:block" />SEO</TabsTrigger>
+        <form onSubmit={(e) => { e.preventDefault(); saveStay("active"); }} className="flex flex-col flex-1 overflow-hidden min-h-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden w-full">
+            <div className="px-6 pt-2 pb-2 shrink-0 border-b">
+              <TabsList className="w-full flex sm:grid sm:grid-cols-4 md:grid-cols-8 h-9 overflow-x-auto sm:overflow-visible">
+                <TabsTrigger value="basic" className="text-xs gap-1 shrink-0"><GripVertical className="h-3 w-3 hidden sm:block" />Basic</TabsTrigger>
+                <TabsTrigger value="photos" className="text-xs gap-1 shrink-0"><Image className="h-3 w-3 hidden sm:block" />Photos</TabsTrigger>
+                <TabsTrigger value="rooms" className="text-xs gap-1 shrink-0"><BedDouble className="h-3 w-3 hidden sm:block" />Rooms</TabsTrigger>
+                <TabsTrigger value="addons" className="text-xs gap-1 shrink-0"><Package className="h-3 w-3 hidden sm:block" />Add-ons</TabsTrigger>
+                <TabsTrigger value="reels" className="text-xs gap-1 shrink-0"><Film className="h-3 w-3 hidden sm:block" />Reels</TabsTrigger>
+                <TabsTrigger value="nearby" className="text-xs gap-1 shrink-0"><Navigation className="h-3 w-3 hidden sm:block" />Nearby</TabsTrigger>
+                <TabsTrigger value="reviews" className="text-xs gap-1 shrink-0"><Star className="h-3 w-3 hidden sm:block" />Reviews</TabsTrigger>
+                <TabsTrigger value="seo" className="text-xs gap-1 shrink-0"><Search className="h-3 w-3 hidden sm:block" />SEO</TabsTrigger>
               </TabsList>
             </div>
 
+            <div className="flex-1 overflow-y-auto min-h-0">
             {/* BASIC TAB */}
             <TabsContent value="basic" className="px-6 pb-2 space-y-4 mt-4">
               <div className="space-y-2">
@@ -1269,10 +1270,11 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
                 </div>
               </div>
             </TabsContent>
+            </div>
           </Tabs>
 
           {/* Footer buttons */}
-          <div className="sticky bottom-0 z-20 px-6 py-4 border-t bg-background space-y-2">
+          <div className="shrink-0 px-6 py-4 border-t bg-background shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-20 space-y-2 mt-auto">
             {/* Step indicator */}
             <div className="flex items-center justify-center gap-1 mb-1">
               {TAB_ORDER.map((tab, i) => (
