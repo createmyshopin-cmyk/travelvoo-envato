@@ -690,7 +690,7 @@ export default function AdminAnalytics() {
                     <div className="flex-1 min-w-0">
                       <p className="font-mono text-sm font-semibold truncate">{c.code}</p>
                       <p className="text-[10px] text-muted-foreground">
-                        {c.type === "percent" ? `${c.value}% off` : `${format(c.value)} off`} · {c.active ? "Active" : "Inactive"}
+                        {c.type === "percentage" ? `${c.value}% off` : `${format(c.value)} off`} · {c.active ? "Active" : "Inactive"}
                       </p>
                     </div>
                     <div className="text-right shrink-0">

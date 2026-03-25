@@ -40,7 +40,7 @@ import {
   Gift,
   Building2,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format as formatDate, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { formatPhoneForWhatsApp } from "@/lib/countryCodes";
 
@@ -135,14 +135,14 @@ function exportGuestContactsCSV(guests: GuestContact[]) {
     g.totalSpend,
     g.tier,
     g.bookedStays.join("; "),
-    g.lastBookingDate ? format(parseISO(g.lastBookingDate), "yyyy-MM-dd") : "",
+    g.lastBookingDate ? formatDate(parseISO(g.lastBookingDate), "yyyy-MM-dd") : "",
   ]);
   const csv = [headers.join(","), ...rows.map((r) => r.map((v) => `"${v}"`).join(","))].join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `guest-contacts-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a.download = `guest-contacts-${formatDate(new Date(), "yyyy-MM-dd")}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -509,7 +509,7 @@ export default function AdminGuestContacts() {
 
                   {g.lastBookingDate && (
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      Last stay: {format(parseISO(g.lastBookingDate), "dd MMM yyyy")}
+                      Last stay: {formatDate(parseISO(g.lastBookingDate), "dd MMM yyyy")}
                     </p>
                   )}
                 </div>
@@ -574,7 +574,7 @@ interface GiveDiscountDialogProps {
 function GiveDiscountDialog({ guest, onClose, onSuccess, tenantId, toast }: GiveDiscountDialogProps) {
   const { format, symbol } = useCurrency();
   const [code, setCode] = useState("");
-  const [type, setType] = useState<"percent" | "flat">("percent");
+  const [type, setType] = useState<"percentage" | "flat">("percentage");
   const [value, setValue] = useState(10);
   const [minPurchase, setMinPurchase] = useState(0);
   const [expiresAt, setExpiresAt] = useState<Date | undefined>();
@@ -584,7 +584,7 @@ function GiveDiscountDialog({ guest, onClose, onSuccess, tenantId, toast }: Give
   const reset = () => {
     const base = guest?.name ? guest.name.replace(/\s+/g, "").toUpperCase().slice(0, 6) : "LOYAL";
     setCode(`LOYAL-${base}-${randomCode().slice(-4)}`);
-    setType("percent");
+    setType("percentage");
     setValue(10);
     setMinPurchase(0);
     setExpiresAt(undefined);
@@ -604,8 +604,8 @@ function GiveDiscountDialog({ guest, onClose, onSuccess, tenantId, toast }: Give
     const payload = {
       code: code.trim().toUpperCase(),
       description: `Loyalty discount for ${guest.name}`,
-      type: type === "percent" ? "percent" : "flat",
-      value: type === "percent" ? Math.min(100, value) : value,
+      type: type === "percentage" ? "percentage" : "flat",
+      value: type === "percentage" ? Math.min(100, value) : value,
       min_purchase: minPurchase || 0,
       max_discount: null,
       active: true,
@@ -624,7 +624,7 @@ function GiveDiscountDialog({ guest, onClose, onSuccess, tenantId, toast }: Give
     }
 
     const discountText =
-      type === "percent"
+      type === "percentage"
         ? `${value}% off`
         : `${format(value)} off`;
     const message = `Hi ${guest.name}! Thank you for being a valued guest. Use coupon ${code.trim().toUpperCase()} for ${discountText} on your next stay!`;
@@ -656,12 +656,12 @@ function GiveDiscountDialog({ guest, onClose, onSuccess, tenantId, toast }: Give
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Type</Label>
-              <Select value={type} onValueChange={(v: "percent" | "flat") => setType(v)}>
+              <Select value={type} onValueChange={(v: "percentage" | "flat") => setType(v)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="percent">Percentage</SelectItem>
+                  <SelectItem value="percentage">Percentage</SelectItem>
                   <SelectItem value="flat">Flat ({symbol})</SelectItem>
                 </SelectContent>
               </Select>
@@ -671,7 +671,7 @@ function GiveDiscountDialog({ guest, onClose, onSuccess, tenantId, toast }: Give
               <Input
                 type="number"
                 min={1}
-                max={type === "percent" ? 100 : 99999}
+                max={type === "percentage" ? 100 : 99999}
                 value={value}
                 onChange={(e) => setValue(parseInt(e.target.value, 10) || 0)}
               />
@@ -702,7 +702,7 @@ function GiveDiscountDialog({ guest, onClose, onSuccess, tenantId, toast }: Give
             <Label>Expires (optional)</Label>
             <Input
               type="date"
-              value={expiresAt ? format(expiresAt, "yyyy-MM-dd") : ""}
+              value={expiresAt ? formatDate(expiresAt, "yyyy-MM-dd") : ""}
               onChange={(e) => setExpiresAt(e.target.value ? parseISO(e.target.value) : undefined)}
             />
           </div>

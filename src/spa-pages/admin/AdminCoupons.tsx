@@ -67,10 +67,11 @@ type SortKey = "code" | "value" | "usage_count" | "created_at" | "expires_at";
 type StatusTab = "all" | "active" | "expired" | "scheduled" | "exhausted" | "inactive";
 
 const EMPTY: CouponForm = {
-  code: "", description: "", type: "percent", value: 10,
+  code: "", description: "", type: "percentage", value: 10,
   min_purchase: 0, max_discount: "", active: true,
   usage_limit: "", starts_at: undefined, expires_at: undefined,
 };
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -83,10 +84,11 @@ function randomCode() {
 
 function discountLabel(c: Coupon) {
   const cur = getStoredCurrencyCode();
-  return c.type === "percent" || c.type === "percentage"
+  return c.type === "percentage"
     ? `${c.value}% OFF`
     : `${formatMoneyAmount(c.value, cur)} OFF`;
 }
+
 
 type CouponStatus = "active" | "expired" | "scheduled" | "exhausted" | "inactive";
 
@@ -193,7 +195,7 @@ function DatePicker({ date, onSelect, placeholder, minDate }: {
 function CouponPreview({ form }: { form: CouponForm }) {
   const cur = getStoredCurrencyCode();
   const code = form.code || "YOURCODE";
-  const isPercent = form.type === "percent" || form.type === "percentage";
+  const isPercent = form.type === "percentage";
   const discount = isPercent ? `${form.value}% OFF` : `${formatMoneyAmount(Number(form.value), cur)} OFF`;
 
   return (
@@ -389,7 +391,7 @@ export default function AdminCoupons() {
     e.preventDefault();
     if (!form.code.trim()) return;
 
-    if (form.type === "percent" && (form.value < 1 || form.value > 100)) {
+    if (form.type === "percentage" && (form.value < 1 || form.value > 100)) {
       toast({ title: "Invalid value", description: "Percentage must be between 1 and 100.", variant: "destructive" });
       return;
     }
@@ -720,9 +722,9 @@ export default function AdminCoupons() {
                       {/* Discount */}
                       <TableCell>
                         <span className={`inline-flex items-center gap-1 font-bold text-sm ${
-                          c.type === "percent" || c.type === "percentage" ? "text-purple-600" : "text-primary"
+                          c.type === "percentage" ? "text-purple-600" : "text-primary"
                         }`}>
-                          {c.type === "percent" || c.type === "percentage"
+                          {c.type === "percentage"
                             ? <><Percent className="w-3.5 h-3.5" />{c.value}%</>
                             : <><IndianRupee className="w-3.5 h-3.5" />{formatMoneyAmount(c.value, getStoredCurrencyCode())}</>}
                         </span>
@@ -873,7 +875,7 @@ export default function AdminCoupons() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="percent">
+                    <SelectItem value="percentage">
                       <div className="flex items-center gap-2"><Percent className="w-4 h-4 text-purple-500" /> Percentage (%)</div>
                     </SelectItem>
                     <SelectItem value="flat">
@@ -884,12 +886,12 @@ export default function AdminCoupons() {
               </div>
               <div className="space-y-1.5">
                 <Label>
-                  {form.type === "percent" || form.type === "percentage" ? "Discount (%)" : `Discount (${symbol})`} *
+                  {form.type === "percentage" ? "Discount (%)" : `Discount (${symbol})`} *
                 </Label>
                 <Input
                   type="number"
                   min={1}
-                  max={form.type === "percent" ? 100 : undefined}
+                  max={form.type === "percentage" ? 100 : undefined}
                   value={form.value}
                   onChange={e => setForm({ ...form, value: Number(e.target.value) })}
                   required
