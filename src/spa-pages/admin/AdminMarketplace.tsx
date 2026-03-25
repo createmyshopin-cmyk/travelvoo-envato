@@ -9,7 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { clearSiteSettingsCache } from "@/hooks/useSiteSettings";
 import { useSubscriptionGuard } from "@/hooks/useSubscriptionGuard";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock, Package, Palette, Store } from "lucide-react";
+import { Loader2, Lock, Package, Palette, Store, Eye } from "lucide-react";
 import { payForMarketplaceItem } from "@/lib/marketplace-checkout";
 import type { Tables } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
@@ -99,6 +99,7 @@ export default function AdminMarketplace() {
   const [installs, setInstalls] = useState<TenantInstall[]>([]);
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [activeThemeSlug, setActiveThemeSlug] = useState<string | null>(null);
   const [tenantContact, setTenantContact] = useState<{ name: string; email: string; phone: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -123,6 +124,14 @@ export default function AdminMarketplace() {
         ? supabase.from("tenant_marketplace_installs").select("*").eq("tenant_id", tid)
         : { data: [] as TenantInstall[] },
     ]);
+
+    if (tid) {
+      let siteRes = await (supabase.from("site_settings") as any).select("landing_theme_slug").eq("tenant_id", tid).maybeSingle();
+      if (!siteRes.data) {
+        siteRes = await supabase.from("site_settings").select("landing_theme_slug").limit(1).maybeSingle();
+      }
+      setActiveThemeSlug(siteRes.data?.landing_theme_slug || "default");
+    }
 
     if (cat.data) setItems(cat.data as MarketplaceItem[]);
     if (ins.data) setInstalls(ins.data as TenantInstall[]);
@@ -162,6 +171,41 @@ export default function AdminMarketplace() {
     }
     toast({ title: "Installed", description: item.name });
     await load();
+  };
+
+  const handleUninstall = async (item: MarketplaceItem, isActive: boolean) => {
+    if (!tenantId) return;
+    if (!confirm(`Are you sure you want to uninstall ${item.name}?`)) return;
+
+    setBusyId(item.id);
+    const { error } = await supabase
+      .from("tenant_marketplace_installs")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("item_id", item.id);
+
+    // If the theme was active, automatically revert the user's site back to the default theme
+    if (isActive && !error) {
+       let siteRes = await (supabase.from("site_settings") as any).select("id").eq("tenant_id", tenantId).maybeSingle();
+       if (!siteRes.data?.id) siteRes = await supabase.from("site_settings").select("id").limit(1).maybeSingle();
+       
+       if (siteRes.data?.id) {
+          await supabase.from("site_settings").update({
+             landing_theme_slug: "default",
+             theme_tokens: {},
+             updated_at: new Date().toISOString()
+          }).eq("id", siteRes.data.id);
+          clearSiteSettingsCache();
+       }
+    }
+
+    setBusyId(null);
+    if (error) {
+      toast({ title: "Uninstall failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Uninstalled", description: isActive ? `${item.name} removed and site reverted to default theme.` : `${item.name} has been removed.` });
+      await load();
+    }
   };
 
   const handlePayAndInstall = (item: MarketplaceItem) => {
@@ -273,6 +317,9 @@ export default function AdminMarketplace() {
             const isTheme = item.type === "theme";
             const free = isFreeItem(item);
             const manifest = parseManifest(item.manifest);
+            
+            // For themes, check if it's currently the active one
+            const isActiveTheme = isTheme && (manifest.preset ?? "default") === activeThemeSlug;
 
             return (
               <Card key={item.id} className="flex flex-col overflow-hidden pt-0">
@@ -325,7 +372,28 @@ export default function AdminMarketplace() {
                     )}
                     {installed?.status === "installed" && isTheme && (
                       <Button className="w-full sm:flex-1" size="sm" variant="secondary" disabled={busyId === item.id} onClick={() => handleActivateTheme(item)}>
-                        {busyId === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Activate on site"}
+                        {busyId === item.id && !isActiveTheme ? <Loader2 className="h-4 w-4 animate-spin" /> : "Activate on site"}
+                      </Button>
+                    )}
+                    {installed?.status === "installed" && (
+                      <Button 
+                        className="w-full sm:flex-1" 
+                        size="sm" 
+                        variant="ghost" 
+                        disabled={busyId === item.id} 
+                        onClick={() => handleUninstall(item, isActiveTheme)}
+                      >
+                        Uninstall
+                      </Button>
+                    )}
+                    {isTheme && (
+                      <Button 
+                        className="w-full sm:flex-1" 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => router.push(`/admin/marketplace/preview/${item.slug}`)}
+                      >
+                        <Eye className="w-4 h-4 mr-1" /> Preview
                       </Button>
                     )}
                   </div>

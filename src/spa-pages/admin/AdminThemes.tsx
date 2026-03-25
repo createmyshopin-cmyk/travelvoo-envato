@@ -158,6 +158,42 @@ export default function AdminThemes() {
     toast({ title: "Theme active", description: "Your public site will now use this theme." });
   };
 
+  const handleUninstall = async (item: MarketplaceItem, isActive: boolean) => {
+    if (!tenantId) return;
+    if (!confirm(`Are you sure you want to uninstall ${item.name}?`)) return;
+
+    setBusyId(item.id);
+    const { error } = await supabase
+      .from("tenant_marketplace_installs")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("item_id", item.id);
+
+    // If the theme was active, automatically revert the user's site back to the default theme
+    if (isActive && !error) {
+       let siteRes = await (supabase.from("site_settings") as any).select("id").eq("tenant_id", tenantId).maybeSingle();
+       if (!siteRes.data?.id) siteRes = await supabase.from("site_settings").select("id").limit(1).maybeSingle();
+       
+       if (siteRes.data?.id) {
+          await supabase.from("site_settings").update({
+             landing_theme_slug: "default",
+             theme_tokens: {},
+             updated_at: new Date().toISOString()
+          }).eq("id", siteRes.data.id);
+          clearSiteSettingsCache();
+          setActiveThemeSlug("default");
+       }
+    }
+
+    setBusyId(null);
+    if (error) {
+      toast({ title: "Uninstall failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Uninstalled", description: isActive ? `${item.name} removed and site reverted to default theme.` : `${item.name} has been removed.` });
+      await load();
+    }
+  };
+
   if (planLoading || loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -234,7 +270,7 @@ export default function AdminThemes() {
                         Configure Theme
                       </Button>
                     ) : (
-                      <Button 
+                        <Button 
                         className="w-full" 
                         size="sm" 
                         variant="secondary" 
@@ -244,6 +280,15 @@ export default function AdminThemes() {
                         {busyId === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Activate on site"}
                       </Button>
                     )}
+                    <Button 
+                      className="w-full sm:flex-1" 
+                      size="sm" 
+                      variant="ghost" 
+                      disabled={busyId === item.id} 
+                      onClick={() => handleUninstall(item, isActive)}
+                    >
+                      Uninstall
+                    </Button>
                   </div>
                   {manifest.preset && (
                     <p className="text-[10px] text-muted-foreground">Preset: {manifest.preset}</p>
