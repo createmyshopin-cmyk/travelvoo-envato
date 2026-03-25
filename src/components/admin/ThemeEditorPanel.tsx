@@ -129,9 +129,10 @@ function ThemePreviewCanvas({
 }) {
   const [device, setDevice] = useState<Device>("mobile");
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
 
-  // Build the full token map including the preset
+  // Build the token map
   const previewTokens = useMemo(() => {
     const out: Record<string, string> = {};
     for (const [k, v] of Object.entries(tokenInputs)) {
@@ -142,27 +143,41 @@ function ThemePreviewCanvas({
     return out;
   }, [tokenInputs]);
 
-  // Inject tokens into the iframe via postMessage every time they change
-  useEffect(() => {
-    const send = () => {
-      iframeRef.current?.contentWindow?.postMessage(
-        { type: "THEME_PREVIEW_TOKENS", tokens: previewTokens, preset },
-        "*"
-      );
-    };
-    // Small delay to ensure iframe is ready on first load
-    const tid = setTimeout(send, 200);
-    return () => clearTimeout(tid);
+  // postMessage tokens into iframe on every change
+  const sendTokens = useCallback(() => {
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: "THEME_PREVIEW_TOKENS", tokens: previewTokens, preset },
+      "*"
+    );
   }, [previewTokens, preset]);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo(0, 0);
+    const tid = setTimeout(sendTokens, 300);
+    return () => clearTimeout(tid);
+  }, [sendTokens]);
+
+  // Measure the inner device frame width and compute scale
+  useEffect(() => {
+    const el = frameRef.current;
+    if (!el) return;
+    const dim = DEVICE[device];
+    const compute = () => {
+      const available = el.getBoundingClientRect().width;
+      setScale(available > 0 ? available / dim.w : 1);
+    };
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, [device]);
 
   const dim = DEVICE[device];
+  // The iframe is dim.w px wide; after scaling, visible height should be displayH
+  const displayH = 680;
+  const iframeH = scale > 0 ? Math.ceil(displayH / scale) : displayH;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Device switcher */}
       <div className="flex rounded-lg border bg-muted/40 p-1 gap-1">
         {(Object.keys(DEVICE) as Device[]).map((d) => {
@@ -178,85 +193,81 @@ function ThemePreviewCanvas({
             >
               <Ic className="h-3.5 w-3.5 shrink-0" />
               {DEVICE[d].label}
-              <span className="hidden sm:inline text-[10px] opacity-70 font-normal">{DEVICE[d].w}px</span>
+              <span className="hidden sm:inline text-[10px] opacity-60 font-normal">{DEVICE[d].w}px</span>
             </Button>
           );
         })}
       </div>
 
-      {/* Device frame */}
-      <div className="flex justify-center rounded-xl border bg-gradient-to-b from-muted/60 to-muted/30 p-3 sm:p-6 overflow-x-auto">
+      {/* Outer centering shell */}
+      <div className="rounded-xl border bg-gradient-to-b from-slate-900 to-slate-800 p-4 flex justify-center">
+        {/* Device chrome wrapper — fills available width */}
         <div
-          className="transition-[width] duration-300 ease-out shrink-0"
-          style={{ width: "min(100%, " + dim.w + "px)" }}
+          ref={frameRef}
+          className={cn(
+            "w-full max-w-full border-slate-700 bg-slate-900 shadow-2xl",
+            dim.frame
+          )}
+          style={{ maxWidth: dim.w }}
         >
+          {/* Status bar / browser bar chrome */}
+          {device === "mobile" && (
+            <div className="h-7 bg-slate-900 flex items-center justify-center">
+              <div className="w-20 h-1.5 rounded-full bg-slate-600" />
+            </div>
+          )}
+          {device === "tablet" && (
+            <div className="h-5 bg-slate-900 flex items-center justify-center">
+              <div className="w-14 h-1.5 rounded-full bg-slate-600" />
+            </div>
+          )}
+          {device === "desktop" && (
+            <div className="h-9 bg-slate-800 flex items-center px-3 gap-2 border-b border-slate-700">
+              <div className="flex gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-red-500/90" />
+                <span className="w-3 h-3 rounded-full bg-amber-400/90" />
+                <span className="w-3 h-3 rounded-full bg-emerald-500/90" />
+              </div>
+              <div className="flex-1 h-5 rounded-full bg-slate-700 mx-6">
+                <div className="h-full flex items-center px-3">
+                  <span className="text-[10px] text-slate-400 truncate">yoursite.com</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Scaled iframe viewport */}
           <div
             className={cn(
-              "border-slate-800 bg-slate-800 shadow-2xl overflow-hidden mx-auto",
-              dim.frame
+              "overflow-hidden relative",
+              device === "mobile" && "rounded-b-[2rem]",
+              device === "tablet" && "rounded-b-2xl",
+              device === "desktop" && "rounded-b-xl"
             )}
-            style={{ maxWidth: dim.w }}
+            style={{ height: displayH }}
           >
-            {/* Device chrome */}
-            {device === "mobile" && (
-              <div className="h-2 bg-slate-800 flex justify-center pt-1">
-                <div className="w-16 h-1 rounded-full bg-slate-600" />
-              </div>
-            )}
-            {device === "tablet" && (
-              <div className="h-2.5 bg-slate-800 flex justify-center items-end pb-0.5">
-                <div className="w-10 h-1 rounded-full bg-slate-600" />
-              </div>
-            )}
-            {device === "desktop" && (
-              <div className="h-8 bg-slate-800 flex items-center px-3 gap-1.5 border-b border-slate-700">
-                <div className="flex gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-500/90" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500/90" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/90" />
-                </div>
-                <div className="flex-1 h-5 rounded bg-slate-700/80 mx-4" />
-              </div>
-            )}
-
-            {/* Live iframe */}
-            <div
-              ref={scrollRef}
-              className={cn(
-                "overflow-hidden relative",
-                device === "mobile" && "rounded-b-[22px]",
-                device === "tablet" && "rounded-b-[12px]",
-                device === "desktop" && "rounded-b-lg"
-              )}
-              style={{ height: "min(70vh, 720px)" }}
-            >
-              <iframe
-                ref={iframeRef}
-                src="/"
-                title="Live preview"
-                style={{
-                  width: dim.w + "px",
-                  height: "100%",
-                  border: "none",
-                  transformOrigin: "top left",
-                  // Scale down to fit the container width
-                  transform: `scale(${Math.min(1, 100 / dim.w * (dim.w < 400 ? dim.w : dim.w === 834 ? 834 : 1280) / dim.w)})`,
-                }}
-                onLoad={() => {
-                  // Re-send tokens after iframe navigation/reload
-                  iframeRef.current?.contentWindow?.postMessage(
-                    { type: "THEME_PREVIEW_TOKENS", tokens: previewTokens, preset },
-                    "*"
-                  );
-                }}
-              />
-            </div>
+            <iframe
+              ref={iframeRef}
+              src="/"
+              title="Live preview"
+              scrolling="no"
+              style={{
+                width: dim.w,
+                height: iframeH,
+                border: "none",
+                display: "block",
+                transformOrigin: "top left",
+                transform: `scale(${scale})`,
+                pointerEvents: "none",
+              }}
+              onLoad={sendTokens}
+            />
           </div>
         </div>
       </div>
 
       <p className="text-[11px] text-center text-muted-foreground">
-        Live preview of your actual landing page. Colors update instantly as you edit above. Save theme to publish.
+        Live preview of your actual landing page · colors update instantly · save to publish
       </p>
     </div>
   );
