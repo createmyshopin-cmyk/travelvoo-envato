@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Send, ChevronDown } from "lucide-react";
+import { Send, ChevronDown, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTenant } from "@/context/TenantContext";
+import { supabase } from "@/integrations/supabase/client";
 import enquiryIllustration from "@/assets/enquiry-illustration.png";
 
 const typeOptions = ["International", "Domestic"];
@@ -9,6 +11,8 @@ const travelTypeOptions = ["Solo", "Group", "Family", "Couple"];
 
 const EnquiryForm = () => {
   const { toast } = useToast();
+  const { tenantId } = useTenant();
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
     destination: "",
@@ -25,18 +29,46 @@ const EnquiryForm = () => {
   const update = (key: string, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.mobile.trim()) {
       toast({ title: "Please fill in Name and Mobile", variant: "destructive" });
       return;
     }
+
+    setLoading(true);
+
+    if (tenantId) {
+      const { error } = await supabase.from("leads").insert({
+        tenant_id: tenantId,
+        source: "enquiry_form",
+        full_name: form.name.trim(),
+        phone: form.mobile.trim(),
+        email: form.email.trim() || null,
+        message: `Destination: ${form.destination || "N/A"}\nTravel Date: ${form.travelDate || "N/A"}\nLocation: ${form.location || "N/A"}\nDays: ${form.days || "N/A"}\nPeople: ${form.people || "N/A"}\nType: ${form.type || "N/A"}\nTravel Type: ${form.travelType || "N/A"}`,
+        status: "new",
+      });
+
+      if (error) {
+        toast({ title: "Error tracking enquiry", description: error.message, variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+    }
+
+    setLoading(false);
+
     const phone = "919876543210";
     const msg = encodeURIComponent(
       `Hi! Enquiry from StayFinder:\nName: ${form.name}\nDestination: ${form.destination}\nEmail: ${form.email}\nTravel Date: ${form.travelDate}\nMobile: ${form.mobile}\nLocation: ${form.location}\nDays: ${form.days}\nPeople: ${form.people}\nType: ${form.type}\nTravel Type: ${form.travelType}`
     );
     window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
     toast({ title: "Enquiry sent!", description: "We'll get back to you soon." });
+    
+    setForm({
+      name: "", destination: "", email: "", travelDate: "", mobile: "",
+      location: "", days: "", people: "", type: "", travelType: "",
+    });
   };
 
   const inputClass =
@@ -56,7 +88,7 @@ const EnquiryForm = () => {
         {/* Illustration — shown above form on all sizes */}
         <div className="flex items-center justify-center rounded-2xl overflow-hidden bg-accent/30 h-[180px] md:h-[220px]">
           <img
-            src={enquiryIllustration}
+            src={enquiryIllustration.src}
             alt="Travel enquiry"
             loading="lazy"
             className="h-full object-contain"
@@ -177,9 +209,11 @@ const EnquiryForm = () => {
               </div>
               <button
                 type="submit"
-                className="col-span-2 md:col-span-1 bg-primary text-primary-foreground font-bold text-sm py-2.5 md:py-3 rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+                disabled={loading}
+                className="col-span-2 md:col-span-1 bg-primary text-primary-foreground font-bold text-sm py-2.5 md:py-3 rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-transform disabled:opacity-70 disabled:pointer-events-none"
               >
-                <Send className="w-4 h-4" /> Submit
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {loading ? "Sending..." : "Submit"}
               </button>
             </div>
           </form>
