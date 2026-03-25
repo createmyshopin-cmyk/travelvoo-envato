@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Loader2, Palette, Eye, Trash2, Download, Play } from "lucide-react";
+import { Loader2, Palette, Eye, Trash2, Globe } from "lucide-react";
 
 type Theme = {
   id: string;
@@ -17,6 +17,7 @@ type Theme = {
   author: string;
   description: string;
   preview: string;
+  theme_path: string;
   created_at: string;
 };
 
@@ -24,6 +25,7 @@ export default function SaasAdminThemes() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [themes, setThemes] = useState<Theme[]>([]);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -47,8 +49,54 @@ export default function SaasAdminThemes() {
     }
   };
 
-  const placeholderAction = (action: string) => {
-      toast({ title: `${action} clicked`, description: "This functionality will open the tenant selector."});
+  const handlePublishTheme = async (theme: Theme) => {
+    setPublishingId(theme.id);
+    
+    // Fetch tokens.json from storage
+    const { data: tokenData, error: storageError } = await supabase.storage
+      .from("themes")
+      .download(`${theme.theme_path}/styles/tokens.json`);
+
+    let parsedTokens = {};
+    if (tokenData) {
+      try {
+         const text = await tokenData.text();
+         parsedTokens = JSON.parse(text);
+      } catch(e) {}
+    }
+
+    const manifest = {
+      preset: theme.slug,
+      tokens: parsedTokens,
+      layout: "default"
+    };
+
+    const { error } = await supabase.from("marketplace_items").upsert(
+      {
+        type: "theme",
+        slug: theme.slug,
+        name: theme.name,
+        description: theme.description || "",
+        version: theme.version,
+        is_published: true,
+        pricing_model: "free",
+        price: 0,
+        currency: "USD",
+        manifest,
+        preview_image_url: theme.preview,
+        package_storage_path: theme.theme_path,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: "slug" }
+    );
+
+    setPublishingId(null);
+
+    if (error) {
+      toast({ title: "Failed to publish", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Published to Marketplace", description: `${theme.name} is now available for all tenants.` });
+    }
   };
 
   if (loading) {
@@ -112,11 +160,18 @@ export default function SaasAdminThemes() {
                 </div>
                 
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t">
-                  <Button variant="secondary" size="sm" onClick={() => placeholderAction('Install')}>
-                    <Download className="w-4 h-4 mr-1" /> Install
-                  </Button>
-                  <Button size="sm" onClick={() => placeholderAction('Activate')}>
-                    <Play className="w-4 h-4 mr-1" /> Activate
+                  <Button 
+                    className="col-span-2" 
+                    size="sm" 
+                    onClick={() => handlePublishTheme(theme)}
+                    disabled={publishingId === theme.id}
+                  >
+                    {publishingId === theme.id ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Globe className="w-4 h-4 mr-2" />
+                    )} 
+                    Publish to Tenant Marketplace
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => router.push(`/saas-admin/themes/preview/${theme.slug}`)}>
                     <Eye className="w-4 h-4 mr-1" /> Preview
