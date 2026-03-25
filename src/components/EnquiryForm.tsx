@@ -38,9 +38,15 @@ const EnquiryForm = () => {
 
     setLoading(true);
 
-    if (tenantId) {
+    let targetTenantId = tenantId;
+    if (!targetTenantId) {
+      const { data } = await supabase.rpc("get_platform_tenant_id");
+      targetTenantId = data;
+    }
+
+    if (targetTenantId) {
       const { error } = await supabase.from("leads").insert({
-        tenant_id: tenantId,
+        tenant_id: targetTenantId,
         source: "enquiry_form",
         full_name: form.name.trim(),
         phone: form.mobile.trim(),
