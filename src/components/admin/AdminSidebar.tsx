@@ -54,7 +54,8 @@ const settingsSubItems = [
 
 const marketplaceSubItems = [
   { title: "Catalog", url: "/admin/marketplace", icon: Store },
-  { title: "Theme", url: "/admin/theme", icon: Palette },
+  { title: "Themes", url: "/admin/themes", icon: Palette },
+  { title: "Theme Editor", url: "/admin/theme-editor", icon: Palette },
 ];
 
 const instagramBotSubItems = [
