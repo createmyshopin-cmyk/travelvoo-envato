@@ -24,7 +24,7 @@ import {
   MessageCircle, Phone, Copy, Check,
   BookOpen, CheckCircle2, X as XIcon, Luggage,
 } from "lucide-react";
-import { format as formatDate, differenceInDays, isToday, isTomorrow, isPast, parseISO, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { format as formatDate, differenceInDays, isToday, isTomorrow, isPast, parseISO, isWithinInterval, startOfDay, endOfDay, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { formatPhoneForWhatsApp } from "@/lib/countryCodes";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -205,6 +205,7 @@ export default function AdminBookings() {
   const quotationInFlightRef = useRef(false);
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [quickDate, setQuickDate] = useState<string | null>(null);
   const { toast } = useToast();
   const { settings: siteSettings } = useSiteSettings();
   const router = useRouter();
@@ -327,9 +328,7 @@ export default function AdminBookings() {
     if (statusTab === "enquiries") {
       list = list.filter((b) => b.is_enquiry === true);
     } else if (statusTab !== "all") {
-      list = list.filter((b) => b.status === statusTab && !b.is_enquiry);
-    } else {
-      list = list.filter((b) => !b.is_enquiry);
+      list = list.filter((b) => b.status === statusTab && typeof b.is_enquiry === 'boolean' ? !b.is_enquiry : true);
     }
 
     if (stayFilter !== "all") list = list.filter((b) => b._rowType === "package_lead" || b.stay_id === stayFilter);
@@ -381,7 +380,7 @@ export default function AdminBookings() {
     }
 
     return {
-      total: bookings.length + packageLeadRows.length - enquiries, // Total bookings (excluding enquiries)
+      total: bookings.length + packageLeadRows.length,
       enquiries,
       pending,
       confirmed,
@@ -642,6 +641,28 @@ export default function AdminBookings() {
     return invoiceId;
   };
 
+  const handleQuickDate = (type: "today" | "tomorrow" | "upcoming") => {
+    if (quickDate === type) {
+      setQuickDate(null);
+      setDateFrom(undefined);
+      setDateTo(undefined);
+      return;
+    }
+    setQuickDate(type);
+    const today = new Date();
+    if (type === "today") {
+      setDateFrom(today);
+      setDateTo(today);
+    } else if (type === "tomorrow") {
+      const tomorrow = addDays(today, 1);
+      setDateFrom(tomorrow);
+      setDateTo(tomorrow);
+    } else if (type === "upcoming") {
+      setDateFrom(addDays(today, 1));
+      setDateTo(undefined);
+    }
+  };
+
   const copyBookingId = (id: string) => {
     navigator.clipboard.writeText(id).then(() => {
       setCopiedId(id);
@@ -663,9 +684,10 @@ export default function AdminBookings() {
     setStayFilter("all");
     setDateFrom(undefined);
     setDateTo(undefined);
+    setQuickDate(null);
   };
 
-  const hasActiveFilters = search || statusTab !== "all" || stayFilter !== "all" || dateFrom || dateTo;
+  const hasActiveFilters = search || statusTab !== "all" || stayFilter !== "all" || dateFrom || dateTo || !!quickDate;
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -764,7 +786,13 @@ export default function AdminBookings() {
             </Select>
           )}
 
-          <DateRangePicker from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            <Button variant="outline" size="sm" className={cn("h-9 text-xs", quickDate === "today" && "bg-muted")} onClick={() => handleQuickDate("today")}>Today</Button>
+            <Button variant="outline" size="sm" className={cn("h-9 text-xs", quickDate === "tomorrow" && "bg-muted")} onClick={() => handleQuickDate("tomorrow")}>Tomorrow</Button>
+            <Button variant="outline" size="sm" className={cn("h-9 text-xs", quickDate === "upcoming" && "bg-muted")} onClick={() => handleQuickDate("upcoming")}>Upcoming</Button>
+          </div>
+
+          <DateRangePicker from={dateFrom} to={dateTo} onFromChange={(val) => { setDateFrom(val); setQuickDate(null); }} onToChange={(val) => { setDateTo(val); setQuickDate(null); }} />
 
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs text-muted-foreground h-8 shrink-0">

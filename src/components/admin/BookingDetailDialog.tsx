@@ -8,7 +8,7 @@ import {
   MessageCircle, Phone, FileText, Receipt, CalendarDays,
   Clock, CheckCircle2, X as XIcon, Tag, Loader2,
 } from "lucide-react";
-import { format, differenceInDays, parseISO } from "date-fns";
+import { format as formatDateFns, differenceInDays, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/context/CurrencyContext";
 import { formatPhoneForWhatsApp } from "@/lib/countryCodes";
@@ -38,7 +38,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
 
 function formatDate(d: string | null): string {
   if (!d) return "N/A";
-  return format(parseISO(d), "EEE, dd MMM yyyy");
+  return formatDateFns(parseISO(d), "EEE, dd MMM yyyy");
 }
 
 function whatsappUrl(phone: string, guestName: string, bookingId: string, countryCode?: string) {
@@ -86,11 +86,16 @@ export function BookingDetailDialog({
         <DialogHeader>
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <DialogTitle className="flex items-center gap-2 text-lg">
-              {packageLead ? "Package booking" : "Booking Details"}
+              {packageLead ? "Package booking" : booking?.is_enquiry ? "Enquiry Details" : "Booking Details"}
             </DialogTitle>
             {packageLead && (
               <Badge variant="secondary" className="text-[10px] bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-950/50 dark:text-violet-200">
                 Package Booking
+              </Badge>
+            )}
+            {booking?.is_enquiry && !packageLead && (
+              <Badge variant="secondary" className="text-[10px] bg-yellow-400 text-black border-yellow-500 hover:bg-yellow-500">
+                Enquiry
               </Badge>
             )}
           </div>
@@ -334,7 +339,7 @@ export function BookingDetailDialog({
 
           {/* Created */}
           <p className="text-[10px] text-muted-foreground text-center pt-1">
-            Created {booking.created_at ? format(parseISO(booking.created_at), "dd MMM yyyy, hh:mm a") : "—"}
+            Created {booking.created_at ? formatDateFns(parseISO(booking.created_at), "dd MMM yyyy, hh:mm a") : "—"}
           </p>
         </div>
       </DialogContent>
