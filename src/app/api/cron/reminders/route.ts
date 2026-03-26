@@ -5,13 +5,14 @@ import webpush from 'web-push';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-webpush.setVapidDetails(
-  'mailto:admin@travelvoo.com',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
-  process.env.VAPID_PRIVATE_KEY || ''
-);
-
 export async function POST(req: Request) {
+  // Initialise here (not at module level) so Vercel build doesn't fail
+  // when env vars aren't available during static analysis
+  webpush.setVapidDetails(
+    'mailto:admin@travelvoo.com',
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  );
   try {
     // Optional: verify an auth header or token for cron security
     const authHeader = req.headers.get('authorization');
