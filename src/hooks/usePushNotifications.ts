@@ -31,12 +31,11 @@ export function usePushNotifications() {
     if (!user || !tenantId) return;
     try {
       const registration = await navigator.serviceWorker.ready;
-      
-      const response = await fetch('/api/vapid-key');
-      const { publicKey } = await response.json().catch(() => ({ publicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY }));
+
+      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
       if (!publicKey) {
-        toast({ title: 'Push configuration missing', variant: 'destructive' });
+        toast({ title: 'Push not configured', description: 'VAPID key missing — add NEXT_PUBLIC_VAPID_PUBLIC_KEY to your Vercel env vars and redeploy.', variant: 'destructive' });
         return;
       }
 

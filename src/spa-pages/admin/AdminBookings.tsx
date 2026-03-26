@@ -185,9 +185,11 @@ function exportBookingsCSV(bookings: any[], stays: StayMap) {
   URL.revokeObjectURL(url);
 }
 
-function whatsappUrl(phone: string, guestName: string, bookingId: string, countryCode?: string) {
+function whatsappUrl(phone: string, guestName: string, bookingId: string, isEnquiry: boolean, stayName?: string, countryCode?: string) {
   const num = formatPhoneForWhatsApp(phone, countryCode);
-  const text = encodeURIComponent(`Hi ${guestName}, regarding your booking ${bookingId} — `);
+  const typeLabel = isEnquiry ? "Enquiry" : "Booking";
+  const stayLabel = stayName ? ` for ${stayName}` : "";
+  const text = encodeURIComponent(`Hi ${guestName}, regarding your ${typeLabel}${stayLabel} (${bookingId}) — `);
   return `https://wa.me/${num}?text=${text}`;
 }
 
@@ -223,6 +225,8 @@ export default function AdminBookings() {
   const [autoEnabled, setAutoEnabled] = useState(true);
   const [intervalHours, setIntervalHours] = useState("24");
   const [savingSettings, setSavingSettings] = useState(false);
+  // Map: bookingId / leadId → earliest active reminder scheduled_for
+  const [reminderMap, setReminderMap] = useState<Record<string, string>>({});
   
   const { isSupported, isSubscribed, subscribe } = usePushNotifications();
   const { toast } = useToast();
@@ -263,6 +267,30 @@ export default function AdminBookings() {
       setSettingsOpen(false);
     }
   };
+
+  // Fetch active reminders whenever bookings change
+  useEffect(() => {
+    const allIds = bookings.map((b) => b.id).filter(Boolean);
+    if (allIds.length === 0) return;
+
+    (supabase as any)
+      .from("admin_reminders")
+      .select("booking_id, lead_id, scheduled_for")
+      .eq("triggered", false)
+      .then(({ data }: { data: any[] }) => {
+        if (!data) return;
+        const map: Record<string, string> = {};
+        for (const r of data) {
+          const key = r.booking_id || r.lead_id;
+          if (!key) continue;
+          // Keep the earliest one
+          if (!map[key] || r.scheduled_for < map[key]) {
+            map[key] = r.scheduled_for;
+          }
+        }
+        setReminderMap(map);
+      });
+  }, [bookings, packageLeadRows]);
 
   const fetchBookings = useCallback(async () => {
     const { data: tenantId } = await supabase.rpc("get_my_tenant_id");
@@ -982,6 +1010,13 @@ export default function AdminBookings() {
           const stayInfo = b.stay_id ? stays[b.stay_id] : null;
           const nights = getNights(b.checkin, b.checkout);
           const stayBadge = b.checkin && b.checkout ? getStayLabel(b.checkin, b.checkout) : null;
+          const reminderAt = reminderMap[b.id] || reminderMap[b._leadId];
+          const reminderLabel = reminderAt ? (() => {
+            const ms = new Date(reminderAt).getTime() - Date.now();
+            if (ms < 0) return "Due";
+            const h = Math.round(ms / 1000 / 60 / 60);
+            return h < 24 ? `In ${h}h` : `In ${Math.round(h / 24)}d`;
+          })() : null;
 
           return (
             <motion.div
@@ -993,6 +1028,7 @@ export default function AdminBookings() {
                 "rounded-xl border bg-card hover:shadow-md transition-shadow",
                 selectedIds.has(b._selectionKey) && "ring-2 ring-primary",
                 isPackage && "border-violet-200/80 dark:border-violet-900/50",
+                b.is_enquiry && "bg-yellow-50/50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-900/50"
               )}
             >
               {/* Header: guest + price + checkbox */}
@@ -1016,6 +1052,11 @@ export default function AdminBookings() {
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     <span className="text-[10px] text-muted-foreground font-mono">{b.booking_id}</span>
+                    {reminderLabel && (
+                      <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-full px-1.5 py-0 leading-5">
+                        🔔 {reminderLabel}
+                      </span>
+                    )}
                     {b.is_enquiry && (
                       <Badge variant="secondary" className="text-[8px] py-0 px-1.5 bg-yellow-400 text-black border-yellow-500 hover:bg-yellow-500">
                         Enquiry
@@ -1108,7 +1149,7 @@ export default function AdminBookings() {
                 {/* Quick actions row */}
                 <div className="flex items-center gap-1.5">
                   <a
-                    href={whatsappUrl(b.phone, b.guest_name, b.booking_id, b.phone_country_code)}
+                    href={whatsappUrl(b.phone, b.guest_name, b.booking_id, !!b.is_enquiry, stayInfo?.name || b.trip_display_name, b.phone_country_code)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 h-8 rounded-lg bg-green-500/10 flex items-center justify-center gap-1.5 hover:bg-green-500/20 active:scale-95 transition-all"
@@ -1212,6 +1253,9 @@ export default function AdminBookings() {
               });
             }
           }
+        }}
+        onReminderSet={(bookingId, scheduledFor) => {
+          setReminderMap(prev => ({ ...prev, [bookingId]: scheduledFor }));
         }}
       />
 

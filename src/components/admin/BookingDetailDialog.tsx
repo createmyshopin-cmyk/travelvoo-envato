@@ -27,6 +27,8 @@ interface BookingDetailDialogProps {
   onStatusChange?: (status: string) => void;
   onCreateQuotation?: () => void;
   onCreateInvoice?: () => void;
+  /** Called when a reminder is saved, with the booking id and scheduled_for time */
+  onReminderSet?: (bookingId: string, scheduledFor: string) => void;
   /** Disables Quotation while insert is in flight */
   quotationLoading?: boolean;
   /** When set, a quotation already exists for this booking */
@@ -44,9 +46,11 @@ function formatDate(d: string | null): string {
   return formatDateFns(parseISO(d), "EEE, dd MMM yyyy");
 }
 
-function whatsappUrl(phone: string, guestName: string, bookingId: string, countryCode?: string) {
+function whatsappUrl(phone: string, guestName: string, bookingId: string, isEnquiry: boolean, stayName?: string, countryCode?: string) {
   const num = formatPhoneForWhatsApp(phone || "", countryCode);
-  const text = encodeURIComponent(`Hi ${guestName}, regarding your booking ${bookingId} — `);
+  const typeLabel = isEnquiry ? "Enquiry" : "Booking";
+  const stayLabel = stayName ? ` for ${stayName}` : "";
+  const text = encodeURIComponent(`Hi ${guestName}, regarding your ${typeLabel}${stayLabel} (${bookingId}) — `);
   return `https://wa.me/${num}?text=${text}`;
 }
 
@@ -60,6 +64,7 @@ export function BookingDetailDialog({
   onStatusChange,
   onCreateQuotation,
   onCreateInvoice,
+  onReminderSet,
   quotationLoading,
   existingQuotationId,
 }: BookingDetailDialogProps) {
@@ -87,7 +92,8 @@ export function BookingDetailDialog({
     if (error) {
       toast({ title: "Failed to set reminder", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Reminder Set", description: `You will be reminded in ${hours} hours.` });
+      toast({ title: "🔔 Reminder Set", description: `You will be reminded in ${hours} hours.` });
+      onReminderSet?.(booking.id, scheduledFor);
       setReminderOpen(false);
     }
   };
@@ -197,7 +203,7 @@ export function BookingDetailDialog({
               </div>
               <div className="flex gap-1">
                 <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                  <a href={whatsappUrl(booking.phone, booking.guest_name, booking.booking_id, booking.phone_country_code)} target="_blank" rel="noopener noreferrer" title="WhatsApp">
+                  <a href={whatsappUrl(booking.phone, booking.guest_name, booking.booking_id, !!booking.is_enquiry || !!packageLead, stayInfo?.name || tripDisplayName, booking.phone_country_code)} target="_blank" rel="noopener noreferrer" title="WhatsApp">
                     <MessageCircle className="w-4 h-4 text-green-600" />
                   </a>
                 </Button>
