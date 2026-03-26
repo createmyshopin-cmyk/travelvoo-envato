@@ -35,7 +35,7 @@ interface StayMap {
   [id: string]: { name: string; stay_id: string };
 }
 
-type StatusTab = "all" | "pending" | "confirmed" | "cancelled";
+type StatusTab = "all" | "pending" | "confirmed" | "cancelled" | "enquiries";
 type SortKey = "created_at" | "checkin" | "checkout" | "total_price" | "guest_name";
 
 /** Trip/package enquiries stored in `leads` with source `trip_booking` */
@@ -324,7 +324,14 @@ export default function AdminBookings() {
       );
     }
 
-    if (statusTab !== "all") list = list.filter((b) => b.status === statusTab);
+    if (statusTab === "enquiries") {
+      list = list.filter((b) => b.is_enquiry === true);
+    } else if (statusTab !== "all") {
+      list = list.filter((b) => b.status === statusTab && !b.is_enquiry);
+    } else {
+      list = list.filter((b) => !b.is_enquiry);
+    }
+
     if (stayFilter !== "all") list = list.filter((b) => b._rowType === "package_lead" || b.stay_id === stayFilter);
 
     if (dateFrom) {
@@ -353,11 +360,12 @@ export default function AdminBookings() {
 
   const stats = useMemo(() => {
     const todayStr = formatDate(new Date(), "yyyy-MM-dd");
-    let pending = 0, confirmed = 0, cancelled = 0, revenue = 0;
+    let pending = 0, confirmed = 0, cancelled = 0, revenue = 0, enquiries = 0;
     let arrivingToday = 0, departingToday = 0;
 
     for (const b of bookings) {
-      if (b.status === "pending") pending++;
+      if (b.is_enquiry) enquiries++;
+      else if (b.status === "pending") pending++;
       else if (b.status === "confirmed") { confirmed++; revenue += b.total_price || 0; }
       else if (b.status === "cancelled") cancelled++;
       if (b.checkin === todayStr && b.status !== "cancelled") arrivingToday++;
@@ -373,7 +381,8 @@ export default function AdminBookings() {
     }
 
     return {
-      total: bookings.length + packageLeadRows.length,
+      total: bookings.length + packageLeadRows.length - enquiries, // Total bookings (excluding enquiries)
+      enquiries,
       pending,
       confirmed,
       cancelled,
@@ -718,6 +727,7 @@ export default function AdminBookings() {
             <TabsTrigger value="pending" className="text-[11px] sm:text-xs px-2.5">Pending ({stats.pending})</TabsTrigger>
             <TabsTrigger value="confirmed" className="text-[11px] sm:text-xs px-2.5">Confirmed ({stats.confirmed})</TabsTrigger>
             <TabsTrigger value="cancelled" className="text-[11px] sm:text-xs px-2.5">Cancelled ({stats.cancelled})</TabsTrigger>
+            <TabsTrigger value="enquiries" className="text-[11px] sm:text-xs px-2.5">Enquiries ({stats.enquiries})</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -870,6 +880,11 @@ export default function AdminBookings() {
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     <span className="text-[10px] text-muted-foreground font-mono">{b.booking_id}</span>
+                    {b.is_enquiry && (
+                      <Badge variant="secondary" className="text-[8px] py-0 px-1.5 bg-yellow-400 text-black border-yellow-500 hover:bg-yellow-500">
+                        Enquiry
+                      </Badge>
+                    )}
                     {isPackage && (
                       <Badge variant="secondary" className="text-[8px] py-0 px-1.5 bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-950/50 dark:text-violet-200 dark:border-violet-800">
                         Package Booking

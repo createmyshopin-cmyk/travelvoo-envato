@@ -428,7 +428,7 @@ const BookingFormModal = ({
 
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (isEnquiry: boolean) => {
     setSubmitError(null);
     if (!validate()) return;
     setSubmitting(true);
@@ -484,6 +484,7 @@ const BookingFormModal = ({
       p_solo_traveller: soloTraveller,
       p_group_booking: groupBooking,
       p_group_name: groupName.trim() || "",
+      p_is_enquiry: isEnquiry,
     });
 
     setSubmitting(false);
@@ -552,7 +553,9 @@ const BookingFormModal = ({
     const pathSegment = stayPublicSlug?.trim() || stayId;
     const stayPageUrl = `${window.location.origin}/stay/${encodeURIComponent(pathSegment)}`;
 
-    const message = `*New Booking Enquiry*
+    const headerTitle = isEnquiry ? "*New Enquiry*" : "*New Booking*";
+
+    const message = `${headerTitle}
 
 🔖 *Booking ID:* ${newBookingId}
 🏷 *Stay ID:* ${stayId}
@@ -1226,14 +1229,24 @@ ${addOnLines ? `*Add-ons:*\n${addOnLines}\n` : ""}${appliedCoupon ? `🏷 *Coupo
         </div>
         <div className="p-5 pt-3 border-t border-border bg-background shrink-0 mt-auto">
           {/* Submit */}
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full bg-primary text-primary-foreground font-bold text-sm py-3.5 rounded-xl shadow-soft active:scale-[0.98] transition-transform min-h-[48px] disabled:opacity-60"
-          >
-            {submitting ? "Checking availability..." : "Send Booking Enquiry"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => handleSubmit(true)}
+              disabled={submitting}
+              className="flex-1 bg-[#FACC15] text-black font-bold text-sm py-3.5 rounded-xl shadow-soft hover:bg-[#EAB308] active:scale-[0.98] transition-all min-h-[48px] disabled:opacity-60"
+            >
+              {submitting ? "..." : "Enquiry"}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSubmit(false)}
+              disabled={submitting}
+              className="flex-1 bg-primary text-primary-foreground font-bold text-sm py-3.5 rounded-xl shadow-soft active:scale-[0.98] transition-all min-h-[48px] disabled:opacity-60"
+            >
+              {submitting ? "..." : "Book Now"}
+            </button>
+          </div>
         </div>
       </DialogContent>
 

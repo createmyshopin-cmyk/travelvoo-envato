@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.4"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       accounting_transactions: {
@@ -74,7 +49,7 @@ export type Database = {
           reference_number?: string | null
           stay_id?: string | null
           tags?: string[] | null
-          tenant_id?: string
+          tenant_id: string
           type: string
           updated_at?: string | null
         }
@@ -130,7 +105,7 @@ export type Database = {
           name: string
           price?: number
           stay_id: string
-          tenant_id?: string
+          tenant_id: string
         }
         Update: {
           active?: boolean
@@ -176,7 +151,7 @@ export type Database = {
           id?: string
           query: string
           results_count?: number
-          tenant_id?: string
+          tenant_id: string
         }
         Update: {
           created_at?: string
@@ -339,7 +314,7 @@ export type Database = {
           is_active?: boolean
           sort_order?: number
           subtitle?: string | null
-          tenant_id?: string
+          tenant_id: string
           title: string
           type?: string
         }
@@ -384,7 +359,7 @@ export type Database = {
           id?: string
           label: string
           notes?: string | null
-          tenant_id?: string
+          tenant_id: string
           type: string
         }
         Update: {
@@ -424,7 +399,7 @@ export type Database = {
           id?: string
           note?: string
           status: string
-          tenant_id?: string
+          tenant_id: string
         }
         Update: {
           booking_id?: string
@@ -467,6 +442,7 @@ export type Database = {
           group_name: string | null
           guest_name: string
           id: string
+          is_enquiry: boolean
           pets: number
           phone: string
           phone_country_code: string | null
@@ -492,6 +468,7 @@ export type Database = {
           group_name?: string | null
           guest_name: string
           id?: string
+          is_enquiry?: boolean
           pets?: number
           phone?: string
           phone_country_code?: string | null
@@ -500,7 +477,7 @@ export type Database = {
           special_requests?: string | null
           status?: string
           stay_id?: string | null
-          tenant_id?: string
+          tenant_id: string
           total_price?: number
         }
         Update: {
@@ -517,6 +494,7 @@ export type Database = {
           group_name?: string | null
           guest_name?: string
           id?: string
+          is_enquiry?: boolean
           pets?: number
           phone?: string
           phone_country_code?: string | null
@@ -572,7 +550,7 @@ export type Database = {
           price?: number
           room_category_id?: string | null
           stay_id: string
-          tenant_id?: string
+          tenant_id: string
         }
         Update: {
           available?: number
@@ -643,7 +621,7 @@ export type Database = {
           min_purchase?: number
           show_publicly?: boolean
           starts_at?: string | null
-          tenant_id?: string
+          tenant_id: string
           type?: string
           usage_count?: number
           usage_limit?: number | null
@@ -715,7 +693,7 @@ export type Database = {
           id?: string
           session_id: string
           stay_id: string
-          tenant_id?: string
+          tenant_id: string
           user_id?: string | null
         }
         Update: {
@@ -767,6 +745,56 @@ export type Database = {
             foreignKeyName: "instagram_automation_config_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instagram_automation_flows: {
+        Row: {
+          channel: string
+          conditions_meta: Json
+          created_at: string
+          enabled: boolean
+          flow_definition: Json
+          id: string
+          is_draft: boolean
+          name: string
+          tenant_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          channel?: string
+          conditions_meta?: Json
+          created_at?: string
+          enabled?: boolean
+          flow_definition?: Json
+          id?: string
+          is_draft?: boolean
+          name?: string
+          tenant_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          channel?: string
+          conditions_meta?: Json
+          created_at?: string
+          enabled?: boolean
+          flow_definition?: Json
+          id?: string
+          is_draft?: boolean
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_automation_flows_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -916,49 +944,53 @@ export type Database = {
           },
         ]
       }
-      instagram_automation_flows: {
+      instagram_channel_activity: {
         Row: {
           channel: string
-          conditions_meta: Json
           created_at: string
-          enabled: boolean
-          flow_definition: Json
+          event_type: string
+          follower_check: string | null
           id: string
-          is_draft: boolean
-          name: string
+          latency_ms: number | null
+          lead_id: string | null
+          meta: Json | null
+          sender_ig_id: string | null
           tenant_id: string
-          updated_at: string
-          version: number
         }
         Insert: {
           channel?: string
-          conditions_meta?: Json
           created_at?: string
-          enabled?: boolean
-          flow_definition?: Json
+          event_type?: string
+          follower_check?: string | null
           id?: string
-          is_draft?: boolean
-          name?: string
+          latency_ms?: number | null
+          lead_id?: string | null
+          meta?: Json | null
+          sender_ig_id?: string | null
           tenant_id: string
-          updated_at?: string
-          version?: number
         }
         Update: {
           channel?: string
-          conditions_meta?: Json
           created_at?: string
-          enabled?: boolean
-          flow_definition?: Json
+          event_type?: string
+          follower_check?: string | null
           id?: string
-          is_draft?: boolean
-          name?: string
+          latency_ms?: number | null
+          lead_id?: string | null
+          meta?: Json | null
+          sender_ig_id?: string | null
           tenant_id?: string
-          updated_at?: string
-          version?: number
         }
         Relationships: [
           {
-            foreignKeyName: "instagram_automation_flows_tenant_id_fkey"
+            foreignKeyName: "instagram_channel_activity_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instagram_channel_activity_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1013,60 +1045,6 @@ export type Database = {
           },
           {
             foreignKeyName: "instagram_flow_executions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      instagram_channel_activity: {
-        Row: {
-          channel: string
-          created_at: string
-          event_type: string
-          follower_check: string | null
-          id: string
-          latency_ms: number | null
-          lead_id: string | null
-          meta: Json | null
-          sender_ig_id: string | null
-          tenant_id: string
-        }
-        Insert: {
-          channel?: string
-          created_at?: string
-          event_type?: string
-          follower_check?: string | null
-          id?: string
-          latency_ms?: number | null
-          lead_id?: string | null
-          meta?: Json | null
-          sender_ig_id?: string | null
-          tenant_id: string
-        }
-        Update: {
-          channel?: string
-          created_at?: string
-          event_type?: string
-          follower_check?: string | null
-          id?: string
-          latency_ms?: number | null
-          lead_id?: string | null
-          meta?: Json | null
-          sender_ig_id?: string | null
-          tenant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "instagram_channel_activity_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "instagram_channel_activity_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1177,7 +1155,7 @@ export type Database = {
           room_total?: number
           rooms?: Json
           stay_id?: string | null
-          tenant_id?: string
+          tenant_id: string
           total_price?: number
           updated_at?: string
         }
@@ -1259,7 +1237,7 @@ export type Database = {
           phone: string
           source?: string
           status?: string
-          tenant_id?: string
+          tenant_id: string
         }
         Update: {
           created_at?: string
@@ -1359,7 +1337,7 @@ export type Database = {
           created_at?: string
           id?: string
           stay_id?: string | null
-          tenant_id?: string
+          tenant_id: string
           url: string
         }
         Update: {
@@ -1411,7 +1389,7 @@ export type Database = {
           name: string
           price?: number | null
           sort_order?: number | null
-          tenant_id?: string
+          tenant_id: string
         }
         Update: {
           category?: string
@@ -1458,7 +1436,7 @@ export type Database = {
           name?: string
           sort_order?: number
           stay_id: string
-          tenant_id?: string
+          tenant_id: string
         }
         Update: {
           created_at?: string
@@ -1506,7 +1484,7 @@ export type Database = {
           id?: string
           read?: boolean
           ref_id?: string | null
-          tenant_id?: string
+          tenant_id: string
           title: string
           type?: string
         }
@@ -1641,7 +1619,7 @@ export type Database = {
           stats_text?: string
           subtitle?: string
           template_type?: string
-          tenant_id?: string
+          tenant_id: string
           title?: string
           updated_at?: string
         }
@@ -1693,7 +1671,7 @@ export type Database = {
           icon_name?: string
           id?: string
           sort_order?: number
-          tenant_id?: string
+          tenant_id: string
           title: string
         }
         Update: {
@@ -1761,7 +1739,7 @@ export type Database = {
           special_requests?: string | null
           status?: string
           stay_id?: string | null
-          tenant_id?: string
+          tenant_id: string
           total_price?: number
           updated_at?: string
         }
@@ -1836,7 +1814,7 @@ export type Database = {
           rating?: number
           status?: string
           stay_id: string
-          tenant_id?: string
+          tenant_id: string
         }
         Update: {
           avatar_url?: string | null
@@ -1890,7 +1868,7 @@ export type Database = {
           original_price?: number
           price?: number
           stay_id: string
-          tenant_id?: string
+          tenant_id: string
         }
         Update: {
           amenities?: string[]
@@ -2067,7 +2045,7 @@ export type Database = {
           stories_duration?: number | null
           stories_enabled?: boolean | null
           stories_section_title?: string | null
-          tenant_id?: string
+          tenant_id: string
           theme_tokens?: Json
           updated_at?: string
           whatsapp_number?: string
@@ -2185,7 +2163,7 @@ export type Database = {
           id?: string
           label: string
           sort_order?: number
-          tenant_id?: string
+          tenant_id: string
         }
         Update: {
           active?: boolean
@@ -2224,7 +2202,7 @@ export type Database = {
           platform?: string
           sort_order?: number
           stay_id: string
-          tenant_id?: string
+          tenant_id: string
           thumbnail?: string
           title?: string
           url?: string
@@ -2306,7 +2284,7 @@ export type Database = {
           seo_title?: string | null
           status?: string
           stay_id: string
-          tenant_id?: string
+          tenant_id: string
         }
         Update: {
           amenities?: string[]
@@ -2590,6 +2568,48 @@ export type Database = {
           },
         ]
       }
+      tenant_themes: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          tenant_id: string
+          theme_slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          tenant_id: string
+          theme_slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          tenant_id?: string
+          theme_slug?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_themes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_themes_theme_slug_fkey"
+            columns: ["theme_slug"]
+            isOneToOne: false
+            referencedRelation: "themes"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
       tenant_usage: {
         Row: {
           ai_search_count: number
@@ -2639,6 +2659,7 @@ export type Database = {
           favicon_url: string | null
           footer_text: string | null
           id: string
+          is_platform: boolean
           logo_url: string | null
           og_image_url: string | null
           owner_name: string
@@ -2653,7 +2674,6 @@ export type Database = {
           status: string
           tenant_name: string
           user_id: string | null
-          is_platform: boolean
         }
         Insert: {
           created_at?: string
@@ -2662,6 +2682,7 @@ export type Database = {
           favicon_url?: string | null
           footer_text?: string | null
           id?: string
+          is_platform?: boolean
           logo_url?: string | null
           og_image_url?: string | null
           owner_name?: string
@@ -2676,7 +2697,6 @@ export type Database = {
           status?: string
           tenant_name: string
           user_id?: string | null
-          is_platform?: boolean
         }
         Update: {
           created_at?: string
@@ -2685,6 +2705,7 @@ export type Database = {
           favicon_url?: string | null
           footer_text?: string | null
           id?: string
+          is_platform?: boolean
           logo_url?: string | null
           og_image_url?: string | null
           owner_name?: string
@@ -2699,7 +2720,6 @@ export type Database = {
           status?: string
           tenant_name?: string
           user_id?: string | null
-          is_platform?: boolean
         }
         Relationships: [
           {
@@ -2710,6 +2730,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      themes: {
+        Row: {
+          author: string
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          preview: string | null
+          slug: string
+          theme_path: string
+          updated_at: string | null
+          version: string
+        }
+        Insert: {
+          author: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          preview?: string | null
+          slug: string
+          theme_path: string
+          updated_at?: string | null
+          version: string
+        }
+        Update: {
+          author?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          preview?: string | null
+          slug?: string
+          theme_path?: string
+          updated_at?: string | null
+          version?: string
+        }
+        Relationships: []
       }
       transactions: {
         Row: {
@@ -3066,7 +3125,7 @@ export type Database = {
           slug: string
           starting_price?: number
           status?: string
-          tenant_id?: string
+          tenant_id: string
         }
         Update: {
           cancellation_policy?: Json | null
@@ -3158,6 +3217,7 @@ export type Database = {
           p_group_booking?: boolean
           p_group_name?: string
           p_guest_name: string
+          p_is_enquiry?: boolean
           p_pets?: number
           p_phone: string
           p_phone_country_code?: string
@@ -3170,6 +3230,7 @@ export type Database = {
         Returns: Json
       }
       get_my_tenant_id: { Args: never; Returns: string }
+      get_platform_maintenance_mode: { Args: never; Returns: boolean }
       get_platform_tenant_id: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -3320,9 +3381,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user", "super_admin"],
