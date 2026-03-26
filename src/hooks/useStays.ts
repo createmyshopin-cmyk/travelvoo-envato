@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/context/TenantContext";
 import { getPlatformTenantId } from "@/lib/platformTenant";
-import { looksLikeStayUuid } from "@/lib/stayPublicUrl";
+import { looksLikeStayUuid, stayPublicSegment } from "@/lib/stayPublicUrl";
 import type { Stay, RoomCategory, Review, Reel, NearbyDestination } from "@/types/stay";
 
 // Module-level cache: key = "tenantId|category" so tenant subdomains get fresh empty data
@@ -220,6 +220,7 @@ export function useStayDetail(stayId: string | undefined) {
           const { data } = await supabase.from("stays").select("*").eq("id", key).maybeSingle();
           stayData = data;
         } else {
+          const tenantFilterId = tenantId ?? (await getPlatformTenantId());
           const stayIdCandidates = new Set<string>([key]);
           const match = key.match(/^(\d+)(?:-|$)/);
           if (match) {
@@ -230,14 +231,26 @@ export function useStayDetail(stayId: string | undefined) {
           }
 
           let q = supabase.from("stays").select("*").in("stay_id", Array.from(stayIdCandidates));
-          if (tenantId) {
-            q = q.eq("tenant_id", tenantId);
-          } else {
-            const pid = await getPlatformTenantId();
-            if (pid) q = q.eq("tenant_id", pid);
-          }
+          if (tenantFilterId) q = q.eq("tenant_id", tenantFilterId);
           const { data } = await q.limit(1).maybeSingle();
           stayData = data ?? null;
+
+          // Fallback for pretty public segments (e.g. STAY-MN72W90Q -> /stay/72-...)
+          // where reverse-mapping to exact stay_id is lossy.
+          if (!stayData) {
+            let fallbackQ = supabase.from("stays").select("id, stay_id, name, location, tenant_id");
+            if (tenantFilterId) fallbackQ = fallbackQ.eq("tenant_id", tenantFilterId);
+            const { data: rows } = await fallbackQ.limit(200);
+            const bySegment = (rows || []).find((r: any) =>
+              stayPublicSegment({
+                id: r.id,
+                stayId: r.stay_id,
+                name: r.name,
+                location: r.location,
+              }) === key
+            );
+            stayData = bySegment ?? null;
+          }
         }
 
         if (stayData) {
