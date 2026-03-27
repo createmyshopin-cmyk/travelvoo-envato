@@ -33,7 +33,7 @@ const StayCarousel = ({ title, category }: StayCarouselProps) => {
 
       {/* Always horizontal scroll — 5 cards visible on xl/lg, 3 on md, 1–2 on mobile */}
       <div
-        className="flex gap-3 px-4 md:px-6 md:gap-5 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x"
+        className="flex gap-3 px-4 md:px-6 md:gap-5 overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-auto"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
         {stays.map((stay, i) => (

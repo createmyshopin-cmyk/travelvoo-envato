@@ -25,7 +25,7 @@ const StayCard = ({ stay, index }: StayCardProps) => {
   const { format } = useCurrency();
   const { isWishlisted, toggleWishlist: toggle } = useWishlist();
   const [currentImage, setCurrentImage] = useState(0);
-  const [swipeStartX, setSwipeStartX] = useState<number | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [shouldLoadCard, setShouldLoadCard] = useState(index < 2);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const wishlisted = isWishlisted(stay.id);
@@ -85,20 +85,26 @@ const StayCard = ({ stay, index }: StayCardProps) => {
   }, [stay.images.length]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    setSwipeStartX(e.touches[0].clientX);
+    const touch = e.touches[0];
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (swipeStartX === null) return;
-    const diff = swipeStartX - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 40) {
-      if (diff > 0) {
+    const start = swipeStartRef.current;
+    if (!start) return;
+    const endTouch = e.changedTouches[0];
+    const deltaX = start.x - endTouch.clientX;
+    const deltaY = Math.abs(start.y - endTouch.clientY);
+
+    // Only treat as image swipe when horizontal intent is clear.
+    if (Math.abs(deltaX) > 52 && Math.abs(deltaX) > deltaY * 1.15) {
+      if (deltaX > 0) {
         setCurrentImage((prev) => (prev + 1) % stay.images.length);
       } else {
         setCurrentImage((prev) => (prev - 1 + stay.images.length) % stay.images.length);
       }
     }
-    setSwipeStartX(null);
+    swipeStartRef.current = null;
   };
 
   const toggleWishlist = (e: React.MouseEvent) => {
@@ -120,7 +126,7 @@ const StayCard = ({ stay, index }: StayCardProps) => {
     >
       {/* Image Slider */}
       <div
-        className="relative h-[160px] md:h-[180px] lg:h-[200px] overflow-hidden"
+        className="relative h-[160px] md:h-[180px] lg:h-[200px] overflow-hidden touch-pan-y"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
