@@ -27,7 +27,7 @@ const sections = [
 ];
 
 const Index = () => {
-  const [selectedCategory, setSelectedCategory] = useState("Couple Friendly");
+  const [selectedCategory, setSelectedCategory] = useState("All Stays");
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",
@@ -56,7 +56,10 @@ const Index = () => {
           <ResortStories />
         </LazySection>
         <CategoryTabs selected={selectedCategory} onSelect={setSelectedCategory} />
-        <StayCarousel title={selectedCategory + " Stays"} category={selectedCategory} />
+        <StayCarousel
+          title={selectedCategory === "All Stays" ? "All Stays" : `${selectedCategory} Stays`}
+          category={selectedCategory === "All Stays" ? undefined : selectedCategory}
+        />
         {sections
           .filter((s) => s.category !== selectedCategory)
           .map((s) => (

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ICON_MAP } from "@/components/admin/CategoriesBuilder";
-import { Tag } from "lucide-react";
+import { Home, Tag } from "lucide-react";
 
 interface CategoryTabsProps {
   selected: string;
@@ -13,7 +13,14 @@ const CategoryTabs = ({ selected, onSelect }: CategoryTabsProps) => {
 
   const fetchCategories = async () => {
     const { data } = await (supabase.from("stay_categories") as any).select("label, icon, sort_order").eq("active", true).order("sort_order");
-    if (data) setCategories((data as any[]).map((d) => ({ label: d.label, icon: d.icon })));
+    if (data) {
+      const dbCategories = (data as any[])
+        .map((d) => ({ label: d.label, icon: d.icon }))
+        .filter((d) => typeof d.label === "string" && d.label.trim().length > 0);
+      const hasAllStays = dbCategories.some((d) => d.label.trim().toLowerCase() === "all stays");
+      const allStaysTab = { label: "All Stays", icon: "Home" };
+      setCategories(hasAllStays ? dbCategories : [allStaysTab, ...dbCategories]);
+    }
   };
 
   useEffect(() => {
@@ -27,7 +34,7 @@ const CategoryTabs = ({ selected, onSelect }: CategoryTabsProps) => {
       <h3 className="px-4 md:px-6 text-base md:text-lg font-bold text-foreground mb-3">Browse Categories</h3>
       <div className="flex gap-3 px-4 md:px-6 overflow-x-auto md:flex-wrap md:overflow-x-visible scrollbar-hide pb-1">
         {categories.map(({ icon, label }) => {
-          const Icon = ICON_MAP[icon] || Tag;
+          const Icon = icon === "Home" ? Home : (ICON_MAP[icon] || Tag);
           const active = selected === label;
           return (
             <button
