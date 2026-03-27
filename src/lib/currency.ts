@@ -4,7 +4,7 @@
 
 export type PlatformCurrencyCode = "USD" | "INR" | "EUR" | "GBP";
 
-const DEFAULT_CODE: PlatformCurrencyCode = "USD";
+const DEFAULT_CODE: PlatformCurrencyCode = "INR";
 
 export function getStoredCurrencyCode(): PlatformCurrencyCode {
   if (typeof window === "undefined") return DEFAULT_CODE;

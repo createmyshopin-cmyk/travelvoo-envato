@@ -55,6 +55,12 @@ export async function bootstrapTenant(
     .eq("setting_key", "signup_auto_verify")
     .maybeSingle();
   const verified = (autoVerifyRow as { setting_value?: string } | null)?.setting_value === "true";
+  const { data: defaultCurrencyRow } = await admin
+    .from("saas_platform_settings")
+    .select("setting_value")
+    .eq("setting_key", "default_currency")
+    .maybeSingle();
+  const defaultCurrency = (defaultCurrencyRow as { setting_value?: string } | null)?.setting_value || "INR";
 
   const { error: domainErr } = await admin.from("tenant_domains").insert({
     tenant_id: tenantId,
@@ -90,6 +96,7 @@ export async function bootstrapTenant(
       row.contact_phone = input.phone || "";
       row.whatsapp_number = input.phone || "";
       row.meta_title = input.companyName;
+      row.currency = defaultCurrency;
       row.updated_at = new Date().toISOString();
       const { error: ssErr } = await admin.from("site_settings").insert(row as never);
       if (ssErr) throw ssErr;
@@ -101,7 +108,7 @@ export async function bootstrapTenant(
         contact_phone: input.phone || "",
         whatsapp_number: input.phone || "",
         address: "",
-        currency: "INR",
+        currency: defaultCurrency,
         booking_enabled: true,
         maintenance_mode: false,
         meta_title: input.companyName,
@@ -135,7 +142,7 @@ export async function bootstrapTenant(
       contact_phone: input.phone || "",
       whatsapp_number: input.phone || "",
       address: "",
-      currency: "INR",
+      currency: defaultCurrency,
       booking_enabled: true,
       maintenance_mode: false,
       meta_title: input.companyName,

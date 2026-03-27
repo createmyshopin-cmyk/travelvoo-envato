@@ -114,12 +114,14 @@ function StayEditModal({ stay, isDark, onClose, onSave, isNew }: {
   const [description, setDescription] = useState(stay.description || "");
   const [category, setCategory] = useState(stay.category || CATEGORIES[0]);
   const [status, setStatus] = useState(stay.status || "active");
+  const [categoryOptions, setCategoryOptions] = useState<string[]>(CATEGORIES);
   const [price, setPrice] = useState(String(stay.price || 0));
   const [originalPrice, setOriginalPrice] = useState(String(stay.original_price || 0));
-  const [maxAdults, setMaxAdults] = useState(stay.max_adults ?? 20);
-  const [maxChildren, setMaxChildren] = useState(stay.max_children ?? 5);
-  const [maxPets, setMaxPets] = useState(stay.max_pets ?? 5);
+  const [maxAdults, setMaxAdults] = useState(stay.max_adults ?? 1);
+  const [maxChildren, setMaxChildren] = useState(stay.max_children ?? 0);
+  const [maxPets, setMaxPets] = useState(stay.max_pets ?? 1);
   const [amenities, setAmenities] = useState<string[]>(stay.amenities || []);
+  const [customAmenity, setCustomAmenity] = useState("");
   const [images, setImages] = useState<string[]>(stay.images || []);
   const [uploading, setUploading] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
@@ -129,6 +131,34 @@ function StayEditModal({ stay, isDark, onClose, onSave, isNew }: {
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [editingRoom, setEditingRoom] = useState<RoomCategory | null>(null);
   const [addingRoom, setAddingRoom] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      const { data, error } = await supabase
+        .from("stay_categories")
+        .select("label")
+        .eq("active", true)
+        .order("sort_order", { ascending: true });
+
+      if (error || !isMounted) return;
+
+      const labels = (data || [])
+        .map((row: { label: string | null }) => (row.label || "").trim())
+        .filter(Boolean);
+
+      if (labels.length > 0) {
+        setCategoryOptions(labels);
+        if (!category) {
+          setCategory(labels[0]);
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [category]);
 
   useEffect(() => {
     (async () => {
@@ -392,7 +422,7 @@ function StayEditModal({ stay, isDark, onClose, onSave, isNew }: {
     updateNearbyPlace(placeId, { image: publicUrl });
   };
 
-  const MAX_PHOTOS = 6;
+  const MAX_PHOTOS = 100;
 
   const pickAndUpload = async () => {
     if (images.length >= MAX_PHOTOS) {
@@ -548,7 +578,7 @@ function StayEditModal({ stay, isDark, onClose, onSave, isNew }: {
           </TouchableOpacity>
           {showCategoryPicker && (
             <View style={{ borderWidth: 1, borderColor: inputBorder, borderRadius: 12, marginTop: 4, backgroundColor: modalBg, overflow: "hidden" }}>
-              {CATEGORIES.map(c => (
+              {categoryOptions.map(c => (
                 <TouchableOpacity
                   key={c}
                   onPress={() => { setCategory(c); setShowCategoryPicker(false); }}
@@ -647,8 +677,7 @@ function StayEditModal({ stay, isDark, onClose, onSave, isNew }: {
 
         {[
           { label: "Adults", icon: "account" as const, value: maxAdults, setValue: setMaxAdults, min: 1, max: 50 },
-          { label: "Children", icon: "human-child" as const, value: maxChildren, setValue: setMaxChildren, min: 1, max: 20 },
-          { label: "Pets", icon: "paw" as const, value: maxPets, setValue: setMaxPets, min: 1, max: 10 },
+          { label: "Children", icon: "human-child" as const, value: maxChildren, setValue: setMaxChildren, min: 0, max: 20 },
         ].map(g => (
           <View
             key={g.label}
@@ -689,6 +718,43 @@ function StayEditModal({ stay, isDark, onClose, onSave, isNew }: {
             </View>
           </View>
         ))}
+
+        <View
+          style={{
+            flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+            backgroundColor: modalBg, borderRadius: 12, padding: 14,
+            borderWidth: 1, borderColor: isDark ? "#1f2937" : "#e5e7eb",
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <MaterialCommunityIcons name="paw" size={20} color={isDark ? "#9ca3af" : "#6b7280"} />
+            <Text style={{ fontSize: 14, fontWeight: "600", color: inputText }}>Pets</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setMaxPets(prev => (prev > 0 ? 0 : 1))}
+            style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+          >
+            <Text style={{ fontSize: 12, fontWeight: "600", color: maxPets > 0 ? "#16a34a" : labelText }}>
+              {maxPets > 0 ? "Allowed" : "Not allowed"}
+            </Text>
+            <View
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 6,
+                borderWidth: 1.5,
+                borderColor: maxPets > 0 ? "#16a34a" : (isDark ? "#4b5563" : "#94a3b8"),
+                backgroundColor: maxPets > 0 ? "#16a34a" : "transparent",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {maxPets > 0 && (
+                <MaterialCommunityIcons name="check" size={14} color="#ffffff" />
+              )}
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Amenities */}
@@ -723,6 +789,63 @@ function StayEditModal({ stay, isDark, onClose, onSave, isNew }: {
               <Text style={{ fontSize: 12, fontWeight: "500", color: isDark ? "#d1d5db" : "#475569" }}>+ {a}</Text>
             </TouchableOpacity>
           ))}
+        </View>
+
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 }}>
+          <TextInput
+            style={{
+              flex: 1,
+              borderWidth: 1,
+              borderColor: inputBorder,
+              borderRadius: 10,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              fontSize: 12,
+              color: inputText,
+              backgroundColor: inputBg,
+            }}
+            value={customAmenity}
+            onChangeText={setCustomAmenity}
+            placeholder="Add custom amenity..."
+            placeholderTextColor={isDark ? "#6b7280" : "#94a3b8"}
+            onSubmitEditing={() => {
+              const trimmed = customAmenity.trim();
+              if (!trimmed) return;
+              const exists = amenities.some(a => a.toLowerCase() === trimmed.toLowerCase());
+              if (!exists) {
+                setAmenities(prev => [...prev, trimmed]);
+              }
+              setCustomAmenity("");
+            }}
+            returnKeyType="done"
+          />
+          <TouchableOpacity
+            onPress={() => {
+              const trimmed = customAmenity.trim();
+              if (!trimmed) return;
+              const exists = amenities.some(a => a.toLowerCase() === trimmed.toLowerCase());
+              if (!exists) {
+                setAmenities(prev => [...prev, trimmed]);
+              }
+              setCustomAmenity("");
+            }}
+            style={{
+              height: 40,
+              paddingHorizontal: 12,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: isDark ? "#374151" : "#d1d5db",
+              backgroundColor: isDark ? "#111827" : "#ffffff",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: customAmenity.trim() ? 1 : 0.5,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <MaterialCommunityIcons name="plus" size={14} color={isDark ? "#d1d5db" : "#334155"} />
+              <Text style={{ fontSize: 12, fontWeight: "600", color: isDark ? "#d1d5db" : "#334155" }}>Add</Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -2010,6 +2133,18 @@ export default function StaysScreen() {
     const { error } = await supabase.from("stays").update(dbUpdates).eq("id", editing.id);
     if (error) { Alert.alert("Error", error.message); return; }
     setStays(s => s.map(x => x.id === editing.id ? { ...x, ...updates } : x));
+    setIsNewStay(false);
+    setEditing(null);
+  };
+
+  const closeStayEditor = async () => {
+    if (!editing) return;
+    if (isNewStay) {
+      // Add Stay currently creates a draft DB row first; if user closes without saving, remove it.
+      await supabase.from("stays").delete().eq("id", editing.id);
+      setStays((prev) => prev.filter((s) => s.id !== editing.id));
+      setIsNewStay(false);
+    }
     setEditing(null);
   };
 
@@ -2180,7 +2315,7 @@ export default function StaysScreen() {
         <StayEditModal
           stay={editing}
           isDark={isDark}
-          onClose={() => setEditing(null)}
+          onClose={() => { void closeStayEditor(); }}
           onSave={saveStay}
           isNew={isNewStay}
         />

@@ -20,6 +20,7 @@ const MENU_SECTIONS: { title: string; items: MenuItem[] }[] = [
     title: "Management",
     items: [
       { label: "Guest Contacts", icon: "account-group" as const, route: "/(admin)/guests", description: "Database and communication history" },
+      { label: "Homepage Categories", icon: "view-grid-plus-outline" as const, route: "/(admin)/homepage-categories", description: "Manage homepage category tabs" },
       { label: "Analytics", icon: "chart-bar" as const, route: "/(admin)/analytics", featureKey: "analytics", description: "Performance and revenue insights" },
       { label: "Coupons", icon: "tag-outline" as const, route: "/(admin)/coupons", featureKey: "coupons", description: "Manage discounts and promotions" },
       { label: "Quotations", icon: "file-document-outline" as const, route: "/(admin)/quotations", featureKey: "quotation_generator", description: "Create and track price quotes" },
@@ -106,7 +107,7 @@ export default function MoreScreen() {
             </View>
           </View>
           <View style={{ marginTop: 14 }}>
-            <Text style={{ fontSize: 28, fontWeight: "800", color: isDark ? "#f9fafb" : "#0f172a", letterSpacing: -0.5 }}>More</Text>
+            <Text style={{ fontSize: 28, fontWeight: "800", color: isDark ? "#f9fafb" : "#0f172a", letterSpacing: -0.5 }}>Settings</Text>
             {tenantName && (
               <Text style={{ fontSize: 14, color: isDark ? "#6b7280" : "#64748b", fontWeight: "500", marginTop: 2 }}>{tenantName}</Text>
             )}

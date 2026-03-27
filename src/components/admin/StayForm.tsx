@@ -118,7 +118,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
   const [form, setForm] = useState({
     name: "", location: "", description: "", category: "",
     price: 0, original_price: 0, status: "active",
-    max_adults: 20, max_children: 5, max_pets: 5,
+    max_adults: 1, max_children: 1, max_pets: 0,
   });
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [customAmenity, setCustomAmenity] = useState("");
@@ -174,7 +174,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
         name: stay.name || "", location: stay.location || "", description: stay.description || "",
         category: stay.category || "", price: stay.price || 0, original_price: stay.original_price || 0,
         status: stay.status || "active",
-        max_adults: stay.max_adults ?? 20, max_children: stay.max_children ?? 5, max_pets: stay.max_pets ?? 5,
+        max_adults: stay.max_adults ?? 1, max_children: stay.max_children ?? 1, max_pets: stay.max_pets ?? 0,
       });
       setSelectedAmenities(stay.amenities || []);
       setPhotos(stay.images || []);
@@ -195,7 +195,7 @@ export function StayForm({ open, onOpenChange, stay, onSaved }: StayFormProps) {
       setDeletedAddonIds([]);
       fetchRelatedData(stay.id);
     } else {
-      setForm({ name: "", location: "", description: "", category: "", price: 0, original_price: 0, status: "active", max_adults: 20, max_children: 5, max_pets: 5 });
+      setForm({ name: "", location: "", description: "", category: "", price: 0, original_price: 0, status: "active", max_adults: 1, max_children: 1, max_pets: 0 });
       setSelectedAmenities([]);
       setPhotos([]);
       setReels([]);

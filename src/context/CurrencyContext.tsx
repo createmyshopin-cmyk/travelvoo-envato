@@ -29,10 +29,10 @@ export type CurrencyContextValue = {
 };
 
 const defaultValue: CurrencyContextValue = {
-  code: "USD",
-  format: (n) => formatMoneyAmount(n, "USD"),
-  formatCompact: (n) => formatMoneyCompact(n, "USD"),
-  symbol: "$",
+  code: "INR",
+  format: (n) => formatMoneyAmount(n, "INR"),
+  formatCompact: (n) => formatMoneyCompact(n, "INR"),
+  symbol: "₹",
 };
 
 const CurrencyContext = createContext<CurrencyContextValue>(defaultValue);

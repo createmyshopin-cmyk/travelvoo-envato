@@ -131,9 +131,9 @@ function AdminTabsLayout() {
       <Tabs.Screen
         name="more"
         options={{
-          title: "More",
+          title: "Settings",
           tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons name="dots-horizontal" size={24} color={color} />
+            <MaterialCommunityIcons name="cog-outline" size={24} color={color} />
           ),
         }}
       />
@@ -143,6 +143,7 @@ function AdminTabsLayout() {
       <Tabs.Screen name="quotations" options={{ href: null }} />
       <Tabs.Screen name="invoices" options={{ href: null }} />
       <Tabs.Screen name="analytics" options={{ href: null }} />
+      <Tabs.Screen name="homepage-categories" options={{ href: null }} />
       <Tabs.Screen name="account/billing" options={{ href: null }} />
       <Tabs.Screen name="account/profile" options={{ href: null }} />
       <Tabs.Screen name="account/usage" options={{ href: null }} />
