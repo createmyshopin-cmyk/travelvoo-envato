@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { JsonLd } from "@/components/seo/JsonLd";
 import StickyHeader from "@/components/StickyHeader";
 import SearchBar from "@/components/SearchBar";
@@ -14,8 +15,8 @@ import StickyBottomNav from "@/components/StickyBottomNav";
 import LazySection from "@/components/LazySection";
 import CouponBanner from "@/components/CouponBanner";
 import BestFeatures from "@/components/BestFeatures";
-import PromoPopup from "@/components/PromoPopup";
-import MenuPopup from "@/components/MenuPopup";
+const PromoPopup = dynamic(() => import("@/components/PromoPopup"), { ssr: false });
+const MenuPopup = dynamic(() => import("@/components/MenuPopup"), { ssr: false });
 
 const sections = [
   { title: "Couple Friendly Stays", category: "Couple Friendly" },
@@ -28,6 +29,17 @@ const sections = [
 
 const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState("All Stays");
+  const [deferredUiReady, setDeferredUiReady] = useState(false);
+
+  useEffect(() => {
+    const run = () => setDeferredUiReady(true);
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      const idleId = (window as any).requestIdleCallback(run, { timeout: 1500 });
+      return () => (window as any).cancelIdleCallback?.(idleId);
+    }
+    const timer = window.setTimeout(run, 900);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",
@@ -52,7 +64,7 @@ const Index = () => {
             }
           }}
         />
-        <LazySection rootMargin="300px">
+        <LazySection rootMargin="180px">
           <ResortStories />
         </LazySection>
         <CategoryTabs selected={selectedCategory} onSelect={setSelectedCategory} />
@@ -63,27 +75,31 @@ const Index = () => {
         {sections
           .filter((s) => s.category !== selectedCategory)
           .map((s) => (
-            <LazySection key={s.category} rootMargin="400px">
+            <LazySection key={s.category} rootMargin="220px">
               <StayCarousel title={s.title} category={s.category} />
             </LazySection>
           ))}
-        <LazySection rootMargin="300px">
+        <LazySection rootMargin="220px">
           <PromoBanners />
         </LazySection>
-        <LazySection rootMargin="250px">
+        <LazySection rootMargin="180px">
           <BestFeatures />
         </LazySection>
-        <LazySection rootMargin="200px">
+        <LazySection rootMargin="160px">
           <EnquiryForm />
         </LazySection>
-        <LazySection rootMargin="100px">
+        <LazySection rootMargin="120px">
           <Footer />
         </LazySection>
       </div>
 
       <StickyBottomNav />
-      <MenuPopup />
-      <PromoPopup />
+      {deferredUiReady ? (
+        <>
+          <MenuPopup />
+          <PromoPopup />
+        </>
+      ) : null}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Play, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,8 @@ const FALLBACK_DURATION = 4;
 
 const ResortStories = () => {
   const { tenantId } = useTenant();
+  const sectionRef = useRef<HTMLDivElement | null>(null);
+  const [shouldLoad, setShouldLoad] = useState(false);
   const [groups, setGroups] = useState<StoryGroup[]>([]);
   const [sectionTitle, setSectionTitle] = useState("Resort Stories");
   const [duration, setDuration] = useState(FALLBACK_DURATION);
@@ -38,6 +40,24 @@ const ResortStories = () => {
   const [activeItem, setActiveItem] = useState(0);
 
   useEffect(() => {
+    if (shouldLoad) return;
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldLoad(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "160px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [shouldLoad]);
+
+  useEffect(() => {
+    if (!shouldLoad) return;
     const fetchAll = async () => {
       let reelsQuery = supabase
         .from("stay_reels")
@@ -95,7 +115,7 @@ const ResortStories = () => {
     };
 
     fetchAll();
-  }, [tenantId]);
+  }, [tenantId, shouldLoad]);
 
   const openGroup = (idx: number) => { setActiveGroup(idx); setActiveItem(0); };
   const closeGroup = () => setActiveGroup(null);
@@ -123,7 +143,8 @@ const ResortStories = () => {
     }
   };
 
-  if (!visible || groups.length === 0) return null;
+  if (!shouldLoad) return <div ref={sectionRef} style={{ minHeight: "72px" }} />;
+  if (!visible || groups.length === 0) return <div ref={sectionRef} />;
 
   const currentGroup = activeGroup !== null ? groups[activeGroup] : null;
   const currentItem = currentGroup ? currentGroup.items[activeItem] : null;
@@ -131,7 +152,7 @@ const ResortStories = () => {
   return (
     <>
       {/* Story circles */}
-      <div className="py-4">
+      <div ref={sectionRef} className="py-4">
         <h3 className="px-4 text-base font-bold text-foreground mb-3">{sectionTitle}</h3>
         <div className="flex gap-4 px-4 overflow-x-auto scrollbar-hide">
           {groups.map((group, idx) => (

@@ -29,6 +29,7 @@ const StayCard = ({ stay, index }: StayCardProps) => {
 
   const savings = stay.originalPrice - stay.price;
   const hasDiscount = savings > 0;
+  const nextImageIndex = (currentImage + 1) % Math.max(stay.images.length, 1);
 
   useEffect(() => {
     if (stay.images.length <= 1) return;
@@ -88,19 +89,25 @@ const StayCard = ({ stay, index }: StayCardProps) => {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {stay.images.map((img, i) => (
-          <motion.img
-            key={i}
-            src={img}
-            alt={stay.name}
-            loading={i === 0 ? "eager" : "lazy"}
-            animate={{
-              x: `${(i - currentImage) * 100}%`,
-            }}
-            transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
-            className="w-full h-full object-cover absolute inset-0"
+        <motion.img
+          key={stay.images[currentImage] || `${stay.id}-current`}
+          src={stay.images[currentImage]}
+          alt={stay.name}
+          loading={index < 2 ? "eager" : "lazy"}
+          initial={{ opacity: 0.75 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="w-full h-full object-cover absolute inset-0"
+        />
+        {stay.images.length > 1 && (
+          <img
+            src={stay.images[nextImageIndex]}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="hidden"
           />
-        ))}
+        )}
 
         {/* Nav arrows */}
         {stay.images.length > 1 && (

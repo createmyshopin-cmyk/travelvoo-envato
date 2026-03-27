@@ -25,6 +25,7 @@ const FALLBACK_SLIDES: Slide[] = [
 const HeroBanner = () => {
   const [slides, setSlides] = useState<Slide[]>(FALLBACK_SLIDES);
   const [current, setCurrent] = useState(0);
+  const [heroLoaded, setHeroLoaded] = useState(false);
 
   const fetchSlides = useCallback(async () => {
     const { data } = await (supabase.from("banners") as any)
@@ -33,24 +34,32 @@ const HeroBanner = () => {
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
     if (data && data.length > 0) {
-      setSlides(
-        data.map((b: any) => ({
-          id:       b.id,
-          image:    b.image_url || hero1,
-          title:    b.title,
-          subtitle: b.subtitle  || "",
-          cta:      b.cta_text  || "Explore Now",
-          link:     b.cta_link  || "/",
-        }))
-      );
-      setCurrent(0);
+      const nextSlides = data.map((b: any) => ({
+        id:       b.id,
+        image:    b.image_url || hero1,
+        title:    b.title,
+        subtitle: b.subtitle  || "",
+        cta:      b.cta_text  || "Explore Now",
+        link:     b.cta_link  || "/",
+      }));
+      const hasChanged = JSON.stringify(nextSlides) !== JSON.stringify(slides);
+      if (hasChanged) {
+        setSlides(nextSlides);
+        setCurrent(0);
+      }
     } else {
       setSlides(FALLBACK_SLIDES);
     }
-  }, []);
+  }, [slides]);
 
   useEffect(() => {
-    fetchSlides();
+    const run = () => fetchSlides();
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      const idleId = (window as any).requestIdleCallback(run, { timeout: 1200 });
+      return () => (window as any).cancelIdleCallback?.(idleId);
+    }
+    const timer = window.setTimeout(run, 400);
+    return () => window.clearTimeout(timer);
   }, [fetchSlides]);
 
   const next = useCallback(
@@ -92,8 +101,18 @@ const HeroBanner = () => {
             transition={{ duration: 0.4 }}
             className="absolute inset-0"
           >
-            <img src={slide.image} alt={slide.title} fetchPriority="high" className="w-full h-full object-cover" />
+            <img
+              src={slide.image}
+              alt={slide.title}
+              fetchPriority={current === 0 ? "high" : "auto"}
+              loading={current === 0 ? "eager" : "lazy"}
+              decoding="async"
+              sizes="(max-width: 768px) 100vw, 1400px"
+              onLoad={() => setHeroLoaded(true)}
+              className="w-full h-full object-cover"
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
+            {!heroLoaded && <div className="absolute inset-0 bg-muted animate-pulse" />}
             <div className="absolute bottom-0 left-0 p-5 md:p-10 lg:p-14 flex flex-col gap-2 md:gap-3">
               <h2 className="text-xl md:text-4xl lg:text-5xl font-bold text-primary-foreground leading-tight">
                 {slide.title}
