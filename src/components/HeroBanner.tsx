@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,10 +22,16 @@ const FALLBACK_SLIDES: Slide[] = [
   { id: 3, image: hero3, title: "Family Vacations",  subtitle: "Fun-filled resort experiences",        cta: "Book Now",    link: "/" },
 ];
 
+/** One full Ken Burns cycle per slide; keep in sync with zoom `transition.duration`. */
+const HERO_SLIDE_DURATION_MS = 5500;
+const KEN_BURNS_SCALE = 1.08;
+const TRANSFORM_ORIGINS = ["center", "top left", "bottom right"] as const;
+
 const HeroBanner = () => {
   const [slides, setSlides] = useState<Slide[]>(FALLBACK_SLIDES);
   const [current, setCurrent] = useState(0);
   const [heroLoaded, setHeroLoaded] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
 
   const fetchSlides = useCallback(async () => {
     const { data } = await (supabase.from("banners") as any)
@@ -68,7 +74,7 @@ const HeroBanner = () => {
   );
 
   useEffect(() => {
-    const timer = setInterval(next, 4000);
+    const timer = setInterval(next, HERO_SLIDE_DURATION_MS);
     return () => clearInterval(timer);
   }, [next]);
 
@@ -83,6 +89,14 @@ const HeroBanner = () => {
   };
 
   const slide = slides[current];
+  const zoomIn = current % 2 === 0;
+  const transformOrigin =
+    TRANSFORM_ORIGINS[current % TRANSFORM_ORIGINS.length];
+  const kenBurnsScale = prefersReducedMotion
+    ? { from: 1, to: 1 }
+    : zoomIn
+      ? { from: 1, to: KEN_BURNS_SCALE }
+      : { from: KEN_BURNS_SCALE, to: 1 };
 
   return (
     /* Mobile: px-4 inset rounded card. Desktop: full-bleed edge-to-edge. */
@@ -101,16 +115,25 @@ const HeroBanner = () => {
             transition={{ duration: 0.4 }}
             className="absolute inset-0"
           >
-            <img
-              src={slide.image}
-              alt={slide.title}
-              fetchPriority={current === 0 ? "high" : "auto"}
-              loading={current === 0 ? "eager" : "lazy"}
-              decoding="async"
-              sizes="(max-width: 768px) 100vw, 1400px"
-              onLoad={() => setHeroLoaded(true)}
-              className="w-full h-full object-cover"
-            />
+            <div className="absolute inset-0 overflow-hidden">
+              <motion.img
+                src={slide.image}
+                alt={slide.title}
+                fetchPriority={current === 0 ? "high" : "auto"}
+                loading={current === 0 ? "eager" : "lazy"}
+                decoding="async"
+                sizes="(max-width: 768px) 100vw, 1400px"
+                onLoad={() => setHeroLoaded(true)}
+                className="w-full h-full object-cover"
+                style={{ transformOrigin }}
+                initial={{ scale: kenBurnsScale.from }}
+                animate={{ scale: kenBurnsScale.to }}
+                transition={{
+                  duration: HERO_SLIDE_DURATION_MS / 1000,
+                  ease: "linear",
+                }}
+              />
+            </div>
             <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
             {!heroLoaded && <div className="absolute inset-0 bg-muted animate-pulse" />}
             <div className="absolute bottom-0 left-0 p-5 md:p-10 lg:p-14 flex flex-col gap-2 md:gap-3">
