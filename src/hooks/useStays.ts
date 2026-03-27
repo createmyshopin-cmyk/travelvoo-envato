@@ -8,15 +8,47 @@ import type { Stay, RoomCategory, Review, Reel, NearbyDestination } from "@/type
 // Module-level cache: key = "tenantId|category" so tenant subdomains get fresh empty data
 const staysCache = new Map<string, Stay[]>();
 
-// Fallback images when DB images are empty
-const fallbackImages = [
-  "/assets/stay-1.jpg", "/assets/stay-2.jpg", "/assets/stay-3.jpg",
-  "/assets/stay-4.jpg", "/assets/stay-5.jpg", "/assets/stay-6.jpg",
-  "/assets/stay-7.jpg", "/assets/stay-8.jpg",
-];
+// Lightweight inline fallback to avoid 404s across environments.
+const fallbackImage =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+      <rect width="1200" height="800" fill="#eef2ff"/>
+      <rect x="40" y="40" width="1120" height="720" rx="24" fill="#e2e8f0"/>
+      <text x="600" y="410" text-anchor="middle" fill="#64748b" font-size="42" font-family="Arial, sans-serif">
+        Image unavailable
+      </text>
+    </svg>`
+  );
+
+const normalizeImageValue = (value: unknown): string | null => {
+  if (typeof value === "string") {
+    const v = value.trim();
+    if (!v || v === "[object Object]") return null;
+    return v;
+  }
+
+  if (value && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const candidates = [obj.url, obj.src, obj.image, obj.image_url, obj.publicUrl];
+    for (const candidate of candidates) {
+      if (typeof candidate === "string" && candidate.trim() && candidate !== "[object Object]") {
+        return candidate.trim();
+      }
+    }
+  }
+
+  return null;
+};
+
+const normalizeImageList = (images: unknown): string[] => {
+  if (!Array.isArray(images)) return [];
+  return images.map(normalizeImageValue).filter((v): v is string => Boolean(v));
+};
 
 function mapDbStay(row: any): Stay {
-  const images = row.images?.length > 0 ? row.images : [fallbackImages[Math.floor(Math.random() * fallbackImages.length)]];
+  const images = normalizeImageList(row.images);
+  const safeImages = images.length > 0 ? images : [fallbackImage];
   return {
     id: row.id,
     stayId: row.stay_id,
@@ -24,8 +56,8 @@ function mapDbStay(row: any): Stay {
     location: row.location,
     price: row.price,
     originalPrice: row.original_price,
-    image: images[0],
-    images,
+    image: safeImages[0],
+    images: safeImages,
     category: row.category,
     rating: Number(row.rating),
     reviews: row.reviews_count,
@@ -58,13 +90,14 @@ function mapDbRoom(row: any): RoomCategory {
 }
 
 function mapDbReview(row: any): Review {
+  const photos = normalizeImageList(row.photos);
   return {
     id: row.id,
     name: row.guest_name,
     avatar: row.avatar_url || "",
     rating: row.rating,
     text: row.comment,
-    photos: row.photos || [],
+    photos,
   };
 }
 

@@ -43,6 +43,12 @@ const ResortStories = () => {
     if (shouldLoad) return;
     const el = sectionRef.current;
     if (!el) return;
+
+    if (typeof window === "undefined" || typeof window.IntersectionObserver === "undefined") {
+      setShouldLoad(true);
+      return;
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {

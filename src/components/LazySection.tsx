@@ -19,6 +19,11 @@ const LazySection = ({ children, minHeight = "200px", rootMargin = "200px" }: La
     const el = ref.current;
     if (!el) return;
 
+    if (typeof window === "undefined" || typeof window.IntersectionObserver === "undefined") {
+      setMounted(true);
+      return;
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
