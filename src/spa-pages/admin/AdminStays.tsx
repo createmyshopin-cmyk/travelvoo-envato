@@ -109,7 +109,7 @@ export default function AdminStays() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [categories, setCategories] = useState<string[]>([]);
+  const [homepageCategories, setHomepageCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
@@ -141,10 +141,17 @@ export default function AdminStays() {
     const { data, error } = await query;
     if (!error) {
       setStays(data || []);
-      const cats = [...new Set((data || []).map((s: any) => s.category).filter(Boolean))];
-      setCategories(cats as string[]);
     }
     setLoading(false);
+  }, []);
+
+  const fetchHomepageCategories = useCallback(async () => {
+    const { data } = await supabase
+      .from("stay_categories" as any)
+      .select("label, sort_order")
+      .eq("active", true)
+      .order("sort_order");
+    setHomepageCategories((data as any[] || []).map((row: any) => row.label).filter(Boolean));
   }, []);
 
   const fetchBookingCounts = useCallback(async () => {
@@ -170,6 +177,7 @@ export default function AdminStays() {
     fetchStays();
     fetchBookingCounts();
     fetchCategoryCount();
+    fetchHomepageCategories();
 
     const staysChannel = supabase
       .channel("stays-realtime")
@@ -178,11 +186,14 @@ export default function AdminStays() {
 
     const catChannel = supabase
       .channel("stay_categories_count")
-      .on("postgres_changes", { event: "*", schema: "public", table: "stay_categories" }, () => fetchCategoryCount())
+      .on("postgres_changes", { event: "*", schema: "public", table: "stay_categories" }, () => {
+        fetchCategoryCount();
+        fetchHomepageCategories();
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(staysChannel); supabase.removeChannel(catChannel); };
-  }, [fetchStays, fetchBookingCounts, fetchCategoryCount]);
+  }, [fetchStays, fetchBookingCounts, fetchCategoryCount, fetchHomepageCategories]);
 
   // ── Filtered + sorted ─────────────────────────────────────────────────
 
@@ -493,14 +504,14 @@ export default function AdminStays() {
                 </button>
               )}
             </div>
-            {categories.length > 1 && (
+            {homepageCategories.length > 0 && (
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-[160px] h-9">
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                  {homepageCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                 </SelectContent>
               </Select>
             )}
