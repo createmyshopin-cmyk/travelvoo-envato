@@ -32,16 +32,20 @@ export async function fetchReels(): Promise<ReelWithStay[]> {
     return [];
   }
 
-  return (data || []).map((r: any) => ({
-    id: r.id,
-    stay_id: r.stay_id,
-    stay_public_slug: (r.stays?.stay_id as string) || r.stay_id,
-    title: r.title || "",
-    thumbnail: r.thumbnail || "",
-    url: r.url || "",
-    platform: r.platform || "youtube",
-    stay_name: r.stays?.name || "Resort",
-  }));
+  return (data || []).map((r: any) => {
+    // stays may be returned as an array (Supabase !inner join) or a single object
+    const stayRow = Array.isArray(r.stays) ? r.stays[0] : r.stays;
+    return {
+      id: r.id,
+      stay_id: r.stay_id,
+      stay_public_slug: (stayRow?.stay_id as string) || r.stay_id,
+      title: r.title || "",
+      thumbnail: r.thumbnail || "",
+      url: r.url || "",
+      platform: r.platform || "youtube",
+      stay_name: stayRow?.name || "Resort",
+    };
+  });
 }
 
 export function useReels() {
