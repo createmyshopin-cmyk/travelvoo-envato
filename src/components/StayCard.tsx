@@ -25,6 +25,7 @@ const StayCard = ({ stay, index }: StayCardProps) => {
   const { format } = useCurrency();
   const { isWishlisted, toggleWishlist: toggle } = useWishlist();
   const [currentImage, setCurrentImage] = useState(0);
+  const [prevImageSrc, setPrevImageSrc] = useState<string | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [shouldLoadCard, setShouldLoadCard] = useState(index < 2);
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -69,20 +70,35 @@ const StayCard = ({ stay, index }: StayCardProps) => {
     if (!shouldLoadCard || stay.images.length <= 1) return;
     const delay = 5000 + index * 700;
     const interval = setInterval(() => {
-      setCurrentImage((prev) => (prev + 1) % stay.images.length);
+      setCurrentImage((prev) => {
+        setPrevImageSrc(
+          withSupabaseImageTransform(stay.images[prev] || "", { width: 720, quality: 62, format: "webp" })
+        );
+        return (prev + 1) % stay.images.length;
+      });
     }, delay);
     return () => clearInterval(interval);
-  }, [stay.images.length, index, shouldLoadCard]);
+  }, [stay.images, index, shouldLoadCard]);
 
   const nextImage = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    setCurrentImage((prev) => (prev + 1) % stay.images.length);
-  }, [stay.images.length]);
+    setCurrentImage((prev) => {
+      setPrevImageSrc(
+        withSupabaseImageTransform(stay.images[prev] || "", { width: 720, quality: 62, format: "webp" })
+      );
+      return (prev + 1) % stay.images.length;
+    });
+  }, [stay.images]);
 
   const prevImage = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    setCurrentImage((prev) => (prev - 1 + stay.images.length) % stay.images.length);
-  }, [stay.images.length]);
+    setCurrentImage((prev) => {
+      setPrevImageSrc(
+        withSupabaseImageTransform(stay.images[prev] || "", { width: 720, quality: 62, format: "webp" })
+      );
+      return (prev - 1 + stay.images.length) % stay.images.length;
+    });
+  }, [stay.images]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const touch = e.touches[0];
@@ -99,9 +115,15 @@ const StayCard = ({ stay, index }: StayCardProps) => {
     // Only treat as image swipe when horizontal intent is clear.
     if (Math.abs(deltaX) > 52 && Math.abs(deltaX) > deltaY * 1.15) {
       if (deltaX > 0) {
-        setCurrentImage((prev) => (prev + 1) % stay.images.length);
+        setCurrentImage((prev) => {
+          setPrevImageSrc(withSupabaseImageTransform(stay.images[prev] || "", { width: 720, quality: 62, format: "webp" }));
+          return (prev + 1) % stay.images.length;
+        });
       } else {
-        setCurrentImage((prev) => (prev - 1 + stay.images.length) % stay.images.length);
+        setCurrentImage((prev) => {
+          setPrevImageSrc(withSupabaseImageTransform(stay.images[prev] || "", { width: 720, quality: 62, format: "webp" }));
+          return (prev - 1 + stay.images.length) % stay.images.length;
+        });
       }
     }
     swipeStartRef.current = null;
@@ -132,6 +154,17 @@ const StayCard = ({ stay, index }: StayCardProps) => {
       >
         {shouldLoadCard ? (
           <>
+            {/* Previous image stays visible underneath during cross-fade — no white flash */}
+            {prevImageSrc && (
+              <img
+                src={prevImageSrc}
+                alt=""
+                aria-hidden="true"
+                decoding="async"
+                className="w-full h-full object-cover absolute inset-0"
+                style={{ zIndex: 0 }}
+              />
+            )}
             <motion.img
               key={stay.images[currentImage] || `${stay.id}-current`}
               src={currentSrc}
@@ -139,10 +172,12 @@ const StayCard = ({ stay, index }: StayCardProps) => {
               loading={index < 2 ? "eager" : "lazy"}
               decoding="async"
               sizes="(min-width: 1280px) 256px, (min-width: 1024px) 230px, (min-width: 768px) 300px, 220px"
-              initial={{ opacity: 0.75 }}
+              initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.35 }}
+              onAnimationComplete={() => setPrevImageSrc(null)}
               className="w-full h-full object-cover absolute inset-0"
+              style={{ zIndex: 1 }}
             />
             {stay.images.length > 1 && (
               <img

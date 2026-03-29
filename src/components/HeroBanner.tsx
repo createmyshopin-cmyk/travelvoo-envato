@@ -106,14 +106,15 @@ const HeroBanner = () => {
         onTouchStart={(e) => setTouchStart(e.touches[0].clientX)}
         onTouchEnd={(e) => handleTouchEnd(e.changedTouches[0].clientX)}
       >
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="sync">
           <motion.div
             key={slide.id}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: 0.6 }}
             className="absolute inset-0"
+            style={{ zIndex: 1 }}
           >
             <div className="absolute inset-0 overflow-hidden">
               <motion.img
