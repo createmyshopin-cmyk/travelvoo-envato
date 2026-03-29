@@ -5,6 +5,7 @@ import "./globals.css";
 import { AppProviders } from "@/components/AppProviders";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SupabaseEnvScript } from "@/components/SupabaseEnvScript";
+import { getCachedTenantThemeCss } from "@/lib/server/tenantThemeFromHost";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -74,11 +75,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ?? "";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const host = headersList.get("host")?.split(":")[0] ?? "";
+  const tenantThemeCss = await getCachedTenantThemeCss(host);
+
   return (
     <html lang="en" className={plusJakarta.variable} suppressHydrationWarning>
       <head>
@@ -88,6 +93,12 @@ export default function RootLayout({
             <link rel="preconnect" href={supabaseOrigin} crossOrigin="anonymous" />
             <link rel="dns-prefetch" href={supabaseOrigin} />
           </>
+        ) : null}
+        {tenantThemeCss ? (
+          <style
+            id="tenant-theme-ssr"
+            dangerouslySetInnerHTML={{ __html: tenantThemeCss }}
+          />
         ) : null}
       </head>
       <body className="font-sans antialiased">
